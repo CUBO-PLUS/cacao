@@ -99,7 +99,7 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
             Saltar al contenido
           </a>
           <div className="hoja">
-            <div className="cinta">Modo demo: pagos simulados</div>
+            <div className="cinta">Demo: pagos por Lightning con bitcoin de prueba</div>
             <Cabecera />
             <main id="contenido" tabIndex={-1} className="principal">
               <div className="contenedor">{children}</div>

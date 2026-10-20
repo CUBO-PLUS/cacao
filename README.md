@@ -18,7 +18,7 @@ Este repositorio contiene la página de la empresa, Cacao, y cinco productos hec
 | Cacao Travel | `travel/` | Experiencias con precio en sats | https://cacao-travel.vercel.app |
 | CacaoMarket | `market/` | Productos y servicios locales pagados en sats | https://cacao-market.vercel.app |
 | CacaoPay | `pay/` | Simulador de remesas: lo que se envía, la comisión, el tipo de cambio y lo que llega | https://cacao-pay.vercel.app |
-| CacaoLedger | `ledger/` | Herramienta de terminal: la venta, su pago y su factura electrónica (DTE) | https://cacao-grupo.vercel.app/ledger |
+| CacaoLedger | `ledger/` | App web y herramienta de terminal: la venta, su pago y su factura electrónica (DTE) | https://cacao-cuentas.vercel.app |
 
 Media, Market y Pay comparten una base de datos (las migraciones viven en `market/supabase/`). Todos los pagos son simulados: no se mueve dinero real. Lo que sigue en este documento describe Cacao Media y Cacao Travel; los otros tienen su `README.md` en su carpeta.
 

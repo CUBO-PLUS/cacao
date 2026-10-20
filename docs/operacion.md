@@ -11,7 +11,7 @@ Guía práctica para retomar el proyecto en cualquier computadora: qué instalar
 | Cacao Travel | `travel/` | Astro 7 | 4322 | https://cacao-travel.vercel.app |
 | CacaoMarket | `market/` | Next.js 16 y Supabase | 4323 | https://cacao-market.vercel.app |
 | CacaoPay | `pay/` | Next.js 16 y Supabase | 4324 | https://cacao-pay.vercel.app |
-| CacaoLedger | `ledger/` | Node 24, TypeScript, terminal | no usa | https://cacao-grupo.vercel.app/ledger |
+| CacaoLedger | `ledger/` | Next.js 16 (web) y Node 24 (terminal) | `ledger_` | https://cacao-cuentas.vercel.app |
 
 Media, Market y Pay comparten una base de datos de Supabase. Sus migraciones viven en `market/supabase/migrations/`: las tablas de Market no llevan prefijo, las de Media empiezan con `media_`, las de Pay con `pay_`, y `eventos` es común.
 

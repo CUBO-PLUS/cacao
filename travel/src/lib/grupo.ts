@@ -21,5 +21,5 @@ export const PRODUCTOS: Producto[] = [
   { id: 'travel', marca: 'travel', url: 'https://cacao-travel.vercel.app', linea: 'Experiencias en El Salvador, con precio en sats' },
   { id: 'market', marca: 'market', url: 'https://cacao-market.vercel.app', linea: 'Productos y servicios locales, pagados en sats' },
   { id: 'pay', marca: 'pay', url: 'https://cacao-pay.vercel.app', linea: 'Mandá dinero a El Salvador y mirá cada centavo' },
-  { id: 'ledger', marca: 'ledger', url: 'https://cacao-grupo.vercel.app/ledger', linea: 'Cobrá y declará: la venta y su factura electrónica' },
+  { id: 'ledger', marca: 'ledger', url: 'https://cacao-cuentas.vercel.app', linea: 'Cobrá y declará: la venta y su factura electrónica' },
 ];

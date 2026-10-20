@@ -11,7 +11,7 @@ export interface Producto {
 
 export const URL_CACAO = 'https://cacao-grupo.vercel.app';
 export const URL_PAY = 'https://cacao-pay.vercel.app';
-export const URL_LEDGER = 'https://cacao-grupo.vercel.app/ledger';
+export const URL_LEDGER = 'https://cacao-cuentas.vercel.app';
 
 export const GRUPO_FRASE =
   'Cacao es la empresa. Media, Travel, Market, Pay y Ledger son la plataforma: el dinero llega, se gasta en lo local, se declara y se cuenta.';

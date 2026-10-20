@@ -34,7 +34,7 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
     <div class="muro__factura">
       <img class="muro__qr" data-gate-qr alt="Código QR de la factura" width="200" height="200" />
       <div class="muro__datos">
-        <p class="etiqueta">Factura Lightning simulada</p>
+        <p class="etiqueta">{demo ? 'Factura Lightning simulada' : 'Factura Lightning'}</p>
         <p class="muro__monto mono" data-gate-monto></p>
         <p class="muro__codigo mono" data-gate-factura></p>
         <button class="boton muro__secundario" type="button" data-gate-copiar>Copiar factura</button>

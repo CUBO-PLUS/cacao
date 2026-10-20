@@ -40,8 +40,9 @@ async function cobroBtcpay(
       p_slug: historia.slug,
     });
     if (errorVigente) throw errorVigente;
+    // A function that returns a row type answers a row of nulls, not null, when there is no row.
     const viva = (Array.isArray(vigente) ? vigente[0] : vigente) as Cobro | null;
-    if (viva) return Response.json(vistaCobro(viva, config), { headers: sinGuardar });
+    if (viva?.id) return Response.json(vistaCobro(viva, config), { headers: sinGuardar });
 
     // The invoice needs a BTC price: the database stores the dollar value and refuses zero.
     let cotizacion: number;

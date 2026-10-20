@@ -40,7 +40,11 @@ export function PagoLightning({ envioId }: { envioId: string }) {
         setPago(respuesta.dato);
         // The page hides "Cancelar envío" while an invoice is live: read it again.
         router.refresh();
-      } else setError(respuesta.mensaje);
+      } else {
+        setError(respuesta.mensaje);
+        // The invoice may have been paid meanwhile, so the state is read again.
+        router.refresh();
+      }
     });
   }
 
@@ -123,6 +127,11 @@ export function PagoLightning({ envioId }: { envioId: string }) {
 
       {pago && (
         <div className={estilos.factura}>
+          {pago.montoDestinoActualizado !== undefined && (
+            <p role="status" className={estilos.regtest}>
+              La cotización se actualizó: ahora recibe {formatoSats(pago.montoDestinoActualizado)}.
+            </p>
+          )}
           <p className={estilos.monto}>
             <span className="dato">{formatoSats(pago.sats)}</span>
             <span> equivalen a {formatoUsd(pago.usdCentavos)}</span>

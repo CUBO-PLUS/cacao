@@ -2,9 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // The database and BTCPay are replaced: the claim flow is tested through its own rules.
 const rpc = vi.hoisted(() => vi.fn());
-vi.mock('./supabase', () => ({ clienteServicio: () => ({ rpc }) }));
+const desde = vi.hoisted(() => vi.fn());
+vi.mock('./supabase', () => ({ clienteServicio: () => ({ rpc, from: desde }) }));
 
-import { cobrarEnvio, hashDeFactura, satsDeFactura } from './cobro';
+import { cobrarEnvio, estadoDeCobro, hashDeFactura, marcarCobroFallido, satsDeFactura } from './cobro';
 
 const ALFABETO = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
 
@@ -98,6 +99,12 @@ describe('cobrarEnvio', () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 
+  it('refuses an invoice with no payment hash, without touching the database', async () => {
+    const r = await cobrarEnvio(TOKEN, 'lnbcrt50u1qqqqqq');
+    expect(r.ok).toBe(false);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
   it('reports BTCPay as not set up before it marks the transfer', async () => {
     vi.stubEnv('BTCPAY_URL', '');
     const r = await cobrarEnvio(TOKEN, FACTURA);
@@ -120,7 +127,12 @@ describe('cobrarEnvio', () => {
     const r = await cobrarEnvio(`${TOKEN}`, `  ${FACTURA.toUpperCase()}  `);
 
     expect(r).toEqual({ ok: true, dato: { estado: 'pagado', motivo: null } });
-    expect(rpc).toHaveBeenNthCalledWith(1, 'pay_iniciar_cobro', { p_token: TOKEN, p_factura: FACTURA, p_sats: 5000 });
+    expect(rpc).toHaveBeenNthCalledWith(1, 'pay_iniciar_cobro', {
+      p_token: TOKEN,
+      p_factura: FACTURA,
+      p_sats: 5000,
+      p_hash: 'ab'.repeat(32),
+    });
     expect(rpc).toHaveBeenNthCalledWith(2, 'pay_terminar_cobro', {
       p_token: TOKEN,
       p_ok: true,
@@ -165,5 +177,152 @@ describe('cobrarEnvio', () => {
 
     expect(r).toEqual({ ok: true, dato: { estado: 'pendiente', motivo: null } });
     expect(rpc).toHaveBeenCalledTimes(1);
+  });
+});
+
+// The claim's stored state, as the database returns it to the server.
+function filaDeCobro(datos: Record<string, unknown>) {
+  const consulta: Record<string, unknown> = {};
+  consulta.select = () => consulta;
+  consulta.eq = () => consulta;
+  consulta.maybeSingle = async () => ({ data: datos, error: null });
+  return consulta;
+}
+
+function haceMs(milisegundos: number): string {
+  return new Date(Date.now() - milisegundos).toISOString();
+}
+
+describe('estadoDeCobro and marcarCobroFallido check the payment in BTCPay first', () => {
+  const fetchMock = vi.fn();
+  const enCurso = {
+    codigo: 'CP-2345-ABCD',
+    estado: 'procesando',
+    entrega: 'lightning',
+    monto_destino: 5000,
+    cobro_estado: 'pagando',
+    cobro_motivo: null,
+    cobro_hash: HASH,
+    cobrada_en: null,
+    remitente: { nombre: 'Marta' },
+  };
+
+  beforeEach(() => {
+    rpc.mockReset();
+    fetchMock.mockReset();
+    desde.mockReset();
+    rpc.mockResolvedValue({ data: {}, error: null });
+    vi.stubEnv('BTCPAY_URL', 'https://btcpay.test');
+    vi.stubEnv('BTCPAY_API_KEY', 'clave-de-prueba');
+    vi.stubEnv('BTCPAY_STORE_ID', 'TiendaDePrueba123');
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  function conIntento(intentoEn: string) {
+    desde.mockImplementation(() => filaDeCobro({ ...enCurso, cobro_factura: FACTURA, cobro_intento_en: intentoEn }));
+  }
+
+  function respuesta(estado: number, cuerpo: unknown): Response {
+    return new Response(JSON.stringify(cuerpo), { status: estado });
+  }
+
+  it('keeps the claim open while BTCPay says Pending', async () => {
+    conIntento(haceMs(60_000));
+    fetchMock.mockResolvedValueOnce(respuesta(200, { paymentHash: HASH, status: 'Pending' }));
+
+    const r = await estadoDeCobro(TOKEN);
+
+    expect(r).toEqual({ ok: true, dato: { cobroEstado: 'pagando' } });
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it('keeps the claim open for a payment BTCPay does not know yet, within the waiting time', async () => {
+    conIntento(haceMs(60_000));
+    fetchMock.mockResolvedValueOnce(respuesta(404, {}));
+
+    const r = await estadoDeCobro(TOKEN);
+
+    expect(r).toEqual({ ok: true, dato: { cobroEstado: 'pagando' } });
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it('fails a payment BTCPay does not know after the waiting time', async () => {
+    conIntento(haceMs(11 * 60 * 1000));
+    fetchMock.mockResolvedValueOnce(respuesta(404, {}));
+
+    const r = await estadoDeCobro(TOKEN);
+
+    expect(r).toEqual({ ok: true, dato: { cobroEstado: 'fallido' } });
+    expect(rpc).toHaveBeenCalledWith('pay_terminar_cobro', expect.objectContaining({ p_ok: false, p_hash: null }));
+  });
+
+  it('marks the claim as paid when BTCPay says Complete, instead of failing it', async () => {
+    conIntento(haceMs(60_000));
+    fetchMock.mockResolvedValueOnce(respuesta(200, { paymentHash: HASH, status: 'Complete' }));
+
+    const r = await marcarCobroFallido(TOKEN, 'Lo marcamos a mano');
+
+    expect(r).toEqual({ ok: true, dato: { estado: 'pagado', motivo: null } });
+    expect(rpc).toHaveBeenCalledWith('pay_terminar_cobro', {
+      p_token: TOKEN,
+      p_ok: true,
+      p_hash: HASH,
+      p_motivo: null,
+    });
+  });
+
+  it('refuses to fail a payment that is still pending in BTCPay', async () => {
+    conIntento(haceMs(60_000));
+    fetchMock.mockResolvedValueOnce(respuesta(200, { paymentHash: HASH, status: 'Pending' }));
+
+    const r = await marcarCobroFallido(TOKEN, 'Lo marcamos a mano');
+
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.mensaje).toBe('El pago anterior todavía está en curso en BTCPay; revisalo de nuevo en unos minutos.');
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it('fails the claim when BTCPay says Failed', async () => {
+    conIntento(haceMs(60_000));
+    fetchMock.mockResolvedValueOnce(respuesta(200, { paymentHash: HASH, status: 'Failed' }));
+
+    const r = await marcarCobroFallido(TOKEN, 'La factura venció');
+
+    expect(r).toEqual({ ok: true, dato: { estado: 'fallido', motivo: 'La factura venció' } });
+    expect(rpc).toHaveBeenCalledWith('pay_terminar_cobro', {
+      p_token: TOKEN,
+      p_ok: false,
+      p_hash: null,
+      p_motivo: 'La factura venció',
+    });
+  });
+
+  it('never fails a claim while BTCPay cannot be asked', async () => {
+    conIntento(haceMs(60_000));
+    fetchMock.mockRejectedValueOnce(new Error('sin red'));
+
+    const r = await marcarCobroFallido(TOKEN, 'Lo marcamos a mano');
+
+    expect(r.ok).toBe(false);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it('fails a payment BTCPay does not know only after the waiting time', async () => {
+    conIntento(haceMs(60_000));
+    fetchMock.mockResolvedValueOnce(respuesta(404, {}));
+    const reciente = await marcarCobroFallido(TOKEN, 'Lo marcamos a mano');
+    expect(reciente.ok).toBe(false);
+    expect(rpc).not.toHaveBeenCalled();
+
+    conIntento(haceMs(11 * 60 * 1000));
+    fetchMock.mockResolvedValueOnce(respuesta(404, {}));
+    const vencido = await marcarCobroFallido(TOKEN, 'Lo marcamos a mano');
+    expect(vencido).toEqual({ ok: true, dato: { estado: 'fallido', motivo: 'Lo marcamos a mano' } });
   });
 });

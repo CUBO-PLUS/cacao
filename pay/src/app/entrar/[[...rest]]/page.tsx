@@ -7,8 +7,6 @@ import { Suspense } from 'react';
 import { destinoSeguro, rutaAcceso, rutaContinuar, rutaCuenta } from '@/servidor/cuentas';
 import { sesionActual } from '@/servidor/sesion';
 
-import estilos from '../estilos.module.css';
-
 export const metadata: Metadata = {
   title: 'Entrar',
 };
@@ -38,17 +36,17 @@ async function EntradaConDestino({ busqueda }: { busqueda: PageProps<'/entrar/[[
   return (
     <>
       <section className="encabezado">
-        <h1>Entrá con tu celular</h1>
-        <p>Te mandamos un código para entrar a tu cuenta.</p>
+        <h1>Entrá a tu cuenta</h1>
+        <p>Con tu celular o tu correo. Te mandamos un código, sin contraseña.</p>
       </section>
 
-      <div className={estilos.bloque}>
-        {/* After sign-in, /continuar runs the name check and sends the visitor on, once. */}
-        <SignIn
-          forceRedirectUrl={rutaContinuar(volver)}
-          signUpUrl={rutaAcceso('/registrarse', volver)}
-        />
-      </div>
+      {/* After sign-in, /continuar runs the name check and sends the visitor on, once. */}
+      <SignIn
+        routing="path"
+        path="/entrar"
+        forceRedirectUrl={rutaContinuar(volver)}
+        signUpUrl={rutaAcceso('/registrarse', volver)}
+      />
     </>
   );
 }

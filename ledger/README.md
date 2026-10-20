@@ -29,7 +29,19 @@ El uso diario es `node src/cli.ts ayuda`. Los datos viven en `datos/`, que no en
 ## Aplicación web (CacaoLedger en el navegador)
 
 Next.js 16 en `app/`, en el mismo paquete que la CLI. Muestra las ventas reales de Grupo Cacao sin terminal.
-Es pública y de solo lectura (empresa de demostración, `noindex`); no tiene inicio de sesión.
+
+Acceso (`src/servidor/acceso.ts`, `src/servidor/sesion.ts`, `proxy.ts`): el mismo Clerk que los demás sitios de
+Cacao (como `pay/`). Quién entra al libro lo decide `usuarios.es_admin` en Supabase, no Clerk.
+
+- Público, sin login: `/`, el tablero con cifras agregadas (hoy, semana, mes, por producto, por riel y 30 días).
+  No muestra filas de tickets ni detalles de error.
+- Dueño (sesión iniciada y `usuarios.es_admin = true`, comprobado en el servidor en cada página, ruta y acción):
+  `/tickets`, `/tickets/[id]`, `/tickets/[id]/json`, `/mes`, `/mes/[mes]`, los CSV y "Sincronizar ahora".
+- Sesión sin `es_admin`: "Esta cuenta no tiene acceso al libro de Grupo Cacao."
+- Sin sesión: redirige a `/entrar?volver=...`; el cabezal muestra "Entrar". Al dueño, el cabezal muestra
+  Tickets, Mes y el botón de cuenta de Clerk.
+- Los errores de sincronización son genéricos para todos ("No se pudo sincronizar con BTCPay. Probá más tarde.").
+  La causa va al log del servidor y, para el dueño, a la línea de estado del tablero.
 
 ```
 npm install
@@ -37,52 +49,58 @@ npm run dev          # http://localhost:4325
 npm run build && npm start
 ```
 
-Variables de entorno (solo en el servidor; ninguna llega al navegador):
+Variables de entorno (solo en el servidor, salvo la clave pública de Clerk; ninguna es secreta para el navegador):
 
 | Variable | Para qué |
 |---|---|
-| `SUPABASE_URL` | Proyecto de Supabase donde están `ledger_tickets` y `ledger_sincronizaciones`. |
-| `SUPABASE_SERVICE_ROLE_KEY` | Clave de servicio de ese proyecto. No se pone en el cliente. |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clave pública de Clerk (la misma app que los demás sitios). Va al navegador, como en `pay/`. |
+| `CLERK_SECRET_KEY` | Clave secreta de Clerk. Solo en el servidor. |
+| `SUPABASE_URL` | Proyecto de Supabase donde están `ledger_tickets`, `ledger_dtes`, `ledger_candados` y `usuarios`. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Clave de servicio de ese proyecto. Vincula la cuenta de Clerk (`vincular_clerk`) y lee `es_admin`. |
 | `LEDGER_BTCPAY_URL` | Dirección de BTCPay Server (http o https). |
 | `LEDGER_BTCPAY_API_KEY` | Clave de API de solo lectura de BTCPay. |
 | `LEDGER_BTCPAY_TIENDAS` | Ids de las tiendas, separados por coma. |
 | `CRON_SECRET` | Clave que Vercel Cron manda como `Authorization: Bearer ...` a `/api/sincronizar`. |
-| `LEDGER_ESQUEMAS` | Opcional: `caso` (por defecto) o `2026`. Elige el esquema de la vista previa y de la emisión de los tickets que no son Lightning. Los cobros Lightning se emiten siempre con `2026` (forma de pago 11). |
+| `LEDGER_ESQUEMAS` | Solo para la CLI. La web emite y muestra todos los tickets con el esquema `2026`. |
 
 Rutas:
 
-| Ruta | Qué muestra |
-|---|---|
-| `/` | Tablero: hoy, semana y mes en USD y sats, ventas por producto, cómo te pagan, últimos 30 días y últimas ventas. Estado de la sincronización y botón "Sincronizar ahora". |
-| `/tickets` | Lista con filtros en la URL (`producto`, `estado`, `desde`, `hasta`, `q`) y "Ver más" por cursor (`despues`). |
-| `/tickets/[id]` | Detalle del ticket, totales con IVA, pago y el documento tributario. Si el ticket ya tiene documento emitido (`ledger_dtes`), muestra estado, número de control, código de generación, fecha de recepción y el sello SIMULADO (o las observaciones, si fue rechazado). Si no, muestra la vista previa rotulada como tal: versión legible, QR, "Descargar JSON" e "Imprimir". 404 si no existe. |
-| `/tickets/[id]/json` | El documento emitido como JSON si existe; si no, el de la vista previa. |
-| `/mes` y `/mes/[yyyy-mm]` | Libros de IVA del mes, cifras para F-07 y F-14, tickets no incluidos y selector de mes. |
-| `/mes/[yyyy-mm]/csv/[libro]` | CSV del mes: `consumidor`, `contribuyentes`, `anexo1`, `anexo2`. Mismos archivos que `mes --csv`. |
-| `/api/sincronizar` | `GET` con `Authorization: Bearer $CRON_SECRET`. Sincroniza sin límite de tiempo. Vercel lo llama cada día (`vercel.json`). |
+| Ruta | Acceso | Qué muestra |
+|---|---|---|
+| `/` | Público | Tablero: hoy, semana y mes en USD y sats, ventas por producto, cómo te pagan y últimos 30 días. Estado de la sincronización (y, para el dueño, el botón "Sincronizar ahora"). |
+| `/entrar`, `/registrarse`, `/continuar` | Público | Clerk: entrar, crear cuenta y volver a la página pedida. |
+| `/tickets` | Dueño | Lista con filtros en la URL (`producto`, `estado`, `desde`, `hasta`, `q`) y "Ver más" por cursor (`despues` y `despuesId`, por creado y id). |
+| `/tickets/[id]` | Dueño | Detalle del ticket, totales con IVA, pago y el documento tributario. Si hay fila en `ledger_dtes`, muestra estado, número de control, código, fecha de recepción y el sello SIMULADO (o las observaciones). Si no hay fila, muestra la vista previa rotulada (versión legible, QR, "Imprimir"); la vista previa no se descarga como JSON. |
+| `/tickets/[id]/json` | Dueño | El documento emitido como JSON. 404 si el ticket no tiene fila en `ledger_dtes`; 409 si la fila sigue reservada. |
+| `/mes` y `/mes/[yyyy-mm]` | Dueño | Libros de IVA del mes, cifras para F-07 y F-14, supuestos, tickets no incluidos y selector de mes. |
+| `/mes/[yyyy-mm]/csv/[libro]` | Dueño | CSV del mes: `consumidor`, `contribuyentes`, `anexo1`, `anexo2`. Las celdas que parecen fórmulas se escapan con `'`. |
+| `/api/sincronizar` | Secreto de cron | `GET` con `Authorization: Bearer $CRON_SECRET`. Sincroniza sin límite de tiempo. Vercel lo llama cada día (`vercel.json`). |
 
-Sincronización con BTCPay (`src/servidor/sincronizacion.ts`): la página lee la última fila de
-`ledger_sincronizaciones`; si tiene menos de 60 s, no vuelve a consultar BTCPay. Si no, corre
-`sincronizarBtcpay` con un límite de 6 s para que un BTCPay lento no bloquee la página. El botón usa un
-límite de 10 s. Cada corrida deja una fila en el registro. Los errores aparecen en la línea de estado.
+Sincronización con BTCPay (`src/servidor/sincronizacion.ts`): hay un candado en la base (`ledger_candados`, nombre
+`sincronizar`, 120 s, `src/servidor/candado.ts`): solo una corrida a la vez. Cada corrida escribe su fila en
+`ledger_sincronizaciones` al empezar (sin `termino`) y la completa al terminar. La página lee la última fila: si
+tiene menos de 60 s, no vuelve a consultar BTCPay. Si hay otra corrida en curso, responde "en curso" sin
+empezar otra. Después de importar, la corrida emite hasta 50 tickets `pagado`. La página espera 6 s; el botón
+usa un límite de 10 s. La corrida sigue hasta terminar y libera el candado al final.
 
-Emisión: después de importar, cada corrida emite hasta 50 tickets `pagado` (los nuevos y los pendientes) con
-la misma lógica que la CLI (`src/emitir.ts`, detalle en `docs/web-datos.md`). Cada ticket queda `emitido`
-con sello simulado o `rechazado` con sus observaciones, y el documento se guarda en `ledger_dtes`. La línea
-de estado del tablero muestra "N documentos emitidos". Requiere aplicar la migración
-`market/supabase/migrations/20261021000004_ledger_dte.sql` antes de desplegar.
+Una factura que falla al guardarse queda en `omitidas` con su motivo; el resto de la corrida sigue.
+
+Emisión: cada ticket `pagado` se emite con la lógica de la CLI (`src/emitir.ts`, detalle en `docs/web-datos.md`):
+primero se reserva la fila de `ledger_dtes` con su número (`ledger_reservar_dte`, en la misma transacción), después
+se construye, valida y recibe, y la fila pasa a `aceptado` o `rechazado`. Un ticket con fila no toma número. Una fila
+que quedó `reservado` la completa la siguiente corrida con el número que ya tiene. Requiere aplicar las migraciones
+`market/supabase/migrations/20261021000004_ledger_dte.sql` y `20261021000005_ledger_seguridad.sql` antes de desplegar.
 
 Notas de la vista previa: el documento de cada ticket que aún no se emitió se arma al abrir la página con
-`construirDte`. No consume `ledger_siguiente_correlativo`, así que su número se deriva del id del ticket y
-no coincide con el que se emite. Los libros cuentan solo los tickets en estado `emitido`, con referencias y
-sello guardados en Supabase.
+`construirDte` y el esquema `2026`. No consume número: su número se deriva del id del ticket y no coincide con el
+que se emite. Los libros cuentan solo los tickets en estado `emitido`, con referencias y sello guardados en Supabase.
 
 Despliegue: `vercel.json` usa `framework: nextjs`, `buildCommand: next build` y un cron diario a las
 12:00 UTC (06:00 en El Salvador). El sitio estático anterior sigue disponible con `npm run sitio`.
 
-Pruebas: `npm test` cubre la CLI y el almacén, incluida la sincronización con un BTCPay falso. Las rutas
-de la aplicación se probaron en `next build` y con un PostgREST y un BTCPay de prueba; la migración
-SQL todavía no se ejecutó contra el proyecto.
+Pruebas: `npm test` cubre la CLI, el almacén, la sincronización con un BTCPay falso (también la factura que falla
+sola), el candado, el control de acceso, la emisión con la reserva, y el CSV. Las migraciones SQL no se ejecutaron
+contra el proyecto.
 
 ## Comandos
 
@@ -155,7 +173,7 @@ retipean.
 - `libro-consumidor-final-01_2026-10.csv` y `libro-contribuyentes-03_2026-10.csv` (formato de los libros no verificado en esta revisión; UTF-8 con BOM, punto y coma y coma decimal).
 - `anexo-1-contribuyentes-f07_2026-10.csv` (**20 columnas A a T**, con punto decimal) y `anexo-2-consumidor-final-f07_2026-10.csv` (**23 columnas A a W**, agrupado por día con primer y último `codigoGeneracion`), siguiendo la plantilla de la DGII de 2021 e incluyendo las columnas de Renta. No confirmado: que los archivos no lleven encabezado, que el separador sea `;`, que la plantilla sea la versión 14 y los valores fijos de las columnas de Renta.
 
-Las cifras alimentan el **Formulario F-07** (Art. 94 Ley de IVA, dentro de los primeros 10 días hábiles del mes siguiente; la versión 14 figura como borrador en mh.gob.sv y su vigencia no está confirmada) y el **Formulario F-14 v17** (pago a cuenta del 1.75 % sobre ingresos brutos por rama económica, Art. 151 inc. 3° CT; la base sin IVA es un supuesto de cálculo). El plazo del pago a cuenta se rige por el Art. 152 CT, cuya vigencia no está confirmada. El detalle completo está en `docs/hallazgos.md` (sección 12) y en `docs/estrategia-y-hacienda.md`.
+Las cifras alimentan el **Formulario F-07** (dentro de los primeros 10 días hábiles del mes siguiente, por confirmar; la versión 14 figura como borrador en mh.gob.sv y su vigencia no está confirmada) y el **Formulario F-14 v17** (pago a cuenta del 1.75 % sobre ingresos brutos por rama económica, Art. 151 CT, pago a cuenta, por confirmar; la base sin IVA es un supuesto de cálculo). El plazo del pago a cuenta no está confirmado (por confirmar). El detalle completo está en `docs/hallazgos.md` (sección 12) y en `docs/estrategia-y-hacienda.md`.
 
 ## Sitio estático del cierre, libros y marco de Hacienda
 

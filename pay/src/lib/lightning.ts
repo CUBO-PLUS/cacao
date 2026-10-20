@@ -14,6 +14,8 @@ export type PagoLightning = {
   expiraEn: string;
   /** Link to the regtest test wallet, or null when the invoice is not a regtest one. */
   enlaceBilleteraDePrueba: string | null;
+  /** Set when the quote was made again before this invoice: the sats the recipient gets now. */
+  montoDestinoActualizado?: number;
 };
 
 /**

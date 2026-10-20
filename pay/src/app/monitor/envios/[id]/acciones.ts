@@ -78,5 +78,8 @@ export async function ejecutarAccionCobro(previo: EstadoAccion, datos: FormData)
   const resultado = await marcarCobroFallido(cobro.token, motivo);
   revalidatePath('/monitor', 'layout');
   if (!resultado.ok) return { ok: false, mensaje: resultado.mensaje };
+  if (resultado.dato.estado === 'pagado') {
+    return { ok: true, mensaje: 'BTCPay confirmó el pago. El envío quedó entregado.' };
+  }
   return { ok: true, mensaje: 'Marcamos el cobro como fallido. Quien cobra puede pedir otra factura.' };
 }

@@ -4,8 +4,10 @@ import { connection } from "next/server";
 import { LIMITE_DEFECTO, type FiltrosTickets } from "../../src/almacen/tipos.ts";
 import { formatoSats, formatoUsd } from "../../src/dinero.ts";
 import { almacenDeEntorno } from "../../src/servidor/configuracion.ts";
+import { accesoDeDueno } from "../../src/servidor/sesion.ts";
 import { esDia, inicioDia } from "../../src/servidor/tiempo-sv.ts";
 import { productoDeTicket, totalDeTicket, type Ticket } from "../../src/ticket.ts";
+import { SinAcceso } from "../_componentes/SinAcceso.tsx";
 import { SinDatos } from "../_componentes/SinDatos.tsx";
 import { acortar, etiquetaProducto, fechaHoraSv } from "../_componentes/formato.ts";
 
@@ -26,6 +28,7 @@ type Filtros = {
   hasta: string;
   q: string;
   despues: string;
+  despuesId: string;
 };
 
 function leerFiltros(sp: Record<string, string | string[] | undefined>): Filtros {
@@ -36,6 +39,7 @@ function leerFiltros(sp: Record<string, string | string[] | undefined>): Filtros
   const producto = texto("producto");
   const estado = texto("estado");
   const despues = texto("despues");
+  const despuesId = texto("despuesId");
   return {
     producto: (PRODUCTOS as readonly string[]).includes(producto) ? producto : "",
     estado: (ESTADOS as readonly string[]).includes(estado) ? estado : "",
@@ -43,6 +47,8 @@ function leerFiltros(sp: Record<string, string | string[] | undefined>): Filtros
     hasta: esDia(texto("hasta")) ? texto("hasta") : "",
     q: texto("q").slice(0, 100),
     despues: despues !== "" && !Number.isNaN(Date.parse(despues)) ? despues : "",
+    // The cursor's id is kept only when it has the shape of a ticket id (it goes into a filter).
+    despuesId: /^TK-\d{8}-[0-9A-F]{4}$/.test(despuesId) ? despuesId : "",
   };
 }
 
@@ -55,6 +61,7 @@ function aFiltrosTickets(f: Filtros): FiltrosTickets {
   if (f.hasta !== "") filtros.hasta = new Date(inicioDia(f.hasta).getTime() + DIA_MS);
   if (f.q !== "") filtros.texto = f.q;
   if (f.despues !== "") filtros.despues = f.despues;
+  if (f.despuesId !== "") filtros.despuesId = f.despuesId;
   return filtros;
 }
 
@@ -77,6 +84,8 @@ function descripcion(t: Ticket): string {
 export default async function PaginaTickets({ searchParams }: PageProps<"/tickets">) {
   await connection();
   const filtros = leerFiltros(await searchParams);
+  // Owner-only: the list shows every sale. The check runs before any read of the database.
+  if (!(await accesoDeDueno(enlaceConFiltros(filtros)))) return <SinAcceso />;
 
   let lista: Ticket[] | null = null;
   try {
@@ -198,7 +207,7 @@ export default async function PaginaTickets({ searchParams }: PageProps<"/ticket
           </div>
           {verMas && ultimo ? (
             <p style={{ marginTop: "1rem" }}>
-              <Link className="boton secundario" href={enlaceConFiltros(filtros, { despues: ultimo.creado })}>
+              <Link className="boton secundario" href={enlaceConFiltros(filtros, { despues: ultimo.creado, despuesId: ultimo.id })}>
                 Ver más
               </Link>
             </p>

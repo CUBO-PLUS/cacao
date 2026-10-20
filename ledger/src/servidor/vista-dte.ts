@@ -34,7 +34,8 @@ export function vistaDte(ticket: Ticket, generacion?: Generacion): VistaDte {
   }
   let gen: Generacion;
   try {
-    gen = resolverGeneracion(generacion);
+    // The web works on 2026 by default, as its emission does (emitir.ts, generacionParaTicket).
+    gen = resolverGeneracion(generacion ?? "2026");
   } catch (e) {
     return { ok: false, motivo: e instanceof ErrorLedger ? e.message : "No se pudo elegir el esquema." };
   }

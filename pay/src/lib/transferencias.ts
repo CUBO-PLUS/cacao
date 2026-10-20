@@ -80,7 +80,8 @@ export function esDemo(): boolean {
  * What a person may do with a transfer in this state. The sender confirms or cancels before it
  * moves. An administrator moves it and can complete or fail it. The simulator adds complete and
  * fail for the sender, but only in the demo. A recipient never acts on a transfer. A lightning
- * transfer is completed by the recipient's claim, so nobody completes it by hand.
+ * transfer leaves "creada" only when its invoice is paid (BTCPay), and the recipient's claim completes
+ * it; so nobody starts or completes it by hand.
  */
 export function accionesPosibles(
   estado: EstadoEnvio,
@@ -90,20 +91,20 @@ export function accionesPosibles(
   opciones: { pagada?: boolean; facturaViva?: boolean } = {},
 ): AccionEnvio[] {
   if (rol === 'destinatario') return [];
-  const sinCompletar = entrega === 'lightning';
+  const lightning = entrega === 'lightning';
   if (rol === 'remitente') {
     if (estado === 'creada') {
       const cancelable = !opciones.pagada && !opciones.facturaViva;
-      const acciones: AccionEnvio[] = ['procesar'];
+      const acciones: AccionEnvio[] = lightning ? [] : ['procesar'];
       if (cancelable) acciones.push('cancelar');
-      if (esDemo()) acciones.push('fallar');
+      if (esDemo() && !opciones.pagada) acciones.push('fallar');
       return acciones;
     }
-    if (estado === 'procesando') return esDemo() && !sinCompletar ? ['completar', 'fallar'] : [];
+    if (estado === 'procesando') return esDemo() && !lightning ? ['completar', 'fallar'] : [];
     return [];
   }
-  if (estado === 'creada') return ['procesar', 'fallar'];
-  if (estado === 'procesando') return sinCompletar ? ['fallar'] : ['completar', 'fallar'];
+  if (estado === 'creada') return lightning ? ['fallar'] : ['procesar', 'fallar'];
+  if (estado === 'procesando') return lightning ? ['fallar'] : ['completar', 'fallar'];
   return [];
 }
 

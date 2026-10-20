@@ -35,7 +35,7 @@ export async function POST(peticion: Request): Promise<Response> {
   if (cambio.ok) return new Response(null, { status: 200 });
   // Not a transfer of ours, or a transfer that can no longer move: repeating the webhook would not help.
   if (cambio.codigo === 'NO_ENCONTRADA' || cambio.codigo === 'ESTADO_INVALIDO') {
-    console.error('Factura pagada sin envío que la espere:', cambio.codigo, factura.id);
+    console.error('Webhook de BTCPay sin cambio en el envío:', cambio.codigo, 'factura', factura.id, cambio.mensaje);
     return new Response(null, { status: 200 });
   }
   return new Response('No pudimos confirmar el pago.', { status: 500 });

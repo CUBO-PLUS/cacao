@@ -7,8 +7,10 @@ import * as QRCode from "qrcode";
 import { formatoSats, formatoUsd } from "../../../src/dinero.ts";
 import type { RegistroDte } from "../../../src/almacen/dtes.ts";
 import { almacenDeEntorno, almacenDtesDeEntorno } from "../../../src/servidor/configuracion.ts";
+import { accesoDeDueno } from "../../../src/servidor/sesion.ts";
 import { vistaDte } from "../../../src/servidor/vista-dte.ts";
 import { modalidadDe, productoDeTicket, totalDeTicket, type Ticket } from "../../../src/ticket.ts";
+import { SinAcceso } from "../../_componentes/SinAcceso.tsx";
 import { SinDatos } from "../../_componentes/SinDatos.tsx";
 import { etiquetaProducto, fechaHoraSv, acortar } from "../../_componentes/formato.ts";
 import { ImprimirBoton } from "./ImprimirBoton.tsx";
@@ -103,6 +105,13 @@ function SeccionPago({ ticket }: { ticket: Ticket }) {
 
 // The document the web emitted for this ticket (ledger_dtes): real numbers and the simulated seal.
 function DocumentoEmitido({ registro }: { registro: RegistroDte }) {
+  if (registro.estado === "reservado") {
+    return (
+      <p className="nota">
+        El número {registro.correlativo ?? ""} ya está reservado para este ticket. El documento se completa en la próxima sincronización.
+      </p>
+    );
+  }
   const aceptado = registro.estado === "aceptado";
   const conDocumento = Object.keys(registro.documento as object).length > 0;
   return (
@@ -154,6 +163,8 @@ function DocumentoEmitido({ registro }: { registro: RegistroDte }) {
 export default async function PaginaTicket({ params }: PageProps<"/tickets/[id]">) {
   await connection();
   const { id } = await params;
+  // Owner only. The check runs before the first read of the ledger.
+  if (!(await accesoDeDueno(`/tickets/${id}`))) return <SinAcceso />;
   if (!FORMATO_ID.test(id)) notFound();
 
   let ticket: Ticket | null;
@@ -254,9 +265,6 @@ export default async function PaginaTicket({ params }: PageProps<"/tickets/[id]"
             <p className="nota">Vista previa: este documento todavía no se emitió. El número y el código son de demostración.</p>
             <VersionLegible ticket={ticket} resultado={vista.resultado} qrSvg={qrSvg} />
             <div className="acciones no-imprimir">
-              <a className="boton" href={`/tickets/${ticket.id}/json`}>
-                Descargar JSON
-              </a>
               <ImprimirBoton />
             </div>
             <p className="nota" style={{ marginTop: "0.5rem" }}>

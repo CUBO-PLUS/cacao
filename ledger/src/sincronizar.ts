@@ -103,7 +103,9 @@ export async function sincronizarBtcpay(
           resultado.repetidas += 1;
           continue;
         }
-        throw e;
+        // Any other failure stays with this invoice: it is listed as omitida and the run goes on with the rest.
+        resultado.omitidas.push({ factura: factura.id, motivo: e instanceof Error ? e.message : String(e) });
+        continue;
       }
       if ("omitida" in r) {
         resultado.omitidas.push({ factura: factura.id, motivo: r.omitida });

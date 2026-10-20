@@ -159,14 +159,18 @@ describe('contactos', () => {
 describe('cancelar un envío', () => {
   it('se puede cancelar mientras no hay factura vigente ni pago', () => {
     expect(accionesPosibles('creada', 'remitente', 'lightning', { pagada: false, facturaViva: false })).toEqual([
-      'procesar',
       'cancelar',
     ]);
   });
 
   it('no se ofrece con una factura Lightning vigente o con el pago hecho', () => {
-    expect(accionesPosibles('creada', 'remitente', 'lightning', { facturaViva: true })).toEqual(['procesar']);
-    expect(accionesPosibles('creada', 'remitente', 'lightning', { pagada: true })).toEqual(['procesar']);
+    expect(accionesPosibles('creada', 'remitente', 'lightning', { facturaViva: true })).toEqual([]);
+    expect(accionesPosibles('creada', 'remitente', 'lightning', { pagada: true })).toEqual([]);
+  });
+
+  it('un envío por Lightning nunca ofrece procesar a mano, ni al administrador', () => {
+    expect(accionesPosibles('creada', 'remitente', 'lightning')).not.toContain('procesar');
+    expect(accionesPosibles('creada', 'admin', 'lightning')).toEqual(['fallar']);
   });
 
   it('un envío por Lightning nunca ofrece completar a mano, ni en la demo', () => {

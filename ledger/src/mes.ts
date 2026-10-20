@@ -10,6 +10,13 @@ import type { Ticket } from "./ticket.ts";
 // with a seal count. The books record the document as it was emitted; the figures feed the
 // monthly returns and are an aid for the accountant, not a filed return.
 
+// Assumptions and limits of the figures, shown next to them on the web. Kept short and in one place.
+export const SUPUESTOS: readonly string[] = [
+  "La base del F-14 son los ingresos sin IVA: es un supuesto de cálculo. Confirmalo con tu contador.",
+  "Las columnas de los anexos del F-07 todavía no están validadas contra la plantilla oficial.",
+  "Los documentos llevan un sello de recepción simulado y no se transmiten al Ministerio de Hacienda.",
+];
+
 const NOTA_CIFRAS =
   "Estas cifras salen solo de los tickets de CacaoLedger: no incluyen compras, retenciones ni otros ingresos, " +
   "y son una ayuda para el contador, no una declaración presentada.";
@@ -305,8 +312,14 @@ function sinGuiones(texto: string | null | undefined): string {
   return (texto ?? "").replace(/-/g, "");
 }
 
-function celdaCsv(v: string | number | null): string {
-  const texto = v === null ? "" : String(v);
+// A cell that a spreadsheet would read as a formula (=, +, -, @, tab or CR at the start) gets a leading apostrophe.
+// Plain numbers such as -1,50 keep their form: they are amounts, not formulas.
+const FORMULA_CSV = /^[=+\-@\t\r]/;
+const NUMERO_CSV = /^-?\d[\d.,]*$/;
+
+export function celdaCsv(v: string | number | null): string {
+  let texto = v === null ? "" : String(v);
+  if (FORMULA_CSV.test(texto) && !NUMERO_CSV.test(texto)) texto = `'${texto}`;
   return /[;"\r\n]/.test(texto) ? `"${texto.replace(/"/g, '""')}"` : texto;
 }
 
@@ -509,14 +522,16 @@ export function lineasMes(informe: InformeMes): string[] {
         ["Ventas a consumidor final, sin IVA", formatoUsd(c.f07VentasConsumidorNetoCentavos), "F-07, ventas gravadas a consumidor final, neto (Anexo 2 / 1.13)"],
         ["Base gravada del mes, sin IVA", formatoUsd(c.f07BaseGravadaCentavos), "F-07, ventas gravadas (base total sin IVA)"],
         ["Débito fiscal de IVA del mes (13 %)", formatoUsd(c.f07DebitoIvaCentavos), "F-07, débito fiscal (por contribuyentes y por consumidor final)"],
-        ["Ingresos brutos del mes, sin IVA", formatoUsd(c.f14IngresosBrutosCentavos), "F-14, base del pago a cuenta (Art. 151 inciso 3 CT; sin IVA es supuesto)"],
+        ["Ingresos brutos del mes, sin IVA", formatoUsd(c.f14IngresosBrutosCentavos), "F-14, base del pago a cuenta (Art. 151 CT, pago a cuenta, por confirmar; sin IVA es supuesto)"],
         ["Pago a cuenta de 1.75 %", formatoUsd(c.f14PagoACuentaCentavos), "F-14, pago a cuenta (1.75 % por rama económica)"],
       ],
       ["izq", "der", "izq"],
     ),
   );
   lineas.push(informe.nota);
-  lineas.push("F-07: primeros 10 días hábiles del mes siguiente (Art. 94 Ley de IVA). F-14: pago a cuenta según el Art. 152 CT, vigencia no confirmada. La versión 14 del F-07 figura como borrador en mh.gob.sv.");
+  lineas.push(
+    "F-07: dentro de los primeros 10 días hábiles del mes siguiente (por confirmar). F-14: pago a cuenta, Art. 151 CT (por confirmar). La versión 14 del F-07 figura como borrador en mh.gob.sv.",
+  );
   lineas.push("");
 
   lineas.push("No incluidos: no tienen documento válido con sello (Art. 119-C CT)");

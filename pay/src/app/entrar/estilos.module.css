@@ -1,6 +1,0 @@
-/* Wraps Clerk's sign-in and sign-up forms, so they keep the reading width of the page. */
-.bloque {
-  display: grid;
-  gap: 16px;
-  max-width: 28rem;
-}

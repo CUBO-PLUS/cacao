@@ -1,6 +1,7 @@
 import { connection } from "next/server";
 
 import { almacenDeEntorno } from "../../../../../src/servidor/configuracion.ts";
+import { respuestaSinAcceso } from "../../../../../src/servidor/sesion.ts";
 import { informeDelMes } from "../../../../../src/servidor/informe.ts";
 import { esMes } from "../../../../../src/servidor/tiempo-sv.ts";
 import {
@@ -27,6 +28,9 @@ function error(mensaje: string, estado: number): Response {
 export async function GET(_request: Request, { params }: { params: Promise<{ mes: string; libro: string }> }) {
   await connection();
   const { mes, libro } = await params;
+  // Owner only, before the ledger is read.
+  const sinAcceso = await respuestaSinAcceso(`/mes/${mes}`);
+  if (sinAcceso) return sinAcceso;
   // Own keys only: a name such as "constructor" must not reach the prototype.
   const elegido = Object.hasOwn(LIBROS, libro) ? LIBROS[libro] : undefined;
   if (!esMes(mes) || elegido === undefined) return error("No existe ese archivo.", 404);

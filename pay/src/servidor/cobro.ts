@@ -44,6 +44,12 @@ const FACTURA = /^ln(bc|tb|bcrt)[0-9a-z]+$/;
 const MENSAJE_NO_ENCONTRADO = 'No encontramos ese envío.';
 const SIN_BTCPAY = 'El pago con Lightning no está activo en este servidor.';
 const TIENDA = /^[A-Za-z0-9]{10,64}$/;
+const MENSAJE_EN_CURSO = 'El pago anterior todavía está en curso en BTCPay; revisalo de nuevo en unos minutos.';
+const MOTIVO_SIN_PAGO = 'BTCPay no encontró el pago de esta factura. Pedí otra factura y probá de nuevo.';
+
+// A payment BTCPay has never seen is given this long before it counts as failed: the request that started it
+// may still be on its way.
+const ESPERA_SIN_PAGO_MS = 10 * 60 * 1000;
 
 const COLUMNAS_COBRO =
   'codigo, estado, entrega, monto_destino, cobro_estado, cobro_motivo, cobro_hash, cobrada_en, remitente:usuarios!pay_transferencias_remitente_id_fkey(nombre)';
@@ -161,15 +167,35 @@ async function filaDeCobro(token: string): Promise<FilaCobro | null> {
   return data as unknown as FilaCobro | null;
 }
 
-// Reads the factura too; only the server uses it, so it is not in the public columns.
-async function facturaDeCobro(token: string): Promise<string | null> {
+// The attempt being paid: its invoice, its payment hash (stored before BTCPay was asked) and when it started.
+// Only the server reads these.
+type Intento = {
+  factura: string | null;
+  hash: string | null;
+  intentoEn: string | null;
+};
+
+async function intentoDeCobro(token: string): Promise<Intento | null> {
   const { data, error } = await clienteServicio()
     .from('pay_transferencias')
-    .select('cobro_factura')
+    .select('cobro_factura, cobro_hash, cobro_intento_en')
     .eq('cobro_token', token)
     .maybeSingle();
   if (error) throw new Error(`No pudimos leer el envío: ${error.message}`);
-  return (data as { cobro_factura: string | null } | null)?.cobro_factura ?? null;
+  if (!data) return null;
+  const fila = data as unknown as { cobro_factura: string | null; cobro_hash: string | null; cobro_intento_en: string | null };
+  return { factura: fila.cobro_factura, hash: fila.cobro_hash, intentoEn: fila.cobro_intento_en };
+}
+
+// The hash of the attempt: the one stored when it started, or the one read from its invoice.
+function hashDelIntento(intento: Intento): string | null {
+  return intento.hash ?? (intento.factura ? hashDeFactura(intento.factura) : null);
+}
+
+// True when BTCPay has had the whole waiting time to show the payment and still does not know it.
+function intentoVencido(intento: Intento): boolean {
+  if (intento.intentoEn === null) return true;
+  return Date.now() - Date.parse(intento.intentoEn) > ESPERA_SIN_PAGO_MS;
 }
 
 function primerNombre(nombre: string | null | undefined): string {
@@ -236,8 +262,9 @@ async function cerrarCobro(token: string, resultado: ResultadoPago): Promise<Res
 }
 
 /**
- * The recipient pays the transfer's sats to the invoice. The database checks the transfer and the amount
- * and marks it "pagando" first, so a second press cannot pay twice. Then BTCPay pays the invoice.
+ * The recipient pays the transfer's sats to the invoice. The database checks the transfer and the amount,
+ * counts the attempt and stores the invoice's payment hash, and marks the claim "pagando" first, so a second
+ * press cannot pay twice. Then BTCPay pays the invoice.
  */
 export async function cobrarEnvio(token: string, facturaCruda: string): Promise<Resultado<ResultadoCobrar>> {
   try {
@@ -250,13 +277,17 @@ export async function cobrarEnvio(token: string, facturaCruda: string): Promise<
     if (sats === null) {
       return fallo('DATOS_INVALIDOS', 'La factura tiene que ser por un monto fijo, en sats enteros.');
     }
+    const hash = hashDeFactura(factura);
+    if (!hash) return fallo('DATOS_INVALIDOS', 'La factura no tiene el hash del pago. Pedí otra factura.');
     const pago = configDePago();
     if (!pago) return fallo('NO_DISPONIBLE', SIN_BTCPAY);
 
+    // The hash is stored before BTCPay is asked, so a crash after this point can still be reconciled.
     const { error } = await clienteServicio().rpc('pay_iniciar_cobro', {
       p_token: token,
       p_factura: factura,
       p_sats: sats,
+      p_hash: hash,
     });
     if (error) return desdeError(error);
 
@@ -277,7 +308,8 @@ export async function cobrarEnvio(token: string, facturaCruda: string): Promise<
 
 /**
  * The state of a claim that is being paid. While it is "pagando", BTCPay is asked for the payment by its
- * hash, and a Complete or Failed answer closes the claim. Anything unclear leaves it "pagando".
+ * hash, and a Complete or Failed answer closes the claim. A payment BTCPay does not know, after the waiting
+ * time, is failed. Anything unclear leaves it "pagando".
  */
 export async function estadoDeCobro(token: string): Promise<Resultado<{ cobroEstado: EstadoCobroEnvio | null }>> {
   try {
@@ -287,9 +319,9 @@ export async function estadoDeCobro(token: string): Promise<Resultado<{ cobroEst
     if (fila.cobro_estado !== 'pagando') return exito({ cobroEstado: fila.cobro_estado });
 
     const pago = configDePago();
-    const factura = await facturaDeCobro(token);
-    const hash = factura ? hashDeFactura(factura) : null;
-    if (!pago || !hash) return exito({ cobroEstado: 'pagando' });
+    const intento = await intentoDeCobro(token);
+    const hash = intento ? hashDelIntento(intento) : null;
+    if (!pago || !intento || !hash) return exito({ cobroEstado: 'pagando' });
 
     let resultado: ResultadoPago | null;
     try {
@@ -298,7 +330,12 @@ export async function estadoDeCobro(token: string): Promise<Resultado<{ cobroEst
       console.error('BTCPay al revisar el cobro:', e instanceof Error ? e.message : e);
       return exito({ cobroEstado: 'pagando' });
     }
-    if (!resultado || resultado.estado === 'pendiente') return exito({ cobroEstado: 'pagando' });
+    if (resultado?.estado === 'pendiente') return exito({ cobroEstado: 'pagando' });
+    if (!resultado) {
+      // BTCPay does not know this payment. Only after the waiting time is it counted as failed.
+      if (!intentoVencido(intento)) return exito({ cobroEstado: 'pagando' });
+      resultado = { estado: 'fallido', hash: null, motivo: MOTIVO_SIN_PAGO };
+    }
 
     const cerrado = await cerrarCobro(token, resultado);
     if (!cerrado.ok) {
@@ -313,9 +350,11 @@ export async function estadoDeCobro(token: string): Promise<Resultado<{ cobroEst
 }
 
 /**
- * An administrator marks a claim that is stuck in "pagando" as failed, when BTCPay has no answer to give.
- * The reason is shown to the person who claims, so it is written for them. The caller checks the admin
- * role first. Only a claim that is being paid can be closed here.
+ * An administrator closes a claim that is stuck in "pagando". First BTCPay is asked for the attempt's payment:
+ * a Complete payment closes the claim as paid; a Pending one, or one BTCPay has not seen within the waiting
+ * time, refuses the change; a Failed one, or one BTCPay does not know after the waiting time, closes it as
+ * failed with the reason written here. A claim is never failed while BTCPay cannot be asked. The caller checks
+ * the admin role first.
  */
 export async function marcarCobroFallido(token: string, motivo: string): Promise<Resultado<ResultadoCobrar>> {
   try {
@@ -324,6 +363,29 @@ export async function marcarCobroFallido(token: string, motivo: string): Promise
     if (Array.from(limpio).length < 4 || Array.from(limpio).length > 200) {
       return fallo('DATOS_INVALIDOS', 'El motivo tiene que tener entre 4 y 200 caracteres.');
     }
+    const intento = await intentoDeCobro(token);
+    if (!intento) return fallo('NO_ENCONTRADA', MENSAJE_NO_ENCONTRADO);
+
+    const hash = hashDelIntento(intento);
+    if (hash) {
+      const pago = configDePago();
+      if (!pago) {
+        return fallo('NO_DISPONIBLE', 'BTCPay no está configurado: no podemos revisar el pago antes de marcarlo como fallido.');
+      }
+      let resultado: ResultadoPago | null;
+      try {
+        resultado = await consultarPago(pago.config, pago.tienda, hash);
+      } catch (e) {
+        console.error('BTCPay al marcar el cobro:', e instanceof Error ? e.message : e);
+        return fallo('BTCPAY', 'No pudimos consultar BTCPay, así que no marcamos el cobro como fallido. Probá de nuevo en un momento.');
+      }
+      if (resultado?.estado === 'pagado') {
+        return await cerrarCobro(token, resultado);
+      }
+      if (resultado?.estado === 'pendiente') return fallo('ESTADO_INVALIDO', MENSAJE_EN_CURSO);
+      if (!resultado && !intentoVencido(intento)) return fallo('ESTADO_INVALIDO', MENSAJE_EN_CURSO);
+    }
+
     return await cerrarCobro(token, { estado: 'fallido', hash: null, motivo: limpio });
   } catch (e) {
     return desdeError(e);

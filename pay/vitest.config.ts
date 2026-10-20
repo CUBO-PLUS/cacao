@@ -11,5 +11,8 @@ export default defineConfig({
     // Database tests share one database: run files one after another.
     fileParallelism: false,
     testTimeout: 20000,
+    // The tests describe the flow without BTCPay; the Lightning flow has its own tests with a fake BTCPay. A local
+    // .env.local that points at the demo BTCPay must not switch the database tests to the other flow.
+    env: { BTCPAY_URL: '', BTCPAY_API_KEY: '' },
   },
 });

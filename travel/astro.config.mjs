@@ -36,6 +36,11 @@ const apariencia = {
     colorBackground: '#fffaf4',
     fontFamily: "'Bricolage Grotesque Variable', 'Bricolage Grotesque', system-ui, sans-serif",
   },
+  // A flat card with a thin border, like the other cards of the site.
+  elements: {
+    cardBox: { boxShadow: 'none', border: '1px solid rgba(42, 25, 18, 0.14)', borderRadius: '16px' },
+    card: { boxShadow: 'none' },
+  },
 };
 
 export default defineConfig({

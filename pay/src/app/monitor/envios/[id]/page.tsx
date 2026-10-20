@@ -56,6 +56,11 @@ export default async function PaginaDetalleEnvio(props: PageProps<'/monitor/envi
         <EtiquetaEstado estado={envio.estado} />
       </p>
       {envio.estado === 'fallida' && envio.motivo && <p>Motivo: {envio.motivo}</p>}
+      {envio.pagoTardioEn && (
+        <p role="alert" className={estilos.devolver}>
+          Devolver pago: llegó un pago de Lightning después de cerrar el envío. Devolvé el dinero y anotalo en BTCPay.
+        </p>
+      )}
 
       <dl className={estilos.datos}>
         <div>

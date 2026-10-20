@@ -48,6 +48,7 @@ export default function PaginaHacienda() {
           Dirección General de Impuestos Internos (DGII · Ministerio de Hacienda) y las reglas del Banco Central de
           Reserva (BCR) en El Salvador.
         </p>
+        <p>Esta página resume normas para la demo. No es asesoría tributaria.</p>
       </section>
 
       <section className={estilos.seccion} aria-labelledby="titulo-regla-principal">
@@ -78,10 +79,9 @@ export default function PaginaHacienda() {
                 fiscal de IVA es <span className="dato">cobro - base</span>.
               </li>
               <li>
-                <strong>Pago a Cuenta de Renta del 1.75% (Art. 151 inciso 3° del Código Tributario, reformado por el Decreto 958):</strong>{' '}
-                anticipo calculado sobre los ingresos brutos obtenidos por rama económica. En este simulador se aplica a
-                la base sin IVA (<span className="dato">base × 1.75%</span>); esa base es un supuesto de cálculo y no
-                aparece en el texto legal.
+                <strong>Pago a cuenta de renta del 1.75% (Art. 151 CT, por confirmar):</strong> anticipo sobre los
+                ingresos brutos. En este simulador se aplica a la base sin IVA (<span className="dato">base × 1.75%</span>).
+                Supuesto: ingresos sin IVA; confirmalo con tu contador.
               </li>
             </ul>
           </div>
@@ -105,7 +105,7 @@ export default function PaginaHacienda() {
                 <th scope="col">Cobro servicio (bruto)</th>
                 <th scope="col">Base sin IVA (F-07)</th>
                 <th scope="col">IVA 13% (F-07)</th>
-                <th scope="col">Pago a Cuenta 1.75% (F-14)</th>
+                <th scope="col">Pago a cuenta 1.75% (Art. 151 CT, por confirmar)</th>
                 <th scope="col">Código CAT-017</th>
               </tr>
             </thead>
@@ -126,7 +126,7 @@ export default function PaginaHacienda() {
                   <td data-etiqueta="IVA 13% (F-07)" className="dato">
                     {formatoUsd(t.ivaUsdCentavos)}
                   </td>
-                  <td data-etiqueta="Pago a Cuenta 1.75% (F-14)" className="dato">
+                  <td data-etiqueta="Pago a cuenta 1.75% (Art. 151 CT, por confirmar)" className="dato">
                     {formatoUsd(t.pagoACuentaUsdCentavos)}
                   </td>
                   <td data-etiqueta="Código CAT-017" className="dato">
@@ -138,8 +138,8 @@ export default function PaginaHacienda() {
           </table>
         </div>
         <p>
-          La base sin IVA es un supuesto de cálculo de este simulador: el texto legal del 1.75% no la define.
-          Las versiones de F-07 y F-14 se describen en la sección 3.
+          La base sin IVA es un supuesto de cálculo de este simulador. Confirmalo con tu contador. Las versiones de
+          F-07 y F-14 se describen en la sección 3.
         </p>
       </section>
 
@@ -147,10 +147,10 @@ export default function PaginaHacienda() {
         <h2 id="titulo-dte">3. Facturación electrónica (DTE), F-07, F-14 v17 y CacaoLedger</h2>
         <dl className={estilos.definiciones}>
           <div>
-            <dt>Emisión de DTE 01 y 03 (Arts. 119-B, 119-C y 119-F CT)</dt>
+            <dt>Emisión de DTE 01 y 03 (Arts. 119-B, 119-C y 119-F CT, por confirmar)</dt>
             <dd>
               El documento tributario electrónico se emite por el valor del servicio cobrado, expresado siempre en
-              dólares (<span className="dato">tipoMoneda: &quot;USD&quot;</span>). Por regla general (Art. 119-C CT) el
+              dólares (<span className="dato">tipoMoneda: &quot;USD&quot;</span>). Por regla general (Art. 119-C CT, por confirmar) el
               DTE se considera emitido al recibir el sello de recepción; la contingencia tiene reglas propias (Art. 119-F
               CT). Para personas naturales se emite{' '}
               <strong>Factura de Consumidor Final (tipoDte 01)</strong>; entre comercios o corresponsales con NRC se
@@ -167,8 +167,7 @@ export default function PaginaHacienda() {
               del validador restringe el código <span className="dato">11</span>, se declara{' '}
               <span className="dato">99</span> (Otros) con la referencia estructurada{' '}
               <span className="dato">BTC-LN|&lt;sats&gt;sat|&lt;tasa&gt;|&lt;hash&gt;</span> y la cadena de atestación
-              SHA-256 en CacaoLedger. La <strong>Resolución 1003 del CVPCPA</strong> (vigente desde el 7 de septiembre de
-              2021), según la guía de esa institución, indica que el bitcoin se mida a costo de adquisición, con el tipo de cambio de referencia al dólar
+              SHA-256 en CacaoLedger. La <strong>Resolución 1003 del CVPCPA</strong> (por confirmar), según la guía de esa institución, indica que el bitcoin se mida a costo de adquisición, con el tipo de cambio de referencia al dólar
               establecido por los mercados internacionales e indicado en la billetera que se utilice.
             </dd>
           </div>
@@ -176,38 +175,18 @@ export default function PaginaHacienda() {
             <dt>Declaraciones F-07 y F-14 v17</dt>
             <dd>
               El <strong>Formulario F-07</strong> se presenta dentro de los primeros <strong>10 días hábiles</strong> del
-              mes siguiente (Art. 94 de la Ley de IVA). Las operaciones con sello de recepción alimentan el Libro de Ventas
+              mes siguiente (arts. 93-94 Ley de IVA, según la DGII). Las operaciones con sello de recepción alimentan el Libro de Ventas
               a Consumidor Final y el <strong>Anexo 2 de 23 columnas (A a W)</strong> de la plantilla de la DGII de 2021.
-              La versión 14 del F-07 figura como borrador en mh.gob.sv y su vigencia no está confirmada; tampoco se confirmó
-              que la plantilla corresponda a esa versión. El <strong>Formulario F-14 v17</strong> de Pago a Cuenta e Impuesto
-              Retenido se rige por el Art. 152 del Código Tributario (vigencia del texto no confirmada); las retenciones de
-              renta, por el Art. 62 de la LISR (10 días hábiles).
+              La versión 14 del F-07 está publicada en mh.gob.sv (ago. 2025); vigencia por confirmar. El{' '}
+              <strong>Formulario F-14 v17</strong> de pago a cuenta e impuesto retenido se rige por el Art. 151 CT (pago a
+              cuenta, por confirmar). Las retenciones de renta, por el Art. 62 de la LISR (10 días hábiles, por confirmar).
             </dd>
           </div>
           <div>
             <dt>Sanciones por incumplimiento (Art. 239-A CT)</dt>
             <dd>
-              Con el salario mínimo del sector comercio y servicios de <span className="dato">$408.80</span> mensuales
-              (vigente desde el 1 de junio de 2025; no se halló reforma posterior a la fecha de revisión), el Art. 239-A
-              del Código Tributario establece estas multas:
-              <ul className={estilos.lista}>
-                <li>
-                  No emitir el DTE: 50% del monto de la operación por documento, con piso de 2 salarios mínimos (
-                  <span className="dato">$817.60</span>).
-                </li>
-                <li>
-                  Emitir sin cumplir el Art. 119-G, o transmitir sin cumplir requisitos, estructura o reglas de sello: 30%,
-                  con piso de 2 salarios mínimos (<span className="dato">$817.60</span>).
-                </li>
-                <li>
-                  No transmitir el DTE a la plataforma: 100% del monto de cada operación, con piso de 9 salarios mínimos (
-                  <span className="dato">$3,679.20</span>).
-                </li>
-                <li>
-                  No transmitir un evento de contingencia o una invalidación, o transmitirlo fuera de plazo: 9 salarios
-                  mínimos mensuales, cantidad fija (<span className="dato">$3,679.20</span>).
-                </li>
-              </ul>
+              Las multas del Art. 239-A del Código Tributario dependen del salario mínimo y del tipo de incumplimiento.
+              Consultá el texto vigente antes de tomar decisiones.
             </dd>
           </div>
         </dl>
@@ -234,15 +213,14 @@ export default function PaginaHacienda() {
             </dd>
           </div>
           <div>
-            <dt>Ley Bitcoin (Decreto Legislativo 199, vigente desde el 30 de abril de 2025)</dt>
+            <dt>Ley Bitcoin (Decreto Legislativo 199)</dt>
             <dd>
-              El Decreto Legislativo 199 derogó los artículos 4, 8 y 9 de la Ley Bitcoin y reformó el artículo 7, que dejó
-              de obligar a aceptar bitcoin. Los registros se llevan en dólares (<span className="dato">USD</span>): Art. 139
+              Desde la reforma de 2025 (D.L. 199) aceptar bitcoin es voluntario. Los registros se llevan en dólares (<span className="dato">USD</span>): Art. 139
               del Código Tributario y Art. 6 de la Ley Bitcoin. En cada envío por Lightning, CacaoPay fija y guarda la tasa{' '}
               <span className="dato">USD/BTC</span> obtenida de Coinbase y Kraken junto con su marca de tiempo. En
               producción, las entidades financieras que operen en el ecosistema bitcoin se rigen por la{' '}
-              <strong>NRP-29 del BCR</strong> (7 de septiembre de 2021), cuyo artículo 10 exige registro en el{' '}
-              <strong>Registro de Proveedores de Bitcoin del BCR</strong>.
+              <strong>NRP-29 del BCR</strong>, cuyo artículo 10 exige registro en el{' '}
+              <strong>Registro de Proveedores de Bitcoin del BCR</strong> (por confirmar).
             </dd>
           </div>
         </dl>

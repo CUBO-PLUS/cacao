@@ -128,6 +128,7 @@ async function ListaEnvios({ busqueda }: { busqueda: PageProps<'/monitor/envios'
                     <td data-etiqueta="Entrega">{ETIQUETA_ENTREGA[e.entrega]}</td>
                     <td data-etiqueta="Estado">
                       <EtiquetaEstado estado={e.estado} />
+                      {e.pagoTardioEn && <span className={estilos.devolver}>Devolver pago</span>}
                     </td>
                     <td data-etiqueta="Creado">
                       <time dateTime={e.creadaEn}>{fechaSv(e.creadaEn)}</time>

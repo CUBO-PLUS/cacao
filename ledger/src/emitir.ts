@@ -1,29 +1,30 @@
 import type { AlmacenTickets } from "./almacen/tipos.ts";
 import type { AlmacenDtes, RegistroDte } from "./almacen/dtes.ts";
 import { codigoGeneracionNuevo } from "./azar.ts";
-import type { FuenteCorrelativosSupabase } from "./correlativos-supabase.ts";
 import { aceptarDte, adjuntarDte, rechazarDte, tipoDteDe, type DteRef, type Ticket } from "./ticket.ts";
 import { construirDte, numeroControl, type Emisor } from "./dte/construir.ts";
 import { ErrorLedger } from "./errores.ts";
-import { resolverGeneracion, type Generacion } from "./generacion.ts";
+import type { Generacion } from "./generacion.ts";
 import { recibir } from "./recepcion-simulada.ts";
 import { emisorPara } from "./servidor/vista-dte.ts";
 import { validarDte } from "./validar.ts";
 
 // Emits the tax document of paid tickets in the web app. The steps are the CLI's (cmdDteConstruir and
-// cmdDteTransmitir in cli.ts): build, validate, take the number, simulated reception, then accept or refuse.
+// cmdDteTransmitir in cli.ts): reserve the number, build, validate, simulated reception, then accept or refuse.
 // The pure pieces (construirDte, validarDte, recibir, the ticket transitions) are the same ones.
 //
 // Differences from the CLI, on purpose:
-// - The number is taken right before building (tomarCorrelativo consumes it). A document that is refused
-//   keeps its number, and the row says so with estado "rechazado".
+// - The number is reserved in the same database transaction that writes a placeholder row (ledger_dtes,
+//   estado "reservado"). A ticket that already has a row takes no number, so a second run never numbers it again.
+//   A row left reservado by a run that stopped is completed by the next run, with the number it already holds.
 // - The document is stored in ledger_dtes, not in datos/dte/. The ticket's DteRef points there.
-// - Only ambiente "00" (test). Production needs the CLI's --confirmar-produccion.
+// - Every ticket goes on the 2026 schemas (see generacionParaTicket). Only ambiente "00" (test).
+//   Production needs the CLI's --confirmar-produccion.
 
 export type ResultadoEmision = {
   ticket: string;
   // "aceptado" or "rechazado" when the ticket got a document (now, or completed from a stored one).
-  // null when the ticket was left alone: not pagado, or already emitido or rechazado.
+  // null when the ticket was left alone: not pagado, another run holds the number, or already emitido or rechazado.
   estado: "aceptado" | "rechazado" | null;
   // True when a document was already stored for the ticket and only the ticket was completed from it.
   reparado: boolean;
@@ -32,19 +33,17 @@ export type ResultadoEmision = {
 export type OpcionesEmision = {
   // Clock for the document, the transitions and the reception.
   ahora: Date;
-  // Schema generation. Default: see generacionParaTicket.
+  // Schema generation. Default: 2026 (see generacionParaTicket).
   esquemas?: Generacion;
-  // Issuer. Default: the preview fixture of the generation (the same one the ticket page shows).
+  // Issuer. Default: the emisor of the generation (the same one the ticket page shows).
   emisor?: Emisor;
 };
 
-// Lightning payments go on the 2026 schemas. The caso schemas do not accept code 11 (Bitcoin) on an 01, so the
-// forma de pago would fall back to 99 with a reference (README, "trampas del caso"). The 2026 schemas accept 11,
-// which is the right forma de pago for a Lightning sale. Other tickets follow the CLI default (LEDGER_ESQUEMAS,
-// else caso), so the web and the CLI agree on them.
-export function generacionParaTicket(ticket: Ticket): Generacion {
-  if (ticket.pago?.rail === "lightning") return "2026";
-  return resolverGeneracion();
+// Every ticket the web emits goes on the 2026 schemas. The caso schemas are a community mirror (herson/dte-json-schemas)
+// with a receptor threshold that the Ministry's schemas do not have, and they do not accept code 11 (Bitcoin) on an 01.
+// The CLI keeps its own default (LEDGER_ESQUEMAS, else caso). The web does not read that variable for emission.
+export function generacionParaTicket(_ticket: Ticket): Generacion {
+  return "2026";
 }
 
 function mensajeDe(e: unknown, respaldo: string): string {
@@ -75,13 +74,12 @@ function ticketDesdeRegistro(ticket: Ticket, r: RegistroDte, ahora: Date): Ticke
 export async function emitirTicket(
   almacen: AlmacenTickets,
   dtes: AlmacenDtes,
-  correlativos: FuenteCorrelativosSupabase,
   ticket: Ticket,
   opciones: OpcionesEmision,
 ): Promise<ResultadoEmision> {
   const sinCambios: ResultadoEmision = { ticket: ticket.id, estado: null, reparado: false };
   const previo = await dtes.porTicket(ticket.id);
-  if (previo !== null) {
+  if (previo !== null && previo.estado !== "reservado") {
     // A document was stored for this ticket but the ticket was not saved after it. Complete the ticket from the
     // stored row. No number is taken and nothing is built again.
     if (ticket.estado !== "pagado") return sinCambios;
@@ -96,10 +94,21 @@ export async function emitirTicket(
   const tipo = tipoDteDe(ticket.cliente);
   const serie = `${tipo}-${emisor.codEstable}${emisor.codPuntoVenta}`;
 
-  // Taken before building: from here on the number is spent, whatever happens to the document.
-  const correlativo = await correlativos.tomarCorrelativo(serie);
+  let codigo: string;
+  let correlativo: number;
+  if (previo !== null) {
+    // Reserved by an earlier run that stopped before completing it: finish that document with its own number.
+    if (previo.correlativo === null) throw new ErrorLedger(`La reserva del ticket ${ticket.id} no tiene correlativo.`);
+    codigo = previo.codigoGeneracion;
+    correlativo = previo.correlativo;
+  } else {
+    codigo = codigoGeneracionNuevo(`${ticket.id}|reserva`);
+    // Taken in the same transaction as the placeholder row. Null means the ticket has a row now: no number is spent here.
+    const tomado = await dtes.reservar({ ticketId: ticket.id, serie, tipoDte: tipo, codigoGeneracion: codigo });
+    if (tomado === null) return sinCambios;
+    correlativo = tomado;
+  }
   const numero = numeroControl(tipo, emisor.codEstable, emisor.codPuntoVenta, correlativo, generacion);
-  const codigo = codigoGeneracionNuevo(`${ticket.id}|${numero}`);
 
   let documento: unknown = {};
   let observaciones: string[] | null = null;
@@ -142,8 +151,8 @@ export async function emitirTicket(
       ? rechazarDte(conDte, observaciones ?? [], instante)
       : aceptarDte(conDte, { valor: sello, momento, simulado: true }, instante);
 
-  // The document row goes first: its unique ticket_id stops a second run from emitting the same ticket.
-  await dtes.insertar({
+  // The reserved row takes the document. The write matches only a row still reserved, so a row completed by another run is left alone.
+  const completado = await dtes.completar({
     codigoGeneracion: codigo,
     ticketId: ticket.id,
     tipoDte: tipo,
@@ -154,7 +163,9 @@ export async function emitirTicket(
     motivo: sello === null ? (observaciones ?? []).join("\n") : null,
     documento,
     creado: momento,
+    correlativo,
   });
+  if (!completado) return sinCambios;
   await almacen.guardar(final);
   return { ticket: ticket.id, estado, reparado: false };
 }
@@ -168,14 +179,13 @@ export type ResumenEmision = { emitidos: number; rechazados: number; fallidos: n
 export async function emitirPagados(
   almacen: AlmacenTickets,
   dtes: AlmacenDtes,
-  correlativos: FuenteCorrelativosSupabase,
   opciones: OpcionesEmision & { limite?: number },
 ): Promise<ResumenEmision> {
   const pendientes = await almacen.listar({ estado: "pagado", limite: opciones.limite ?? LIMITE_EMISION_POR_SYNC });
   const resumen: ResumenEmision = { emitidos: 0, rechazados: 0, fallidos: 0 };
   for (const ticket of pendientes) {
     try {
-      const r = await emitirTicket(almacen, dtes, correlativos, ticket, opciones);
+      const r = await emitirTicket(almacen, dtes, ticket, opciones);
       if (r.estado === "aceptado") resumen.emitidos += 1;
       else if (r.estado === "rechazado") resumen.rechazados += 1;
     } catch (e) {

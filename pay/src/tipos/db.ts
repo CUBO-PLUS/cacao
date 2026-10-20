@@ -864,6 +864,41 @@ export type Database = {
           },
         ]
       }
+      pay_facturas: {
+        Row: {
+          btcpay_factura_id: string
+          creado_en: string
+          expira: string
+          factura: string
+          sats: number
+          transferencia_id: string
+        }
+        Insert: {
+          btcpay_factura_id: string
+          creado_en?: string
+          expira: string
+          factura: string
+          sats: number
+          transferencia_id: string
+        }
+        Update: {
+          btcpay_factura_id?: string
+          creado_en?: string
+          expira?: string
+          factura?: string
+          sats?: number
+          transferencia_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pay_facturas_transferencia_id_fkey"
+            columns: ["transferencia_id"]
+            isOneToOne: false
+            referencedRelation: "pay_transferencias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pay_historial: {
         Row: {
           creado_en: string
@@ -949,6 +984,11 @@ export type Database = {
           clave_idempotencia: string
           cobrada_en: string | null
           cobro_estado: "pagando" | "pagado" | "fallido" | null
+          cobro_intentos: number
+          cobro_intentos_desde: string | null
+          cobro_intento_en: string | null
+          pago_tardio_en: string | null
+          cotizada_en: string
           cobro_factura: string | null
           cobro_hash: string | null
           cobro_motivo: string | null
@@ -988,6 +1028,11 @@ export type Database = {
           clave_idempotencia: string
           cobrada_en?: string | null
           cobro_estado?: "pagando" | "pagado" | "fallido" | null
+          cobro_intentos?: number
+          cobro_intentos_desde?: string | null
+          cobro_intento_en?: string | null
+          pago_tardio_en?: string | null
+          cotizada_en?: string
           cobro_factura?: string | null
           cobro_hash?: string | null
           cobro_motivo?: string | null
@@ -1027,6 +1072,11 @@ export type Database = {
           clave_idempotencia?: string
           cobrada_en?: string | null
           cobro_estado?: "pagando" | "pagado" | "fallido" | null
+          cobro_intentos?: number
+          cobro_intentos_desde?: string | null
+          cobro_intento_en?: string | null
+          pago_tardio_en?: string | null
+          cotizada_en?: string
           cobro_factura?: string | null
           cobro_hash?: string | null
           cobro_motivo?: string | null
@@ -2450,7 +2500,7 @@ export type Database = {
         }
       }
       pay_iniciar_cobro: {
-        Args: { p_factura: string; p_sats: number; p_token: string }
+        Args: { p_factura: string; p_hash: string; p_sats: number; p_token: string }
         Returns: {
           btcpay_factura_id: string | null
           btcpay_tienda_id: string | null
@@ -2458,6 +2508,11 @@ export type Database = {
           clave_idempotencia: string
           cobrada_en: string | null
           cobro_estado: "pagando" | "pagado" | "fallido" | null
+          cobro_intentos: number
+          cobro_intentos_desde: string | null
+          cobro_intento_en: string | null
+          pago_tardio_en: string | null
+          cotizada_en: string
           cobro_factura: string | null
           cobro_hash: string | null
           cobro_motivo: string | null
@@ -2506,6 +2561,11 @@ export type Database = {
           clave_idempotencia: string
           cobrada_en: string | null
           cobro_estado: "pagando" | "pagado" | "fallido" | null
+          cobro_intentos: number
+          cobro_intentos_desde: string | null
+          cobro_intento_en: string | null
+          pago_tardio_en: string | null
+          cotizada_en: string
           cobro_factura: string | null
           cobro_hash: string | null
           cobro_motivo: string | null
@@ -2628,6 +2688,17 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      pay_recotizar: {
+        Args: {
+          p_actor: string
+          p_comision: number
+          p_monto_destino: number
+          p_tasa: number
+          p_tasa_fuente: string
+          p_transferencia: string
+        }
+        Returns: Database["public"]["Tables"]["pay_transferencias"]["Row"]
       }
       pay_resumen: {
         Args: { p_desde: string; p_hasta: string }

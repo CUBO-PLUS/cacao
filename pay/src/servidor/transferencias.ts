@@ -26,7 +26,7 @@ import {
 import { registrarEvento } from './eventos';
 import { desdeError, exito, fallo, type Resultado } from './resultado';
 import { clienteServicio } from './supabase';
-import { cotizarEnServidor, tarifas, tasaEurUsd } from './tasas';
+import { cotizarEnServidor, tarifas, tasaEurUsd, VIGENCIA_MS } from './tasas';
 
 // Transfers. Every change names the acting user first, checks the input here, and then calls a
 // database function with the service role. A stranger gets the same answer as a missing transfer.
@@ -72,6 +72,8 @@ export type Envio = {
   facturaExpira: string | null;
   /** True while that invoice can still be paid. */
   facturaViva: boolean;
+  /** When a payment arrived after the transfer was cancelled or failed: it must be returned. Null otherwise. */
+  pagoTardioEn: string | null;
 };
 
 export type PasoHistorial = { estado: EstadoEnvio; detalle: string; cuando: string };
@@ -117,25 +119,29 @@ export type CambioEnvio = { id: string; estado: EstadoEnvio };
 
 // The columns a list or a detail needs. The sender's first name comes from the usuarios table.
 export const COLUMNAS_ENVIO =
-  'id, codigo, remitente_id, destinatario_nombre, destinatario_contacto, destinatario_id, moneda_origen, monto_origen_centavos, comision_centavos, neto_centavos, tasa, tasa_fuente, moneda_destino, monto_destino, entrega, estado, nota, creada_en, procesando_en, completada_en, fallida_en, cancelada_en, motivo, pagada_en, factura_expira, remitente:usuarios!pay_transferencias_remitente_id_fkey(nombre)';
+  'id, codigo, remitente_id, destinatario_nombre, destinatario_contacto, destinatario_id, moneda_origen, monto_origen_centavos, comision_centavos, neto_centavos, tasa, tasa_fuente, moneda_destino, monto_destino, entrega, estado, nota, creada_en, procesando_en, completada_en, fallida_en, cancelada_en, motivo, pagada_en, factura_expira, pago_tardio_en, remitente:usuarios!pay_transferencias_remitente_id_fkey(nombre)';
 
 // Only what the public view may show. Nothing else is selected, so nothing can leak by mistake.
 const COLUMNAS_RASTREO =
   'id, codigo, estado, moneda_destino, monto_destino, entrega, creada_en, destinatario_nombre, cobro_estado';
 
 const COLUMNAS_CAMBIO =
-  'id, codigo, remitente_id, estado, moneda_origen, monto_origen_centavos, entrega, pagada_en, factura_expira';
+  'id, codigo, remitente_id, estado, moneda_origen, monto_origen_centavos, entrega, pagada_en, factura_expira, btcpay_factura_id, btcpay_tienda_id';
 
-// What the Lightning payment needs: the sender, the state, the amount and the invoice of the transfer.
+// What the Lightning payment needs: the sender, the state, the amounts, the quote and the invoice of the transfer.
 const COLUMNAS_PAGO =
-  'id, codigo, remitente_id, estado, moneda_origen, monto_origen_centavos, btcpay_factura_id, btcpay_tienda_id, factura, factura_sats, factura_usd_centavos, factura_expira';
+  'id, codigo, remitente_id, estado, moneda_origen, monto_origen_centavos, monto_destino, cotizada_en, btcpay_factura_id, btcpay_tienda_id, factura, factura_sats, factura_usd_centavos, factura_expira';
 
 // Lightning through BTCPay Server. The invoice is valid for this long.
 const FACTURA_MINUTOS = 15;
 const SIN_PRECIO_BTC = 'No pudimos obtener el precio del bitcoin. Probá de nuevo en un momento.';
 const SIN_FACTURA = 'No pudimos crear la factura Lightning. Probá de nuevo en un momento.';
 
-type FilaPago = Pick<FilaEnvio, 'id' | 'codigo' | 'remitente_id' | 'estado' | 'moneda_origen' | 'monto_origen_centavos'> & {
+type FilaPago = Pick<
+  FilaEnvio,
+  'id' | 'codigo' | 'remitente_id' | 'estado' | 'moneda_origen' | 'monto_origen_centavos' | 'monto_destino'
+> & {
+  cotizada_en: string;
   btcpay_factura_id: string | null;
   btcpay_tienda_id: string | null;
   factura: string | null;
@@ -170,6 +176,7 @@ export type FilaEnvio = {
   motivo: string | null;
   pagada_en: string | null;
   factura_expira: string | null;
+  pago_tardio_en: string | null;
   remitente: { nombre: string } | null;
 };
 
@@ -215,6 +222,7 @@ export function aEnvio(fila: FilaEnvio, tarifasLeidas: Record<Entrega, Tarifa>):
     pagadaEn: fila.pagada_en,
     facturaExpira: fila.factura_expira,
     facturaViva: fila.factura_expira !== null && Date.parse(fila.factura_expira) > Date.now(),
+    pagoTardioEn: fila.pago_tardio_en ?? null,
   };
 }
 
@@ -484,25 +492,19 @@ export async function crearEnvio(
   }
 }
 
-async function cargarCambio(envioId: string) {
+type FilaCambio = Pick<
+  FilaEnvio,
+  'id' | 'codigo' | 'remitente_id' | 'estado' | 'moneda_origen' | 'monto_origen_centavos' | 'entrega' | 'pagada_en' | 'factura_expira'
+> & { btcpay_factura_id: string | null; btcpay_tienda_id: string | null };
+
+async function cargarCambio(envioId: string): Promise<FilaCambio | null> {
   const { data, error } = await clienteServicio()
     .from('pay_transferencias')
     .select(COLUMNAS_CAMBIO)
     .eq('id', envioId)
     .maybeSingle();
   if (error) throw new Error(`No pudimos leer la transferencia: ${error.message}`);
-  return data as unknown as Pick<
-    FilaEnvio,
-    | 'id'
-    | 'codigo'
-    | 'remitente_id'
-    | 'estado'
-    | 'moneda_origen'
-    | 'monto_origen_centavos'
-    | 'entrega'
-    | 'pagada_en'
-    | 'factura_expira'
-  > | null;
+  return data as unknown as FilaCambio | null;
 }
 
 // The sender may change their own transfer, and an administrator may change any. Anyone else is
@@ -530,6 +532,7 @@ function aPagoLightning(
   envioId: string,
   config: ConfigBtcpay,
   factura: { bolt11: string; sats: number; usdCentavos: number; expiraEn: string },
+  montoDestinoActualizado?: number,
 ): PagoLightning {
   return {
     envioId,
@@ -538,6 +541,7 @@ function aPagoLightning(
     bolt11: factura.bolt11,
     expiraEn: factura.expiraEn,
     enlaceBilleteraDePrueba: enlaceBilleteraDePrueba(config, factura.bolt11),
+    ...(montoDestinoActualizado === undefined ? {} : { montoDestinoActualizado }),
   };
 }
 
@@ -583,13 +587,48 @@ export async function pagarEnvio(usuarioId: string, envioId: string): Promise<Re
       );
     }
 
-    const usdCentavos = await valorUsdDe(fila.monto_origen_centavos, fila.moneda_origen);
+    // The invoice issued before may have been paid since. BTCPay is asked before another one is made.
+    if (fila.btcpay_factura_id && fila.btcpay_tienda_id) {
+      const previa = await leerFacturaSiExiste(btc.config, fila.btcpay_tienda_id, fila.btcpay_factura_id);
+      if (previa?.estado === 'Settled') {
+        await confirmarPagoBtcpay(previa.id);
+        return fallo('ESTADO_INVALIDO', 'Esa factura ya se pagó. Revisá el estado del envío.');
+      }
+      if (previa?.estado === 'Processing') {
+        return fallo('ESTADO_INVALIDO', 'La factura anterior todavía se está pagando. Probá de nuevo en un momento.');
+      }
+    }
+
     let usdBtc: number;
     try {
       usdBtc = await cotizacionUsdBtc();
     } catch {
       return fallo('SIN_COTIZACION', SIN_PRECIO_BTC);
     }
+
+    // A quote older than its validity is made again, with this BTC price, before the invoice uses it.
+    let montoDestinoActualizado: number | undefined;
+    if (Date.now() - Date.parse(fila.cotizada_en) > VIGENCIA_MS) {
+      const nueva = await cotizarEnServidor(
+        { monedaOrigen: fila.moneda_origen, montoOrigenCentavos: fila.monto_origen_centavos, entrega: 'lightning' },
+        { usdBtc },
+      );
+      if (!nueva.ok) return nueva;
+      const { error } = await clienteServicio().rpc('pay_recotizar', {
+        p_transferencia: envioId,
+        p_actor: usuarioId,
+        p_tasa: nueva.dato.tasa,
+        p_tasa_fuente: nueva.dato.tasaFuente,
+        p_comision: nueva.dato.comisionCentavos,
+        p_monto_destino: nueva.dato.montoDestino,
+      });
+      if (error) return desdeError(error);
+      if (nueva.dato.montoDestino !== Number(fila.monto_destino)) {
+        montoDestinoActualizado = nueva.dato.montoDestino;
+      }
+    }
+
+    const usdCentavos = await valorUsdDe(fila.monto_origen_centavos, fila.moneda_origen);
     const sats = satsParaFactura(usdCentavos, usdBtc);
 
     const factura = await crearFactura(btc.config, {
@@ -619,7 +658,9 @@ export async function pagarEnvio(usuarioId: string, envioId: string): Promise<Re
     });
     if (error) return desdeError(error);
 
-    return exito(aPagoLightning(envioId, btc.config, { bolt11: factura.bolt11, sats, usdCentavos, expiraEn }));
+    return exito(
+      aPagoLightning(envioId, btc.config, { bolt11: factura.bolt11, sats, usdCentavos, expiraEn }, montoDestinoActualizado),
+    );
   } catch (error) {
     if (error instanceof ErrorBtcpay) {
       console.error('BTCPay al pagar envío:', error.message);
@@ -677,6 +718,10 @@ export async function procesarEnvio(usuarioId: string, envioId: string): Promise
     if (fila.remitente_id === usuarioId && pagoLightningActivo()) {
       return fallo('NO_PERMITIDO', 'Pagá el envío con Lightning para que salga.');
     }
+    // A Lightning transfer starts when its invoice is paid (pay_confirmar_btcpay), never by hand.
+    if (fila.entrega === 'lightning') {
+      return fallo('NO_PERMITIDO', 'Un envío por Lightning sale cuando quien envía paga la factura.');
+    }
 
     const { data, error } = await clienteServicio().rpc('pay_procesar', {
       p_transferencia: envioId,
@@ -687,6 +732,32 @@ export async function procesarEnvio(usuarioId: string, envioId: string): Promise
   } catch (error) {
     return desdeError(error);
   }
+}
+
+/**
+ * An invoice as BTCPay has it now. Null when BTCPay does not know it (404). Any other failure throws:
+ * the caller must not act on an invoice it could not read.
+ */
+async function leerFacturaSiExiste(config: ConfigBtcpay, tienda: string, facturaId: string) {
+  try {
+    return await leerFactura(config, tienda, facturaId);
+  } catch (error) {
+    if (error instanceof ErrorBtcpay && error.estado === 404) return null;
+    throw error;
+  }
+}
+
+/**
+ * True when BTCPay says the transfer's invoice is Settled; the payment is then confirmed here. An invoice
+ * BTCPay does not know is not paid. Any other failure throws.
+ */
+async function confirmarSiPagada(fila: { btcpay_factura_id: string | null; btcpay_tienda_id: string | null }): Promise<boolean> {
+  const btc = configuracionBtcpay();
+  if (!btc || !fila.btcpay_factura_id || !fila.btcpay_tienda_id) return false;
+  const factura = await leerFacturaSiExiste(btc.config, fila.btcpay_tienda_id, fila.btcpay_factura_id);
+  if (!factura || factura.estado !== 'Settled') return false;
+  await confirmarPagoBtcpay(factura.id);
+  return true;
 }
 
 /** The sender cancels a transfer that has not started moving. */
@@ -700,6 +771,15 @@ export async function cancelarEnvio(usuarioId: string, envioId: string): Promise
     if (fila.pagada_en !== null || facturaViva) {
       return fallo('ESTADO_INVALIDO', 'Hay una factura Lightning vigente o un pago hecho. No se puede cancelar.');
     }
+    // The invoice may have been paid since the sender last looked: BTCPay has the last word.
+    let pagada: boolean;
+    try {
+      pagada = await confirmarSiPagada(fila);
+    } catch (error) {
+      console.error('BTCPay al revisar la cancelación:', error instanceof Error ? error.message : error);
+      return fallo('BTCPAY', 'No pudimos revisar la factura en BTCPay. Probá de nuevo en un momento.');
+    }
+    if (pagada) return fallo('ESTADO_INVALIDO', 'Ese envío ya está pagado: no se puede cancelar.');
 
     const { data, error } = await clienteServicio().rpc('pay_cancelar', {
       p_transferencia: envioId,
@@ -774,6 +854,10 @@ export async function simularFallar(
     if (!fila) return fallo('NO_ENCONTRADA', MENSAJE_NO_ENCONTRADA);
     const quien = await actorDelSimulador(actor, fila);
     if (!quien.ok) return quien;
+    // A Lightning transfer that was paid holds the sender's money: it is returned, not failed.
+    if (fila.entrega === 'lightning' && fila.pagada_en !== null) {
+      return fallo('ESTADO_INVALIDO', 'Este envío ya está pagado: hay que devolver el dinero antes de marcarlo como fallido.');
+    }
 
     const limpio = motivo.trim();
     if (largo(limpio) < 4 || largo(limpio) > 200) {

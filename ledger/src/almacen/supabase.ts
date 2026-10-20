@@ -89,11 +89,19 @@ export function createAlmacenSupabase(config: ConfigSupabase): AlmacenTickets {
 
     async listar(f?: FiltrosTickets): Promise<Ticket[]> {
       const limite = limiteDe(f);
-      const q = new URLSearchParams({ select: "datos", order: "creado_en.desc", limit: String(limite) });
+      const q = new URLSearchParams({ select: "datos", order: "creado_en.desc,id.desc", limit: String(limite) });
       if (f?.desde) q.append("creado_en", `gte.${f.desde.toISOString()}`);
       if (f?.hasta) q.append("creado_en", `lt.${f.hasta.toISOString()}`);
       const despues = validarInstante(f?.despues, "despues");
-      if (despues !== undefined) q.append("creado_en", `lt.${new Date(despues).toISOString()}`);
+      if (despues !== undefined) {
+        const corte = new Date(despues).toISOString();
+        // Same instant: only the ids before the cursor (the list is creado desc, id desc).
+        if (f?.despuesId !== undefined) {
+          if (!ID_TICKET.test(f.despuesId)) throw new ErrorLedger("El cursor de la lista de tickets no es un ticket válido.");
+          q.append("or", `(creado_en.lt.${corte},and(creado_en.eq.${corte},id.lt.${f.despuesId}))`);
+        }
+        else q.append("creado_en", `lt.${corte}`);
+      }
       if (f?.producto !== undefined) q.append("producto", `eq.${f.producto}`);
       if (f?.estado !== undefined) q.append("estado", `eq.${f.estado}`);
       const texto = textoDeBusqueda(f?.texto);

@@ -19,5 +19,17 @@ if (Astro.locals.auth().isAuthenticated) return Astro.redirect('/operadores/');
 </Base>
 
 <style>
-  .entrar { display: grid; gap: 24px; max-width: 34rem; padding-block: 40px; }
+  /* One centered column: the page title over Clerk's card. The card's own title is hidden here so the page
+     says it once; the step instructions under it stay. */
+  .entrar {
+    display: grid;
+    justify-items: center;
+    gap: 24px;
+    max-width: 34rem;
+    margin-inline: auto;
+    padding-block: clamp(24px, 6vh, 64px);
+  }
+  .entrar header { text-align: center; }
+  .entrar :global(.cl-rootBox) { width: 100%; max-width: 26rem; }
+  .entrar :global(.cl-headerTitle) { display: none; }
 </style>

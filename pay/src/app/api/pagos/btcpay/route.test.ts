@@ -105,4 +105,36 @@ describe('POST /api/pagos/btcpay', () => {
     expect(respuesta.status).toBe(502);
     expect(confirmarPagoBtcpay).not.toHaveBeenCalled();
   });
+
+  it('answers 200 and logs the invoice when no transfer waits for that payment', async () => {
+    confirmarPagoBtcpay.mockResolvedValueOnce({ ok: false, codigo: 'NO_ENCONTRADA', mensaje: 'No encontramos esa factura.' } as never);
+    btcpayDice('Settled');
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const cuerpo = cuerpoDe('InvoiceSettled');
+    const respuesta = await POST(peticion(cuerpo, firmar(cuerpo)));
+    expect(respuesta.status).toBe(200);
+    expect(error).toHaveBeenCalledWith(expect.any(String), 'NO_ENCONTRADA', 'factura', FACTURA, expect.any(String));
+    error.mockRestore();
+  });
+
+  it('answers 200 and logs the invoice when the transfer can no longer move', async () => {
+    confirmarPagoBtcpay.mockResolvedValueOnce({ ok: false, codigo: 'ESTADO_INVALIDO', mensaje: 'Ya no se puede procesar.' } as never);
+    btcpayDice('Settled');
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const cuerpo = cuerpoDe('InvoiceSettled');
+    const respuesta = await POST(peticion(cuerpo, firmar(cuerpo)));
+    expect(respuesta.status).toBe(200);
+    expect(error).toHaveBeenCalledWith(expect.any(String), 'ESTADO_INVALIDO', 'factura', FACTURA, expect.any(String));
+    error.mockRestore();
+  });
+
+  it('asks for a retry when the database fails for another reason', async () => {
+    confirmarPagoBtcpay.mockResolvedValueOnce({ ok: false, codigo: 'ERROR', mensaje: 'Algo falló.' } as never);
+    btcpayDice('Settled');
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const cuerpo = cuerpoDe('InvoiceSettled');
+    const respuesta = await POST(peticion(cuerpo, firmar(cuerpo)));
+    expect(respuesta.status).toBe(500);
+    error.mockRestore();
+  });
 });

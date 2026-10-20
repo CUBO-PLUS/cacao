@@ -7,8 +7,6 @@ import { Suspense } from 'react';
 import { destinoSeguro, rutaAcceso, rutaContinuar, rutaCuenta } from '@/servidor/cuentas';
 import { sesionActual } from '@/servidor/sesion';
 
-import estilos from '../../entrar/estilos.module.css';
-
 export const metadata: Metadata = {
   title: 'Crear cuenta',
 };
@@ -41,12 +39,12 @@ async function RegistroConDestino({ busqueda }: { busqueda: PageProps<'/registra
         <p>Así podés mandar y recibir dinero con tu propio nombre.</p>
       </section>
 
-      <div className={estilos.bloque}>
-        <SignUp
-          forceRedirectUrl={rutaContinuar(volver)}
-          signInUrl={rutaAcceso('/entrar', volver)}
-        />
-      </div>
+      <SignUp
+        routing="path"
+        path="/registrarse"
+        forceRedirectUrl={rutaContinuar(volver)}
+        signInUrl={rutaAcceso('/entrar', volver)}
+      />
     </>
   );
 }

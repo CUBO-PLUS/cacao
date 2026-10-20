@@ -12,6 +12,10 @@ const PRODUCTOS: string[] = ["media", "travel", "market", "pay"];
 const HASH = /^[0-9a-f]{64}$/;
 // Longest description a ticket line accepts (see validarEntrada in ticket.ts).
 const MAX_DESCRIPCION = 1500;
+// Longest orderId kept (the origen_numero column accepts up to 200 characters).
+const MAX_ORDEN = 200;
+// Largest amount in cents a ticket accepts: the integer column total_centavos is a 32-bit int.
+const MAX_CENTAVOS = 2147483647;
 
 export type ResultadoFacturaBtcpay = { ticket: Ticket; nueva: boolean } | { omitida: string };
 
@@ -55,9 +59,12 @@ export async function importarFacturaBtcpay(almacen: AlmacenTickets, factura: Fa
   const producto = meta.producto as ProductoCacao;
   const orderId = textoNoVacio(meta.orderId);
   if (orderId === null) return omitida("la factura no trae metadata.orderId");
+  if (orderId.length > MAX_ORDEN) return omitida(`metadata.orderId pasa de ${MAX_ORDEN} caracteres`);
   const itemDesc = textoNoVacio(meta.itemDesc);
   if (itemDesc === null) return omitida("la factura no trae metadata.itemDesc");
-  if (!enteroPositivo(meta.usdCentavos)) return omitida("metadata.usdCentavos debe ser un entero mayor que cero");
+  if (!enteroPositivo(meta.usdCentavos) || meta.usdCentavos > MAX_CENTAVOS) {
+    return omitida(`metadata.usdCentavos debe ser un entero entre 1 y ${MAX_CENTAVOS}`);
+  }
   const cotizacion = meta.cotizacionUsdBtc;
   if (typeof cotizacion !== "number" || !Number.isFinite(cotizacion) || cotizacion <= 0) {
     return omitida("metadata.cotizacionUsdBtc debe ser un número mayor que cero");

@@ -65,7 +65,7 @@ export function AccionesEnvio({
 
   // With Lightning on, the sender pays the invoice instead of starting the transfer by hand.
   const puedeProcesar = acciones.includes('procesar') && !pagoLightning;
-  const puedePagar = acciones.includes('procesar') && pagoLightning;
+  const puedePagar = pagoLightning;
   const puedeCancelar = acciones.includes('cancelar');
   const puedeCompletar = acciones.includes('completar');
   const puedeFallar = acciones.includes('fallar');

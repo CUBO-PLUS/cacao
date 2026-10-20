@@ -4,9 +4,11 @@ import { connection } from "next/server";
 
 import { formatoUsd } from "../../../src/dinero.ts";
 import { almacenDeEntorno } from "../../../src/servidor/configuracion.ts";
+import { accesoDeDueno } from "../../../src/servidor/sesion.ts";
 import { informeDelMes } from "../../../src/servidor/informe.ts";
 import { esMes, mesDesplazado } from "../../../src/servidor/tiempo-sv.ts";
-import type { InformeMes } from "../../../src/mes.ts";
+import { SUPUESTOS, type InformeMes } from "../../../src/mes.ts";
+import { SinAcceso } from "../../_componentes/SinAcceso.tsx";
 import { SinDatos } from "../../_componentes/SinDatos.tsx";
 import { fechaCorta } from "../../_componentes/formato.ts";
 
@@ -86,9 +88,23 @@ function Cifras({ informe }: { informe: InformeMes }) {
         </table>
       </div>
       <p className="nota" style={{ marginTop: "0.75rem" }}>
-        {informe.nota} F-07: primeros 10 días hábiles del mes siguiente (Art. 94 Ley de IVA). F-14: pago a cuenta del 1.75 %
-        sobre ingresos brutos (Art. 151 CT).
+        {informe.nota} F-07: dentro de los primeros 10 días hábiles del mes siguiente (por confirmar). F-14: pago a cuenta del
+        1.75 % sobre ingresos brutos, Art. 151 CT (por confirmar).
       </p>
+    </section>
+  );
+}
+
+// What the figures assume and what they do not prove. Shown on the month page, next to the figures they feed.
+function Supuestos() {
+  return (
+    <section className="aviso" aria-labelledby="titulo-supuestos">
+      <h2 id="titulo-supuestos">Supuestos</h2>
+      <ul style={{ marginTop: "0.5rem" }}>
+        {SUPUESTOS.map((s) => (
+          <li key={s}>{s}</li>
+        ))}
+      </ul>
     </section>
   );
 }
@@ -185,6 +201,8 @@ function LibroContribuyentes({ informe }: { informe: InformeMes }) {
 export default async function PaginaMes({ params }: PageProps<"/mes/[mes]">) {
   await connection();
   const { mes } = await params;
+  // Owner only. The check runs before the first read of the ledger.
+  if (!(await accesoDeDueno(`/mes/${mes}`))) return <SinAcceso />;
   if (!esMes(mes)) notFound();
 
   let informe: InformeMes;
@@ -223,6 +241,7 @@ export default async function PaginaMes({ params }: PageProps<"/mes/[mes]">) {
       </section>
 
       <Cifras informe={informe} />
+      <Supuestos />
       <LibroConsumidor informe={informe} />
       <LibroContribuyentes informe={informe} />
 

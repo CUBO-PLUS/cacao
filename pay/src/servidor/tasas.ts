@@ -30,7 +30,7 @@ export type EntradaCotizacion = {
 const FUENTE_BTC = 'Precio de bitcoin: Coinbase y Kraken';
 // A quote is shown for five minutes. Creating a transfer quotes again, so an old quote cannot
 // change what is stored.
-const VIGENCIA_MS = 5 * 60 * 1000;
+export const VIGENCIA_MS = 5 * 60 * 1000;
 
 const SIN_COTIZACION = 'No pudimos obtener el precio del bitcoin. Probá de nuevo en un momento.';
 
@@ -100,20 +100,26 @@ export async function tasaEurUsd(): Promise<{ tasa: number; fuente: string; actu
 
 /**
  * The quote a signed-in sender sees. Fees and the EUR/USD rate come from the database; the BTC price
- * only matters for Lightning. Numbers never come from the browser.
+ * only matters for Lightning. Numbers never come from the browser. A caller that already has the BTC
+ * price (to quote and to invoice with the same one) passes it in `usdBtc`.
  */
 export async function cotizarEnServidor(
   entrada: EntradaCotizacion,
+  opciones: { usdBtc?: number } = {},
 ): Promise<Resultado<Cotizacion & { validaHasta: string }>> {
   try {
     const [tarifasLeidas, eur] = await Promise.all([tarifas(), tasaEurUsd()]);
 
     let usdBtc: number | null = null;
     if (entrada.entrega === 'lightning') {
-      try {
-        usdBtc = await cotizacionUsdBtc();
-      } catch {
-        return fallo('SIN_COTIZACION', SIN_COTIZACION);
+      if (opciones.usdBtc !== undefined) {
+        usdBtc = opciones.usdBtc;
+      } else {
+        try {
+          usdBtc = await cotizacionUsdBtc();
+        } catch {
+          return fallo('SIN_COTIZACION', SIN_COTIZACION);
+        }
       }
     }
 

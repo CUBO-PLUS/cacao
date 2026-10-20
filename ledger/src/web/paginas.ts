@@ -370,7 +370,7 @@ export function paginaMes(d: DatosSitio): string {
 
   const cuerpo = `
 <h1>Libros de IVA y declaraciones · <span class="num">${t(m.mes)}</span></h1>
-<p class="nota">Solo entran los documentos con sello de recepción (Art. 119-C del Código Tributario). Los libros de IVA no pueden atrasarse más de 15 días calendario (Art. 242 numeral 1, subnumeral 2 del Código Tributario). El F-07 se presenta dentro de los primeros 10 días hábiles del mes siguiente (Art. 94 Ley de IVA). El pago a cuenta del F-14 se rige por el Art. 152 del Código Tributario; la vigencia de ese texto no está confirmada.</p>
+<p class="nota">Solo entran los documentos con sello de recepción (Art. 119-C del Código Tributario). Los libros de IVA no pueden atrasarse más de 15 días calendario (Art. 242 numeral 1, subnumeral 2 del Código Tributario). El F-07 se presenta dentro de los primeros 10 días hábiles del mes siguiente (por confirmar). El pago a cuenta del F-14 se rige por el Art. 151 del Código Tributario, pago a cuenta (por confirmar).</p>
 
 <section class="bloque">
 <h2>Cifras para Formulario F-07 (IVA) y Formulario F-14 v17 (Pago a Cuenta)</h2>
@@ -385,8 +385,8 @@ export function paginaMes(d: DatosSitio): string {
 <tr><td>Débito fiscal por ventas a contribuyentes (13 %)</td><td>F-07 · Débito fiscal por contribuyentes (13 % sobre CCF 03)</td><td class="der">${t(formatoUsd(c.f07DebitoContribuyentesCentavos))}</td></tr>
 <tr><td>Débito fiscal por ventas a consumidor final (13 %)</td><td>F-07 · Débito fiscal por consumidor final (IVA contenido en Factura 01)</td><td class="der">${t(formatoUsd(c.f07DebitoConsumidorCentavos))}</td></tr>
 <tr><td>Total débito fiscal de IVA del mes (13 %)</td><td>F-07 · Débito fiscal total del período</td><td class="der">${t(formatoUsd(c.f07DebitoIvaCentavos))}</td></tr>
-<tr><td>Ingresos brutos mensuales (sin IVA)</td><td>F-14 v17 · Base del pago a cuenta por rama económica (Art. 151 inciso 3 CT). Sin IVA es un supuesto de cálculo, no una norma</td><td class="der">${t(formatoUsd(c.f14IngresosBrutosCentavos))}</td></tr>
-<tr><td>Entero de Pago a Cuenta del ISR (1.75 %)</td><td>F-14 v17 · 1.75 % de los ingresos brutos por rama económica (Art. 151 inciso 3 CT, reformado por el Decreto 958)</td><td class="der">${t(formatoUsd(c.f14PagoACuentaCentavos))}</td></tr>
+<tr><td>Ingresos brutos mensuales (sin IVA)</td><td>F-14 v17 · Base del pago a cuenta por rama económica (Art. 151 CT, pago a cuenta, por confirmar). Sin IVA es un supuesto de cálculo, no una norma</td><td class="der">${t(formatoUsd(c.f14IngresosBrutosCentavos))}</td></tr>
+<tr><td>Entero de Pago a Cuenta del ISR (1.75 %)</td><td>F-14 v17 · 1.75 % de los ingresos brutos por rama económica (Art. 151 CT, pago a cuenta, por confirmar; reforma por el Decreto 958)</td><td class="der">${t(formatoUsd(c.f14PagoACuentaCentavos))}</td></tr>
 </tbody>
 </table>
 </div>

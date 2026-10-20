@@ -38,16 +38,19 @@ export function diaSvDe(instante: string): string {
   return fechaHoraSalvador(new Date(instante)).fecEmi;
 }
 
-// Reads every ticket created in [desde, hasta) by following the keyset cursor (creado), 500 per page.
+// Reads every ticket created in [desde, hasta) by following the keyset cursor (creado, id), 500 per page.
 // Stops at a short page or after MAXIMO_PAGINAS pages.
 export async function todosEntre(almacen: AlmacenTickets, desde: Date, hasta: Date): Promise<Ticket[]> {
   const salida: Ticket[] = [];
   let despues: string | undefined;
+  let despuesId: string | undefined;
   for (let pagina = 0; pagina < MAXIMO_PAGINAS; pagina++) {
-    const lote = await almacen.listar({ desde, hasta, limite: 500, despues });
+    const lote = await almacen.listar({ desde, hasta, limite: 500, despues, despuesId });
     salida.push(...lote);
     if (lote.length < 500) break;
-    despues = lote[lote.length - 1]?.creado;
+    const ultimo = lote[lote.length - 1];
+    despues = ultimo?.creado;
+    despuesId = ultimo?.id;
     if (despues === undefined) break;
   }
   return salida;

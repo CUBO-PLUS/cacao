@@ -540,3 +540,30 @@ select {
     text-decoration: none;
   }
 }
+
+/* Sign-in and sign-up: one centered column, the page title over Clerk's card. Clerk's own title is hidden in
+   the layout (appearance), so the page says it once. */
+.entrar {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding-block: clamp(24px, 6vh, 64px);
+}
+
+.entrar .encabezado {
+  text-align: center;
+  justify-items: center;
+  max-width: 28rem;
+  margin-inline: auto;
+}
+
+.entrar .cl-rootBox {
+  width: 100%;
+  max-width: 26rem;
+}
+
+/* Header: the owner's UserButton sits at the end of the nav. */
+.nav-usuario {
+  display: inline-flex;
+  align-items: center;
+}

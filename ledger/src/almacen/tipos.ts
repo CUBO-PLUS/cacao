@@ -15,8 +15,9 @@ export type FiltrosTickets = {
   texto?: string;
   // Rows per page. Default 50, at most 500.
   limite?: number;
-  // Keyset cursor: only tickets created strictly before this ISO-8601 instant (the creado of the last row).
+  // Keyset cursor: tickets created before this ISO-8601 instant, or at it with a smaller id (the creado and id of the last row).
   despues?: string;
+  despuesId?: string;
 };
 
 export type AlmacenTickets = {

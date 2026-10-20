@@ -1,17 +1,18 @@
 import { TASA_EUR_USD, type Entrega } from './cotizacion';
 import { aUsdCentavos } from './transferencias';
 
-// Tax and regulatory breakdown for a remittance in El Salvador (DGII · Ministerio de Hacienda and BCR).
-// All amounts are integer US cents. Los registros van en dólares: art. 139 CT (asientos en moneda de curso legal)
-// y art. 6 de la Ley Bitcoin (dólar como moneda de referencia).
+// Tax breakdown for a remittance in El Salvador, as a demo. Not tax advice: the rules below are not confirmed
+// (see docs/hacienda-y-regulacion.md). All amounts are integer US cents. The records are kept in dollars:
+// art. 139 CT and art. 6 de la Ley Bitcoin.
 //
 // 1. Remittance principal (neto):
-//    - ISR: Art. 3 numeral 4) LISR: los valores recibidos del exterior no constituyen renta; el alcance para remesas familiares no está confirmado.
+//    - ISR: Art. 3 numeral 4) LISR, valores recibidos del exterior. Alcance para remesas familiares: por confirmar.
 //    - IVA: tratamiento no verificado en esta revisión.
-// 2. Service commission (when billed locally in El Salvador as a Factura de Consumidor Final DTE 01):
-//    - Base sin IVA = round(comisionUsdCentavos * 100 / 113)    (supone IVA 13% incluido; artículos de la Ley de IVA no verificados)
-//    - Débito IVA   = comisionUsdCentavos - baseSinIva          (F-07: débito fiscal por consumidor final en DTE 01 y por contribuyentes en DTE 03; versión 14 sin vigencia confirmada)
-//    - Pago a Cuenta ISR (1.75%, Art. 151 inc. 3° CT, reformado por Decreto 958; F-14 v17) = round(baseSinIva * 175 / 10000)   (base sin IVA: supuesto de cálculo, no es norma)
+// 2. Service commission (billed locally as a Factura de Consumidor Final DTE 01):
+//    - Base sin IVA = round(comisionUsdCentavos * 100 / 113). Supuesto de cálculo: IVA 13% incluido en la comisión.
+//    - Débito IVA   = comisionUsdCentavos - baseSinIva. F-07 versión 14: vigencia por confirmar.
+//    - Pago a cuenta 1.75% = round(baseSinIva * 175 / 10000). Art. 151 CT (pago a cuenta, por confirmar). La base
+//      sin IVA es un supuesto de cálculo: confirmalo con tu contador.
 
 export type DesgloseTributario = {
   montoOrigenUsdCentavos: number;
@@ -44,8 +45,8 @@ const CODIGO_CAT017: Record<Entrega, { codigo: '01' | '05' | '11'; caso01: '01' 
 };
 
 /**
- * Splits a commission in US cents into its net taxable base (without 13% IVA), its 13% IVA debit
- * for F-07 (version 14, vigencia no confirmada), and the 1.75% Pago a Cuenta advance for F-14 v17 (Art. 151 CT).
+ * Splits a commission in US cents into its net base (without 13% IVA, a calculation assumption), its 13% IVA
+ * debit for F-07 (version 14, vigencia por confirmar), and the 1.75% pago a cuenta (Art. 151 CT, por confirmar).
  */
 export function desglosarComisionUsd(comisionUsdCentavos: number): {
   comisionBrutaUsdCentavos: number;

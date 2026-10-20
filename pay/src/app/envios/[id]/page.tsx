@@ -90,7 +90,9 @@ export default async function PaginaEnvio(props: PageProps<'/envios/[id]'>) {
       <AccionesEnvio
         envioId={envio.id}
         acciones={acciones}
-        pagoLightning={envio.rol === 'remitente' && pagoLightningActivo()}
+        pagoLightning={
+          envio.rol === 'remitente' && envio.entrega === 'lightning' && envio.estado === 'creada' && pagoLightningActivo()
+        }
       />
       {enCamino && <SeguimientoEnCamino envioId={envio.id} />}
 
@@ -130,12 +132,12 @@ export default async function PaginaEnvio(props: PageProps<'/envios/[id]'>) {
         <dl className={estilos.datos}>
           <div>
             <dt>Principal</dt>{' '}
-            <dd>Valores recibidos del exterior, que no constituyen renta según el Art. 3 núm. 4 de la LISR.</dd>
+            <dd>Remesa familiar recibida del exterior. Referencia: Art. 3 núm. 4 LISR (alcance por confirmar con tu contador).</dd>
           </div>
           <div>
             <dt>Comisión</dt>{' '}
             <dd className="dato">
-              Base sin IVA {formatoUsd(tributario.baseSinIvaUsdCentavos)} + IVA 13% {formatoUsd(tributario.ivaUsdCentavos)} ·
+              Desglose estimado: base sin IVA {formatoUsd(tributario.baseSinIvaUsdCentavos)} + IVA 13% {formatoUsd(tributario.ivaUsdCentavos)} ·
               Pago a cuenta 1.75% {formatoUsd(tributario.pagoACuentaUsdCentavos)}
             </dd>
           </div>

@@ -54,13 +54,18 @@ export function almacenArchivos(datos: string): AlmacenTickets {
           const creado = new Date(t.creado).getTime();
           if (desde !== undefined && creado < desde) return false;
           if (hasta !== undefined && creado >= hasta) return false;
-          if (despues !== undefined && creado >= new Date(despues).getTime()) return false;
+          if (despues !== undefined) {
+            const corte = new Date(despues).getTime();
+            // Same instant: only the ids before the cursor, in the same order as the list (creado desc, id desc).
+            const antes = creado < corte || (creado === corte && f?.despuesId !== undefined && t.id < f.despuesId);
+            if (!antes) return false;
+          }
           if (f?.producto !== undefined && productoDeTicket(t) !== f.producto) return false;
           if (f?.estado !== undefined && t.estado !== f.estado) return false;
           if (texto !== "" && !textoBuscable(t).includes(texto)) return false;
           return true;
         })
-        .sort((a, b) => (a.creado < b.creado ? 1 : a.creado > b.creado ? -1 : 0))
+        .sort((a, b) => (a.creado < b.creado ? 1 : a.creado > b.creado ? -1 : a.id < b.id ? 1 : a.id > b.id ? -1 : 0))
         .slice(0, limite);
     },
   };

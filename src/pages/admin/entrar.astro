@@ -17,3 +17,10 @@ if ((await accesoAdmin(Astro)).estado !== 'sin-sesion') return Astro.redirect('/
     <SignIn routing="hash" forceRedirectUrl="/admin/" />
   </div>
 </Panel>
+
+<style>
+  /* One centered column: the page title over Clerk's card, whose own title is hidden so it shows once. */
+  .entrar { display: grid; justify-items: center; gap: 16px; max-width: 34rem; margin-inline: auto; text-align: center; }
+  .entrar :global(.cl-rootBox) { width: 100%; max-width: 26rem; text-align: start; }
+  .entrar :global(.cl-headerTitle) { display: none; }
+</style>

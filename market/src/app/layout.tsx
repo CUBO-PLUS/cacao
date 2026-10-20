@@ -56,6 +56,14 @@ const apariencia = {
     colorBackground: '#fffaf4',
     fontFamily: 'var(--font-bricolage), system-ui, sans-serif',
   },
+  // The page shows its own title, so the card keeps only the step's instructions. A flat card with a thin
+  // border matches the other cards of the site.
+  elements: {
+    rootBox: { width: '100%' },
+    cardBox: { width: '100%', boxShadow: 'none', border: '1px solid rgba(42, 25, 18, 0.14)', borderRadius: '16px' },
+    card: { boxShadow: 'none' },
+    headerTitle: { display: 'none' },
+  },
 };
 
 export const metadata: Metadata = {

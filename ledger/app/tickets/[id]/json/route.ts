@@ -1,10 +1,11 @@
 import { connection } from "next/server";
 
-import { almacenDeEntorno, almacenDtesDeEntorno } from "../../../../src/servidor/configuracion.ts";
-import { vistaDte } from "../../../../src/servidor/vista-dte.ts";
+import { almacenDtesDeEntorno } from "../../../../src/servidor/configuracion.ts";
+import { respuestaSinAcceso } from "../../../../src/servidor/sesion.ts";
 
-// The document of one ticket as JSON: the one the web emitted (ledger_dtes) when there is one, otherwise the
-// preview the ticket page shows, built on the fly.
+// The document of one ticket as JSON: the one the web emitted (ledger_dtes). Owner only.
+// No stored row means no document: 404. A row still reserved, or one without a built document, is 409.
+// No preview is offered as a download: a preview has no number from the books.
 const FORMATO_ID = /^TK-\d{8}-[0-9A-F]{4}$/;
 
 function enviar(documento: unknown, numeroControl: string): Response {
@@ -24,16 +25,9 @@ function error(mensaje: string, estado: number): Response {
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   await connection();
   const { id } = await params;
-  if (!FORMATO_ID.test(id)) return error("No existe ese ticket.", 404);
-
-  let ticket;
-  try {
-    ticket = await almacenDeEntorno().porId(id);
-  } catch (e) {
-    console.error(`El JSON del ticket ${id} no pudo leer la base:`, e);
-    return error("No se pudo leer los datos.", 503);
-  }
-  if (ticket === null) return error("No existe ese ticket.", 404);
+  const sinAcceso = await respuestaSinAcceso(`/tickets/${id}/json`);
+  if (sinAcceso) return sinAcceso;
+  if (!FORMATO_ID.test(id)) return error("No existe ese documento.", 404);
 
   let registro;
   try {
@@ -42,14 +36,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     console.error(`El documento del ticket ${id} no pudo leerse:`, e);
     return error("No se pudo leer los datos.", 503);
   }
-  if (registro !== null) {
-    if (Object.keys(registro.documento as object).length === 0) {
-      return error("Este ticket no tiene documento: no se pudo armar.", 409);
-    }
-    return enviar(registro.documento, registro.numeroControl);
+  if (registro === null) return error("Este ticket todavía no tiene un documento emitido.", 404);
+  if (registro.estado === "reservado" || Object.keys(registro.documento as object).length === 0) {
+    return error("Este documento todavía no está completo.", 409);
   }
-
-  const vista = vistaDte(ticket);
-  if (!vista.ok) return error(vista.motivo, 409);
-  return enviar(vista.resultado.documento, vista.resultado.numeroControl);
+  return enviar(registro.documento, registro.numeroControl);
 }

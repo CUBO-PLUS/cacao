@@ -1,24 +1,24 @@
-import Link from "next/link";
 import { connection } from "next/server";
 
 import { formatoSats, formatoUsd } from "../src/dinero.ts";
 import { almacenDeEntorno } from "../src/servidor/configuracion.ts";
+import { sesionActual } from "../src/servidor/sesion.ts";
 import { sincronizarSiHaceFalta } from "../src/servidor/sincronizacion.ts";
 import { todosEntre } from "../src/servidor/tiempo-sv.ts";
 import { resumen, type Cifras } from "../src/tablero.ts";
-import { productoDeTicket, totalDeTicket, type Ticket } from "../src/ticket.ts";
+import type { Ticket } from "../src/ticket.ts";
 import { SinDatos } from "./_componentes/SinDatos.tsx";
 import { SincronizarAhora } from "./_componentes/SincronizarAhora.tsx";
-import { acortar, etiquetaProducto, fechaCorta, fechaHoraSv, haceCuanto, ORDEN_PRODUCTOS } from "./_componentes/formato.ts";
+import { etiquetaProducto, fechaCorta, haceCuanto, ORDEN_PRODUCTOS } from "./_componentes/formato.ts";
 
 const DIA_MS = 86_400_000;
-const VENTAS_EN_TABLA = 8;
 
 export const metadata = { title: "Tablero" };
 
+// This page is public: it shows totals only. No ticket rows, no ids, no error causes (those are for the owner).
+
 // These pages read the ledger at request time and wait for it: a blocking route, not an instant one.
 export const instant = false;
-
 
 function plural(n: number, uno: string, varios: string): string {
   return `${n} ${n === 1 ? uno : varios}`;
@@ -91,6 +91,8 @@ export default async function PaginaTablero() {
   const ahora = new Date();
   // Never throws: a slow or failing BTCPay shows up as the status line, not as a broken page.
   const sincro = await sincronizarSiHaceFalta({ ahora });
+  // The owner sees the cause of a failed run; everyone else sees the generic line.
+  const dueno = (await sesionActual())?.usuario.esAdmin === true;
 
   let tickets: Ticket[] | null = null;
   try {
@@ -100,8 +102,11 @@ export default async function PaginaTablero() {
   }
 
   let estadoTexto: string;
-  if (sincro.error !== null) {
-    estadoTexto = `No se pudo sincronizar: ${sincro.error}`;
+  if (sincro.enCurso) {
+    estadoTexto = "Hay una sincronización en curso con BTCPay.";
+  } else if (sincro.error !== null) {
+    estadoTexto = sincro.error;
+    if (dueno && sincro.detalle) estadoTexto += ` Motivo: ${sincro.detalle}`;
     if (sincro.ultima) estadoTexto += ` Última vez con éxito: ${haceCuanto(sincro.ultima, ahora)}.`;
   } else if (sincro.ultima) {
     estadoTexto = `Sincronizado con BTCPay ${haceCuanto(sincro.ultima, ahora)}`;
@@ -119,7 +124,7 @@ export default async function PaginaTablero() {
   const estadoSincro = (
     <section className="bloque" aria-label="Sincronización">
       <p role="status">{estadoTexto}</p>
-      <SincronizarAhora />
+      {dueno ? <SincronizarAhora /> : null}
     </section>
   );
 
@@ -142,7 +147,6 @@ export default async function PaginaTablero() {
     return { clave, centavos: fila?.centavos ?? 0, tickets: fila?.tickets ?? 0 };
   });
   const mesRiel = r.porRiel.lightning.centavos + r.porRiel.efectivo.centavos;
-  const ultimas = tickets.slice(0, VENTAS_EN_TABLA);
 
   return (
     <>
@@ -206,47 +210,6 @@ export default async function PaginaTablero() {
             <p className="nota">Dólares cobrados por día.</p>
             <div style={{ marginTop: "0.75rem" }}>
               <GraficoDias dias={r.porDia} />
-            </div>
-          </section>
-
-          <section className="bloque" aria-labelledby="titulo-ultimas">
-            <div className="encabezado" style={{ margin: 0 }}>
-              <h2 id="titulo-ultimas">Últimas ventas</h2>
-              <Link className="enlace-fila" href="/tickets">
-                Ver todas
-              </Link>
-            </div>
-            <div className="tabla-caja">
-              <table>
-                <thead>
-                  <tr>
-                    <th scope="col">Ticket</th>
-                    <th scope="col">Fecha</th>
-                    <th scope="col">Producto</th>
-                    <th scope="col" className="derecha">
-                      USD
-                    </th>
-                    <th scope="col">Estado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {ultimas.map((t) => (
-                    <tr key={t.id}>
-                      <td>
-                        <Link className="enlace-fila" href={`/tickets/${t.id}`}>
-                          {acortar(t.id, 14, 4)}
-                        </Link>
-                      </td>
-                      <td className="num">{fechaHoraSv(t.creado)}</td>
-                      <td>{etiquetaProducto(productoDeTicket(t))}</td>
-                      <td className="num derecha">{formatoUsd(totalDeTicket(t).totalCentavos)}</td>
-                      <td>
-                        <span className={`chip chip-${t.estado}`}>{t.estado}</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
           </section>
         </>

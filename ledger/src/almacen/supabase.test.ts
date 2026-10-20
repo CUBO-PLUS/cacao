@@ -112,7 +112,7 @@ test("listar builds the filters, order, limit and keyset cursor", async () => {
   assert.ok(l);
   assert.equal(l.url.pathname, "/rest/v1/ledger_tickets");
   assert.equal(l.url.searchParams.get("select"), "datos");
-  assert.equal(l.url.searchParams.get("order"), "creado_en.desc");
+  assert.equal(l.url.searchParams.get("order"), "creado_en.desc,id.desc");
   assert.equal(l.url.searchParams.get("limit"), "20");
   assert.deepEqual(l.url.searchParams.getAll("creado_en"), [
     "gte.2026-10-01T06:00:00.000Z",

@@ -8,6 +8,7 @@ import { plazoEnvio, VIA_RECIBE } from '@/componentes/formatoEnvio';
 
 import { crearEnvioAccion, type CotizacionEnvio, type EstadoCrearEnvio } from './acciones';
 import estilos from './estilos.module.css';
+import { VigenciaCotizacion } from './VigenciaCotizacion';
 import { idAleatorio } from './visita';
 
 /** Step 3: everything in plain words, then the button that creates the transfer. */
@@ -21,6 +22,7 @@ export function PasoConfirmar({
   nota,
   cotizacion,
   usdBtc,
+  onVencer,
   onVolver,
 }: {
   tituloRef: RefObject<HTMLHeadingElement | null>;
@@ -32,6 +34,8 @@ export function PasoConfirmar({
   nota: string;
   cotizacion: CotizacionEnvio;
   usdBtc: number | null;
+  /** The quote ran out: the form asks for a new one. */
+  onVencer: () => void;
   onVolver: () => void;
 }) {
   // One key per form: a double tap sends the same key, and the database answers with one transfer.
@@ -60,6 +64,7 @@ export function PasoConfirmar({
       <p className={estilos.resumen}>{resumen}</p>
 
       <LineasDinero datos={cotizacion} usdBtc={usdBtc} />
+      <VigenciaCotizacion validaHasta={cotizacion.validaHasta} onVencer={onVencer} />
 
       <dl className={estilos.datosFinales}>
         <div>
@@ -78,7 +83,7 @@ export function PasoConfirmar({
         )}
       </dl>
 
-      <p className={estilos.recordatorio}>CacaoPay es una simulación. No se mueve dinero real.</p>
+      <p className={estilos.recordatorio}>Después de confirmar pagás por Lightning. En esta demo es bitcoin de prueba, sin valor.</p>
 
       {estado.error && (
         <p role="alert" className={estilos.error}>

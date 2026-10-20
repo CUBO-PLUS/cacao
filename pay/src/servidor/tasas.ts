@@ -34,7 +34,8 @@ const VIGENCIA_MS = 5 * 60 * 1000;
 
 const SIN_COTIZACION = 'No pudimos obtener el precio del bitcoin. Probá de nuevo en un momento.';
 
-async function leerTarifas(): Promise<TarifaDetalle[] | null> {
+/** The fee rows as stored, or null when the database could not be read. For claims about fees on screen. */
+export async function leerTarifas(): Promise<TarifaDetalle[] | null> {
   try {
     const { data, error } = await clienteServicio()
       .from('pay_tarifas')

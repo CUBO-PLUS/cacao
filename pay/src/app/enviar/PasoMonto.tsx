@@ -7,6 +7,7 @@ import type { TarifaMostrada } from '@/componentes/formatoEnvio';
 
 import type { CotizacionEnvio } from './acciones';
 import estilos from './estilos.module.css';
+import { VigenciaCotizacion } from './VigenciaCotizacion';
 
 // The three ways the recipient gets the money, each in one plain line.
 const OPCIONES: { valor: Entrega; titulo: string; detalle: string }[] = [
@@ -31,6 +32,7 @@ export function PasoMonto({
   usdBtc,
   errorCotizacion,
   enEspera,
+  onVencer,
   onSeguir,
 }: {
   tituloRef: RefObject<HTMLHeadingElement | null>;
@@ -49,6 +51,8 @@ export function PasoMonto({
   errorCotizacion: string | null;
   /** A quote for the current inputs is on its way. */
   enEspera: boolean;
+  /** The quote ran out: the form asks for a new one. */
+  onVencer: () => void;
   onSeguir: (evento: FormEvent<HTMLFormElement>) => void;
 }) {
   const tarifa = tarifas.find((t) => t.entrega === entrega) ?? null;
@@ -135,7 +139,10 @@ export function PasoMonto({
                 {errorCotizacion}
               </p>
             ) : cotizacion ? (
-              <LineasDinero datos={cotizacion} tarifa={tarifa} usdBtc={usdBtc} conPlazo />
+              <>
+                <LineasDinero datos={cotizacion} tarifa={tarifa} usdBtc={usdBtc} conPlazo />
+                <VigenciaCotizacion validaHasta={cotizacion.validaHasta} onVencer={onVencer} />
+              </>
             ) : (
               <p role="status" className={estilos.ayuda}>
                 Calculamos el envío…

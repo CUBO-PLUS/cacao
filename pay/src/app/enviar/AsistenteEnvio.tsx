@@ -1,8 +1,9 @@
 'use client';
 
-import { type FormEvent, useEffect, useRef, useState } from 'react';
+import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 
 import type { Entrega } from '@/lib/cotizacion';
+import type { RecienteDestinatario } from '@/lib/recientes';
 import { normalizarContacto } from '@/lib/transferencias';
 import { errorDeMonto, leerMonto, type TarifaMostrada } from '@/componentes/formatoEnvio';
 
@@ -14,6 +15,15 @@ import { PasoMonto } from './PasoMonto';
 import { asegurarVisita } from './visita';
 
 type Paso = 1 | 2 | 3;
+
+/** What "Repetir envío" fills in, read on the server from one of the sender's own transfers. */
+export type PrefillEnvio = {
+  monedaOrigen: 'USD' | 'EUR';
+  montoTexto: string;
+  entrega: Entrega;
+  nombre: string;
+  contacto: string;
+};
 
 const MENSAJE_SIN_BTC = 'El precio del bitcoin no está disponible ahora.';
 const MENSAJE_SIN_CALCULO = 'No pudimos calcular el envío. Probá de nuevo en un momento.';
@@ -30,20 +40,27 @@ type Respuesta = { clave: string; cotizacion?: CotizacionEnvio; usdBtc?: number 
 export function AsistenteEnvio({
   tarifas,
   precioDisponible,
+  recientes,
+  prefill,
 }: {
   tarifas: TarifaMostrada[];
   precioDisponible: boolean;
+  recientes: RecienteDestinatario[];
+  prefill: PrefillEnvio | null;
 }) {
   const [paso, setPaso] = useState<Paso>(1);
-  const [montoTexto, setMontoTexto] = useState('100');
-  const [moneda, setMoneda] = useState<'USD' | 'EUR'>('USD');
-  const [entrega, setEntrega] = useState<Entrega>('efectivo');
+  const [montoTexto, setMontoTexto] = useState(prefill?.montoTexto ?? '100');
+  const [moneda, setMoneda] = useState<'USD' | 'EUR'>(prefill?.monedaOrigen ?? 'USD');
+  const [entrega, setEntrega] = useState<Entrega>(prefill?.entrega ?? 'efectivo');
   const [intentoMonto, setIntentoMonto] = useState(false);
-  const [nombre, setNombre] = useState('');
-  const [contacto, setContacto] = useState('');
+  const [nombre, setNombre] = useState(prefill?.nombre ?? '');
+  const [contacto, setContacto] = useState(prefill?.contacto ?? '');
   const [nota, setNota] = useState('');
   const [intentoDestino, setIntentoDestino] = useState(false);
   const [respuesta, setRespuesta] = useState<Respuesta | null>(null);
+  // Counts up each time a quote runs out, so the quote is asked again for the same inputs.
+  const [vencimientos, setVencimientos] = useState(0);
+  const alVencer = useCallback(() => setVencimientos((n) => n + 1), []);
 
   const tituloRef = useRef<HTMLHeadingElement>(null);
   const pendienteFoco = useRef(false);
@@ -85,7 +102,7 @@ export function AsistenteEnvio({
       vigente = false;
       clearTimeout(temporizador);
     };
-  }, [clave, centavos, moneda, entrega]);
+  }, [clave, centavos, moneda, entrega, vencimientos]);
 
   // The answer counts only when it belongs to the inputs on screen now.
   const vigente = respuesta !== null && clave !== null && respuesta.clave === clave ? respuesta : null;
@@ -119,6 +136,13 @@ export function AsistenteEnvio({
     // Without a quote for these inputs there is nothing to confirm yet; the sentence above says why.
     if (errorMonto !== null || cotizacion === null) return;
     irAPaso(2);
+  }
+
+  // One tap on a recent person fills the name and the contact. The delivery stays as chosen in step 1.
+  function elegirReciente(reciente: RecienteDestinatario) {
+    setNombre(reciente.nombre);
+    setContacto(reciente.contacto);
+    setIntentoDestino(false);
   }
 
   function seguirDelDestinatario(evento: FormEvent<HTMLFormElement>) {
@@ -157,6 +181,7 @@ export function AsistenteEnvio({
           usdBtc={usdBtc}
           errorCotizacion={errorCotizacion}
           enEspera={enEspera}
+          onVencer={alVencer}
           onSeguir={seguirDelMonto}
         />
       )}
@@ -174,6 +199,8 @@ export function AsistenteEnvio({
           errorContacto={intentoDestino ? errorContacto : null}
           nota={nota}
           onNota={setNota}
+          recientes={recientes}
+          onElegirReciente={elegirReciente}
           onVolver={() => irAPaso(1)}
           onSeguir={seguirDelDestinatario}
         />
@@ -191,6 +218,7 @@ export function AsistenteEnvio({
             nota={nota.trim()}
             cotizacion={cotizacion}
             usdBtc={usdBtc}
+            onVencer={alVencer}
             onVolver={() => irAPaso(2)}
           />
         ) : (

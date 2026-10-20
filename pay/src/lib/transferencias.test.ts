@@ -156,6 +156,25 @@ describe('contactos', () => {
   });
 });
 
+describe('cancelar un envío', () => {
+  it('se puede cancelar mientras no hay factura vigente ni pago', () => {
+    expect(accionesPosibles('creada', 'remitente', 'lightning', { pagada: false, facturaViva: false })).toEqual([
+      'procesar',
+      'cancelar',
+    ]);
+  });
+
+  it('no se ofrece con una factura Lightning vigente o con el pago hecho', () => {
+    expect(accionesPosibles('creada', 'remitente', 'lightning', { facturaViva: true })).toEqual(['procesar']);
+    expect(accionesPosibles('creada', 'remitente', 'lightning', { pagada: true })).toEqual(['procesar']);
+  });
+
+  it('un envío por Lightning nunca ofrece completar a mano, ni en la demo', () => {
+    expect(accionesPosibles('procesando', 'remitente', 'lightning')).toEqual([]);
+    expect(accionesPosibles('procesando', 'admin', 'lightning')).toEqual(['fallar']);
+  });
+});
+
 describe('montos en dólares', () => {
   it('un monto en dólares no cambia', () => {
     expect(aUsdCentavos(9_999, 'USD', 1.08)).toBe(9_999);

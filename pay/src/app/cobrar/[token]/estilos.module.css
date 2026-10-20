@@ -1,0 +1,82 @@
+/* The claim page: the amount, the states and the invoice form. Brand variables only, no shadows. */
+.pagina {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+
+.encabezado {
+  display: grid;
+  gap: 10px;
+}
+
+.encabezado h1 {
+  font-size: clamp(1.75rem, 6vw, 2.5rem);
+  overflow-wrap: anywhere;
+}
+
+.codigo {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.texto {
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.bloque {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+  border-radius: var(--radio);
+  background: var(--blanco);
+  min-width: 0;
+}
+
+.formulario {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.textoFactura {
+  width: 100%;
+  min-width: 0;
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+  resize: vertical;
+  padding: 10px 12px;
+  border-radius: var(--radio-chico);
+  background: var(--pulpa);
+  color: var(--tostado);
+}
+
+.ayuda {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.regtest {
+  font-size: 0.9375rem;
+  padding: 10px 14px;
+  border-radius: var(--radio-chico);
+  background: var(--arena);
+}
+
+.exito {
+  padding: 10px 14px;
+  border-radius: var(--radio-chico);
+  background: var(--arena);
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.error {
+  padding: 10px 14px;
+  border-radius: var(--radio-chico);
+  background: var(--mazorca);
+  color: var(--tostado);
+  font-weight: 600;
+}

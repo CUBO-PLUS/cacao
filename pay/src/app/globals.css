@@ -454,3 +454,63 @@ main:focus {
     padding-inline: 0;
   }
 }
+
+/* The demo line under the page: small, mono, one sentence. */
+.pie-demo {
+  padding: 12px var(--canal) calc(var(--barra-alto) + 16px + env(safe-area-inset-bottom));
+  color: var(--chocolate);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  text-align: center;
+}
+
+/* Printing keeps the page's own content: the navigation, the bottom bar and the actions stay on screen. */
+@media print {
+  .cabecera,
+  .barra-inferior,
+  .zona-grupo,
+  .saltar,
+  .pie-demo,
+  .no-imprimir {
+    display: none !important;
+  }
+}
+
+/* Loading and error pages: centred, short, with the brand colours. */
+.cargando {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+  padding: 48px 0;
+  color: var(--chocolate);
+  font-weight: 600;
+  text-align: center;
+}
+
+.cargando__marca {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 6px solid var(--arena);
+  border-top-color: var(--mazorca);
+}
+
+.cargando__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cargando__marca {
+    animation: cargando-girar 1s linear infinite;
+  }
+}
+
+@keyframes cargando-girar {
+  to {
+    transform: rotate(360deg);
+  }
+}

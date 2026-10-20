@@ -66,6 +66,12 @@ export type Envio = {
   fallidaEn: string | null;
   canceladaEn: string | null;
   motivo: string | null;
+  /** When the Lightning payment of the sender settled. Null for every other way. */
+  pagadaEn: string | null;
+  /** When the live Lightning invoice of the sender runs out. Null when there is none. */
+  facturaExpira: string | null;
+  /** True while that invoice can still be paid. */
+  facturaViva: boolean;
 };
 
 export type PasoHistorial = { estado: EstadoEnvio; detalle: string; cuando: string };
@@ -90,6 +96,8 @@ export type RastreoPublico = {
   /** The recipient's first name only. */
   destinatarioNombre: string;
   creadaEn: string;
+  /** True when the recipient collected it with a Lightning invoice. Never the claim link. */
+  cobradaPorLightning: boolean;
   historial: PasoHistorial[];
 };
 
@@ -109,12 +117,14 @@ export type CambioEnvio = { id: string; estado: EstadoEnvio };
 
 // The columns a list or a detail needs. The sender's first name comes from the usuarios table.
 export const COLUMNAS_ENVIO =
-  'id, codigo, remitente_id, destinatario_nombre, destinatario_contacto, destinatario_id, moneda_origen, monto_origen_centavos, comision_centavos, neto_centavos, tasa, tasa_fuente, moneda_destino, monto_destino, entrega, estado, nota, creada_en, procesando_en, completada_en, fallida_en, cancelada_en, motivo, remitente:usuarios!pay_transferencias_remitente_id_fkey(nombre)';
+  'id, codigo, remitente_id, destinatario_nombre, destinatario_contacto, destinatario_id, moneda_origen, monto_origen_centavos, comision_centavos, neto_centavos, tasa, tasa_fuente, moneda_destino, monto_destino, entrega, estado, nota, creada_en, procesando_en, completada_en, fallida_en, cancelada_en, motivo, pagada_en, factura_expira, remitente:usuarios!pay_transferencias_remitente_id_fkey(nombre)';
 
 // Only what the public view may show. Nothing else is selected, so nothing can leak by mistake.
-const COLUMNAS_RASTREO = 'id, codigo, estado, moneda_destino, monto_destino, entrega, creada_en, destinatario_nombre';
+const COLUMNAS_RASTREO =
+  'id, codigo, estado, moneda_destino, monto_destino, entrega, creada_en, destinatario_nombre, cobro_estado';
 
-const COLUMNAS_CAMBIO = 'id, codigo, remitente_id, estado, moneda_origen, monto_origen_centavos';
+const COLUMNAS_CAMBIO =
+  'id, codigo, remitente_id, estado, moneda_origen, monto_origen_centavos, entrega, pagada_en, factura_expira';
 
 // What the Lightning payment needs: the sender, the state, the amount and the invoice of the transfer.
 const COLUMNAS_PAGO =
@@ -158,6 +168,8 @@ export type FilaEnvio = {
   fallida_en: string | null;
   cancelada_en: string | null;
   motivo: string | null;
+  pagada_en: string | null;
+  factura_expira: string | null;
   remitente: { nombre: string } | null;
 };
 
@@ -200,6 +212,9 @@ export function aEnvio(fila: FilaEnvio, tarifasLeidas: Record<Entrega, Tarifa>):
     fallidaEn: fila.fallida_en,
     canceladaEn: fila.cancelada_en,
     motivo: fila.motivo,
+    pagadaEn: fila.pagada_en,
+    facturaExpira: fila.factura_expira,
+    facturaViva: fila.factura_expira !== null && Date.parse(fila.factura_expira) > Date.now(),
   };
 }
 
@@ -225,18 +240,14 @@ async function historialDe(envioId: string): Promise<PasoHistorial[]> {
   return (data ?? []).map((paso) => ({ estado: paso.estado, detalle: paso.detalle, cuando: paso.creado_en }));
 }
 
-async function paginaDe(
-  consulta: PromiseLike<{
-    data: unknown[] | null;
-    count: number | null;
-    error: { message: string; code?: string } | null;
-  }>,
-  pagina: number,
-  mensaje: string,
-): Promise<PaginaEnvios> {
+type RespuestaPagina = {
+  data: unknown[] | null;
+  count: number | null;
+  error: { message: string; code?: string } | null;
+};
+
+async function paginaDe(consulta: PromiseLike<RespuestaPagina>, pagina: number, mensaje: string): Promise<PaginaEnvios> {
   const { data, count, error } = await consulta;
-  // A page past the last one is not a failure: the database refuses the range, the list is empty.
-  if (error?.code === 'PGRST103') return { envios: [], total: 0, pagina, porPagina: POR_PAGINA };
   if (error) throw new Error(`${mensaje}: ${error.message}`);
   const tarifasLeidas = await tarifas();
   const filas = (data ?? []) as unknown as FilaEnvio[];
@@ -257,22 +268,54 @@ function paginaVacia(pagina?: number): PaginaEnvios {
   return { envios: [], total: 0, pagina: paginaValida(pagina), porPagina: POR_PAGINA };
 }
 
-/** The transfers this user sent, newest first. */
-export async function misEnvios(usuarioId: string, opciones: { pagina?: number } = {}): Promise<PaginaEnvios> {
+/**
+ * The transfers this user sent, newest first. Optional filters: the states to show, and a search over
+ * the code and the recipient's name (the search text must already be cleaned, see limpiarBusqueda).
+ * A page past the last one gives no transfers, but the total of the list.
+ */
+export async function misEnvios(
+  usuarioId: string,
+  opciones: { pagina?: number; estados?: EstadoEnvio[] | null; busqueda?: string } = {},
+): Promise<PaginaEnvios> {
   if (!esUuid(usuarioId)) return paginaVacia(opciones.pagina);
   const pagina = paginaValida(opciones.pagina);
-  const [desde, hasta] = rangoDe(pagina);
-  return paginaDe(
-    clienteServicio()
+  const busqueda = (opciones.busqueda ?? '').trim();
+
+  const consultar = (numero: number) => {
+    const [desde, hasta] = rangoDe(numero);
+    let consulta = clienteServicio()
       .from('pay_transferencias')
       .select(COLUMNAS_ENVIO, { count: 'exact' })
-      .eq('remitente_id', usuarioId)
+      .eq('remitente_id', usuarioId);
+    if (opciones.estados && opciones.estados.length > 0) consulta = consulta.in('estado', opciones.estados);
+    if (busqueda) {
+      consulta = consulta.or(`codigo.ilike.*${busqueda}*,destinatario_nombre.ilike.*${busqueda}*`);
+    }
+    return consulta
       .order('creada_en', { ascending: false })
       .order('id', { ascending: false })
-      .range(desde, hasta),
-    pagina,
-    'No pudimos leer tus envíos',
-  );
+      .range(desde, hasta);
+  };
+
+  const { data, count, error } = await consultar(pagina);
+  if (error?.code === 'PGRST103' && pagina > 1) {
+    // The page is past the last one: the database refuses the range. The total still counts.
+    const primera = await paginaDe(consultar(1), 1, 'No pudimos leer tus envíos');
+    return { envios: [], total: primera.total, pagina, porPagina: POR_PAGINA };
+  }
+  return paginaDe(Promise.resolve({ data, count, error }), pagina, 'No pudimos leer tus envíos');
+}
+
+/** Links the transfers sent to this user's contact to the user. Returns how many were linked. */
+export async function vincularRecibidos(usuarioId: string): Promise<number> {
+  if (!esUuid(usuarioId)) return 0;
+  const { data, error } = await clienteServicio().rpc('pay_vincular_recibidos', { p_usuario: usuarioId });
+  if (error) {
+    // The list still shows what was already linked; the failure is only logged.
+    console.error('Vincular envíos recibidos:', error.message);
+    return 0;
+  }
+  return Number(data ?? 0);
 }
 
 /** The transfers addressed to this user: their phone or email was the recipient's contact. */
@@ -344,7 +387,7 @@ export async function rastreo(codigo: string): Promise<RastreoPublico | null> {
   const fila = data as unknown as Pick<
     FilaEnvio,
     'codigo' | 'estado' | 'moneda_destino' | 'monto_destino' | 'entrega' | 'creada_en' | 'destinatario_nombre'
-  >;
+  > & { cobro_estado: string | null };
   const [tarifasLeidas, historial] = await Promise.all([tarifas(), historialDe(data.id)]);
   return {
     codigo: fila.codigo,
@@ -355,6 +398,7 @@ export async function rastreo(codigo: string): Promise<RastreoPublico | null> {
     minutosEstimados: tarifasLeidas[fila.entrega].minutosEstimados,
     destinatarioNombre: primerNombre(fila.destinatario_nombre),
     creadaEn: fila.creada_en,
+    cobradaPorLightning: fila.cobro_estado === 'pagado',
     historial,
   };
 }
@@ -447,7 +491,18 @@ async function cargarCambio(envioId: string) {
     .eq('id', envioId)
     .maybeSingle();
   if (error) throw new Error(`No pudimos leer la transferencia: ${error.message}`);
-  return data as unknown as Pick<FilaEnvio, 'id' | 'codigo' | 'remitente_id' | 'estado' | 'moneda_origen' | 'monto_origen_centavos'> | null;
+  return data as unknown as Pick<
+    FilaEnvio,
+    | 'id'
+    | 'codigo'
+    | 'remitente_id'
+    | 'estado'
+    | 'moneda_origen'
+    | 'monto_origen_centavos'
+    | 'entrega'
+    | 'pagada_en'
+    | 'factura_expira'
+  > | null;
 }
 
 // The sender may change their own transfer, and an administrator may change any. Anyone else is
@@ -640,6 +695,11 @@ export async function cancelarEnvio(usuarioId: string, envioId: string): Promise
     if (!esUuid(usuarioId) || !esUuid(envioId)) return fallo('NO_ENCONTRADA', MENSAJE_NO_ENCONTRADA);
     const fila = await cargarCambio(envioId);
     if (!fila || !(await puedeCambiar(usuarioId, fila))) return fallo('NO_ENCONTRADA', MENSAJE_NO_ENCONTRADA);
+    // A paid transfer, or one whose invoice may still be paid, cannot be cancelled: the money would be stuck.
+    const facturaViva = fila.factura_expira !== null && Date.parse(fila.factura_expira) > Date.now();
+    if (fila.pagada_en !== null || facturaViva) {
+      return fallo('ESTADO_INVALIDO', 'Hay una factura Lightning vigente o un pago hecho. No se puede cancelar.');
+    }
 
     const { data, error } = await clienteServicio().rpc('pay_cancelar', {
       p_transferencia: envioId,
@@ -677,6 +737,10 @@ export async function simularCompletar(
     if (!fila) return fallo('NO_ENCONTRADA', MENSAJE_NO_ENCONTRADA);
     const quien = await actorDelSimulador(actor, fila);
     if (!quien.ok) return quien;
+    // A lightning transfer is completed by its recipient's claim (cobrar), never by hand.
+    if (fila.entrega === 'lightning') {
+      return fallo('NO_PERMITIDO', 'Un envío por Lightning se completa cuando el destinatario lo cobra.');
+    }
 
     const { data, error } = await clienteServicio().rpc('pay_completar', {
       p_transferencia: envioId,

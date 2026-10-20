@@ -302,6 +302,19 @@ export function ticketConHashDePago(dirDatos: string, hash: string, idTicket: st
   return null;
 }
 
+// Reads one ticket, or null when it does not exist or the id has the wrong shape.
+export function buscarTicket(dirDatos: string, id: string): Ticket | null {
+  if (!ID_TICKET.test(id)) return null;
+  const ruta = join(dirDatos, "tickets", `${id}.json`);
+  return existsSync(ruta) ? (leerJson(ruta) as Ticket) : null;
+}
+
+// The Cacao product that made the sale: a CacaoMarket order is "market"; null for tickets typed by hand.
+export function productoDeTicket(ticket: Pick<Ticket, "origen">): ProductoCacao | null {
+  if (!ticket.origen) return null;
+  return ticket.origen.plataforma === "cacaomarket" ? "market" : ticket.origen.producto;
+}
+
 // The ticket already imported from this order number or invoice id, if any.
 export function ticketDeOrigen(dirDatos: string, plataforma: PlataformaOrigen, numero: string): Ticket | null {
   return listarTickets(dirDatos).find((t) => t.origen?.plataforma === plataforma && t.origen.numero === numero) ?? null;

@@ -9,7 +9,7 @@ import { EtiquetaEstado } from '@/componentes/EtiquetaEstado';
 import { Paginacion } from '@/componentes/Paginacion';
 import { dolaresDeSats, fechaSv, primerNombre } from '@/componentes/textosEnvio';
 import { formatoMonto } from '@/lib/cotizacion';
-import { recibidos, type Envio } from '@/servidor/transferencias';
+import { recibidos, type Envio, vincularRecibidos } from '@/servidor/transferencias';
 import { exigirSesion } from '@/servidor/sesion';
 
 import estilos from './estilos.module.css';
@@ -47,6 +47,8 @@ async function ListaRecibidos({
 }) {
   const params = await busqueda;
   const pagina = paginaDe(params.pagina);
+  // Transfers sent to this person's phone or email before they signed in are linked first.
+  await vincularRecibidos(sesionId);
   const datos = await recibidos(sesionId, { pagina });
   const totalPaginas = Math.max(1, Math.ceil(datos.total / datos.porPagina));
   // One price read for the whole list; each card only formats it.

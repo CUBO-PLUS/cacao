@@ -30,3 +30,52 @@
   font-size: 0.9375rem;
   font-weight: 600;
 }
+
+/* How it works: three numbered steps, one per row on a phone, the same row on wide screens. */
+.pasos {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pasos li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.pasos p {
+  margin: 4px 0 0;
+}
+
+.numero {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--tostado);
+  color: var(--pulpa);
+  font-family: var(--mono);
+  font-weight: 700;
+}
+
+.comparacion {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.nota {
+  margin: 0;
+  font-size: 0.9375rem;
+}
+
+@media (min-width: 720px) {
+  .pasos {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

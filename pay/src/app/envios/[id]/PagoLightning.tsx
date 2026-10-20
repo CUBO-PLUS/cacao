@@ -36,8 +36,11 @@ export function PagoLightning({ envioId }: { envioId: string }) {
     setCopiada(false);
     empezar(async () => {
       const respuesta = await pagarEnvioAccion(envioId);
-      if (respuesta.ok) setPago(respuesta.dato);
-      else setError(respuesta.mensaje);
+      if (respuesta.ok) {
+        setPago(respuesta.dato);
+        // The page hides "Cancelar envío" while an invoice is live: read it again.
+        router.refresh();
+      } else setError(respuesta.mensaje);
     });
   }
 

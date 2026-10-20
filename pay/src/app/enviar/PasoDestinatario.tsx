@@ -1,6 +1,16 @@
 import type { FormEvent, RefObject } from 'react';
 
+import type { Entrega } from '@/lib/cotizacion';
+import type { RecienteDestinatario } from '@/lib/recientes';
+
 import estilos from './estilos.module.css';
+
+// Short names for the chips: the full sentences are on the confirmation step.
+const ENTREGA_CORTA: Record<Entrega, string> = {
+  efectivo: 'Efectivo',
+  cuenta: 'Cuenta bancaria',
+  lightning: 'Lightning',
+};
 
 /** Step 2: who receives the money and how to reach them. */
 export function PasoDestinatario({
@@ -15,6 +25,8 @@ export function PasoDestinatario({
   errorContacto,
   nota,
   onNota,
+  recientes,
+  onElegirReciente,
   onVolver,
   onSeguir,
 }: {
@@ -29,6 +41,9 @@ export function PasoDestinatario({
   errorContacto: string | null;
   nota: string;
   onNota: (valor: string) => void;
+  /** The people sent to before: one tap fills the name and the contact. */
+  recientes: RecienteDestinatario[];
+  onElegirReciente: (reciente: RecienteDestinatario) => void;
   onVolver: () => void;
   onSeguir: (evento: FormEvent<HTMLFormElement>) => void;
 }) {
@@ -40,6 +55,30 @@ export function PasoDestinatario({
       <h2 ref={tituloRef} tabIndex={-1} className={estilos.titulo}>
         Destinatario
       </h2>
+
+      {recientes.length > 0 && (
+        <section className={estilos.recientes} aria-labelledby="titulo-recientes">
+          <h3 id="titulo-recientes" className={estilos.subtitulo}>
+            Ya les enviaste
+          </h3>
+          <ul className={estilos.chips}>
+            {recientes.map((reciente) => (
+              <li key={reciente.contacto}>
+                <button
+                  type="button"
+                  className={estilos.chip}
+                  onClick={() => onElegirReciente(reciente)}
+                  aria-label={`Usar a ${reciente.nombre}, ${reciente.contactoEnmascarado}`}
+                >
+                  <strong>{reciente.nombre}</strong>
+                  <span className="dato">{reciente.contactoEnmascarado}</span>
+                  <small>{ENTREGA_CORTA[reciente.entrega]}</small>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <div className={estilos.grupo}>
         <label htmlFor="envio-nombre" className="campo-etiqueta">
@@ -84,8 +123,8 @@ export function PasoDestinatario({
           />
         </div>
         <p id="envio-contacto-ayuda" className={estilos.ayuda}>
-          Son 8 números de El Salvador, o un correo. Con el celular o el correo le avisamos y, si tiene cuenta, lo ve en
-          Recibidos.
+          Son 8 números de El Salvador, o un correo. Si esa persona tiene cuenta con ese celular o correo, lo ve en
+          Recibidos. Al confirmar, te damos un enlace para mandárselo por WhatsApp.
         </p>
         {errorContacto && (
           <p id="envio-contacto-error" role="alert" className={estilos.error}>

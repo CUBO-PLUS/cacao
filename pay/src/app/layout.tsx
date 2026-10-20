@@ -89,11 +89,13 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
             Saltar al contenido
           </a>
           <div className="hoja">
-            <div className="cinta">Modo demo: envíos simulados</div>
             <Cabecera />
             <main id="contenido" tabIndex={-1} className="principal">
               <div className="contenedor">{children}</div>
             </main>
+            <p className="pie-demo">
+              Demo de Grupo Cacao · bitcoin de prueba (regtest), sin valor · tasas de demostración
+            </p>
           </div>
           <div className="zona-grupo">
             <div className="contenedor">

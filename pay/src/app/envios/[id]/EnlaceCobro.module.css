@@ -1,0 +1,39 @@
+/* The sender's claim link: a box with the link and two ways to share it. Brand variables only. */
+.caja {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--radio);
+  background: var(--blanco);
+  min-width: 0;
+}
+
+.caja h2 {
+  font-size: 1.1rem;
+}
+
+.texto {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.enlace {
+  padding: 10px 12px;
+  border-radius: var(--radio-chico);
+  background: var(--pulpa);
+  overflow-wrap: anywhere;
+}
+
+.botones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.error {
+  padding: 10px 14px;
+  border-radius: var(--radio-chico);
+  background: var(--mazorca);
+  color: var(--tostado);
+  font-weight: 600;
+}

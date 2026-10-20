@@ -4,7 +4,7 @@
 export function BotonImprimir() {
   return (
     <button type="button" className="boton boton--secundario" onClick={() => window.print()}>
-      Imprimir o guardar como PDF
+      Imprimir
     </button>
   );
 }

@@ -8,7 +8,17 @@
   font-weight: 600;
 }
 
+.cobrado {
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
 .pie {
   font-size: 1rem;
   line-height: 1.5;
+}
+
+.qr {
+  display: grid;
+  justify-items: start;
 }

@@ -2,9 +2,11 @@ import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { connection } from 'next/server';
 
-import { VistaDestinatario } from '@/componentes/VistaDestinatario';
 import { ActualizarEnvio } from '@/componentes/ActualizarEnvio';
+import { CodigoQr } from '@/componentes/CodigoQr';
+import { VistaDestinatario } from '@/componentes/VistaDestinatario';
 import { esEstadoFinal, saludoDestinatario } from '@/componentes/textosEnvio';
+import { enlaceRastreo } from '@/lib/compartir';
 import { esCodigo, normalizarCodigo } from '@/lib/transferencias';
 import { rastreo } from '@/servidor/transferencias';
 
@@ -43,6 +45,12 @@ export default async function PaginaRastreo(props: PageProps<'/t/[codigo]'>) {
         saludo={saludoDestinatario(envio.destinatarioNombre)}
         envio={envio}
       />
+
+      {envio.cobradaPorLightning && <p className={estilos.cobrado}>Cobrado por Lightning</p>}
+
+      <div className={estilos.qr}>
+        <CodigoQr texto={enlaceRastreo(envio.codigo)} titulo="Escaneá para seguir este envío desde tu teléfono" />
+      </div>
 
       <ActualizarEnvio activo={!esEstadoFinal(envio.estado)} />
 

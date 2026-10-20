@@ -332,3 +332,17 @@
     display: none;
   }
 }
+
+/* The QR sits under the receipt lines, on the left, so it prints beside nothing else. */
+.qr {
+  display: grid;
+  justify-items: start;
+  padding-top: 8px;
+  border-top: 2px solid var(--tostado);
+}
+
+.botonesRecibo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}

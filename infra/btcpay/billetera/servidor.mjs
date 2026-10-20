@@ -87,10 +87,31 @@ async function apiBilletera(req, res, url) {
     if (/already paid/i.test(final.error?.message ?? '')) return json(res, 200, { pagada: true, sats: d.sats });
     return json(res, 502, { error: 'El pago no salió. Probá de nuevo en un momento.' });
   }
+  // Receive: the test wallet makes an invoice for an exact amount, so a remittance recipient without a wallet of
+  // their own can paste it in Cacao Pay and get paid.
+  if (url.pathname === '/billetera/api/recibir' && req.method === 'POST') {
+    let sats = 0;
+    try { sats = Number(JSON.parse(await leerCuerpo(req)).sats); } catch {}
+    if (!Number.isInteger(sats) || sats < 1 || sats > MAXIMO_SATS) {
+      return json(res, 400, { error: `La billetera de prueba recibe de 1 a ${MAXIMO_SATS} sats por factura.` });
+    }
+    const r = await lnd('POST', '/v1/invoices', { value: String(sats), memo: 'Billetera de prueba', expiry: '3600' });
+    if (r.estado !== 200 || !r.json.payment_request) return json(res, 502, { error: 'No se pudo crear la factura. Probá de nuevo.' });
+    return json(res, 200, { factura: r.json.payment_request, sats, hash: Buffer.from(r.json.r_hash, 'base64').toString('hex') });
+  }
+  // Whether an invoice made by this wallet was paid, by its payment hash.
+  if (url.pathname === '/billetera/api/recibida' && req.method === 'GET') {
+    const hash = (url.searchParams.get('hash') ?? '').toLowerCase();
+    if (!/^[0-9a-f]{64}$/.test(hash)) return json(res, 400, { error: 'Hash inválido.' });
+    const r = await lnd('GET', `/v1/invoice/${hash}`);
+    if (r.estado !== 200) return json(res, 404, { error: 'No existe.' });
+    return json(res, 200, { pagada: r.json.state === 'SETTLED', sats: Number(r.json.value) });
+  }
   return json(res, 404, { error: 'No existe.' });
 }
 
 const PAGINA = readFileSync(new URL('./pagina.html', import.meta.url));
+const PAGINA_RECIBIR = readFileSync(new URL('./recibir.html', import.meta.url));
 
 function aBtcpay(req, res) {
   const p = http.request(
@@ -104,6 +125,10 @@ function aBtcpay(req, res) {
 const servidor = http.createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', 'http://local');
   try {
+    if (url.pathname === '/billetera/recibir' || url.pathname === '/billetera/recibir/') {
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+      return res.end(PAGINA_RECIBIR);
+    }
     if (url.pathname === '/billetera' || url.pathname === '/billetera/') {
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
       return res.end(PAGINA);

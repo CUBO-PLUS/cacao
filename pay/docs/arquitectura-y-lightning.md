@@ -96,3 +96,13 @@ Cuando el servidor tiene `BTCPAY_URL`, `BTCPAY_API_KEY` y `BTCPAY_STORE_ID`, el 
 - **Confirmación**: el envío pasa a `procesando` solo cuando BTCPay responde `Settled` (`leerFactura`). La página pregunta cada 3 segundos mientras la pestaña está visible. El webhook `POST /api/pagos/btcpay/` (firma `BTCPay-Sig` con `BTCPAY_WEBHOOK_SECRET`) solo pide volver a mirar: su cuerpo nunca cuenta como pago. La transición la hace `pay_confirmar_btcpay`, que es idempotente.
 - **Lo que no cambia**: completar (`pay_completar`) y fallar siguen en manos del administrador o del simulador. Con BTCPay activo, el remitente no puede llamar `pay_procesar` por su cuenta.
 - **Pendiente**: si llega un pago a una factura ya reemplazada o de un envío cancelado, no se devuelve ni se marca. Hay que revisarlo a mano en BTCPay.
+
+## 6. Cobro del destinatario por Lightning (implementado)
+
+En un envío `entrega = 'lightning'`, el destinatario cobra con un enlace, sin cuenta. El envío no pasa a entregado porque lo dice quien lo mandó ni el administrador: lo pasa el cobro.
+
+- **Enlace**: al crear el envío, un disparador de la base le asigna `cobro_token` (32 bytes aleatorios en base64url). El remitente lo comparte desde `/envios/[id]` como `/cobrar/<token>`. Quien tiene el enlace puede cobrar: el enlace es la única llave. Por eso no aparece en `/t/[codigo]` ni en ninguna vista de destinatario.
+- **Factura**: el destinatario pega una factura Lightning por exactamente `monto_destino` sats. `satsDeFactura` (`src/servidor/cobro.ts`) lee el monto de la parte legible del BOLT11 y rechaza montos sin valor o con fracción de sat. La base vuelve a comparar el monto (`pay_iniciar_cobro`).
+- **Pago**: `pay_iniciar_cobro` pone el cobro en `pagando` (solo uno a la vez) y el servidor paga la factura con la API Pay de BTCPay (`src/servidor/btcpay-pagos.ts`). Un `Complete` cierra el cobro con `pay_terminar_cobro`, que mueve el envío a `completada` y guarda el hash. Un rechazo de BTCPay (400 o 422) deja el cobro en `fallido` con un motivo, y el destinatario puede pedir otra factura. Una respuesta `Pending`, o un error de red, deja el cobro en `pagando`: `estadoDeCobro` pregunta a BTCPay por el hash de la factura hasta tener respuesta.
+- **Lo que no cambia**: el administrador no puede completar un envío por Lightning a mano (`simularCompletar` lo rechaza), y el remitente lo sigue pagando con su propia factura de BTCPay.
+- **Demostración**: BTCPay corre en regtest. La página de cobro enlaza la billetera de prueba (`/billetera/recibir?sats=N`) para quien no tiene una billetera Lightning.

@@ -77,3 +77,58 @@
   align-items: center;
   gap: 12px;
 }
+
+/* Filters: state chips in a wrapping row, then the search box. Chips are at least 44px tall. */
+.filtros {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alto-toque);
+  padding: 0 14px;
+  border: 2px solid var(--tostado);
+  border-radius: 999px;
+  background: var(--blanco);
+  color: var(--tostado);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.chipActual {
+  background: var(--tostado);
+  color: var(--pulpa);
+}
+
+.buscador {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.buscadorFila {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.errorCarga {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+  padding: 16px;
+  border: 2px solid var(--criollo);
+  border-radius: var(--radio-chico);
+  background: var(--blanco);
+  color: var(--criollo);
+  font-weight: 600;
+}

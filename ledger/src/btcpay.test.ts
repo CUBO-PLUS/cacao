@@ -8,6 +8,7 @@ import { importarFacturaBtcpay, leerFacturasArchivo } from "./btcpay.ts";
 import { AHORA, leerFixture } from "./ayudas-prueba.ts";
 import { raizLedger } from "./datos.ts";
 import { importarOrdenMarket } from "./market.ts";
+import { almacenArchivos } from "./almacen/archivos.ts";
 import { leerTicket, listarTickets, type Ticket } from "./ticket.ts";
 import type { Factura } from "./pagos/btcpay-api.ts";
 
@@ -23,10 +24,10 @@ function factura(id: string): Factura {
   return f;
 }
 
-function conDatos(fn: (datos: string) => void): void {
+async function conDatos(fn: (datos: string) => Promise<void>): Promise<void> {
   const datos = mkdtempSync(join(tmpdir(), "ledger-btcpay-"));
   try {
-    fn(datos);
+    await fn(datos);
   } finally {
     rmSync(datos, { recursive: true, force: true });
   }
@@ -48,10 +49,10 @@ function pagado(t: Ticket) {
   return t.pago?.rail === "lightning" ? t.pago : null;
 }
 
-test("a settled media invoice becomes a paid consumer ticket with its total, sats and payment hash", () => {
-  conDatos((datos) => {
+test("a settled media invoice becomes a paid consumer ticket with its total, sats and payment hash", async () => {
+  await conDatos(async (datos) => {
     const f = factura("BtcpayMedia0001Fx");
-    const r = importarFacturaBtcpay(datos, f, AHORA);
+    const r = await importarFacturaBtcpay(almacenArchivos(datos), f, AHORA);
     assert.ok("ticket" in r);
     assert.equal(r.nueva, true);
     const t = r.ticket;
@@ -69,10 +70,10 @@ test("a settled media invoice becomes a paid consumer ticket with its total, sat
   });
 });
 
-test("importing the same invoice twice is idempotent", () => {
-  conDatos((datos) => {
-    const primera = importarFacturaBtcpay(datos, factura("BtcpayMedia0001Fx"), AHORA);
-    const segunda = importarFacturaBtcpay(datos, factura("BtcpayMedia0001Fx"), AHORA);
+test("importing the same invoice twice is idempotent", async () => {
+  await conDatos(async (datos) => {
+    const primera = await importarFacturaBtcpay(almacenArchivos(datos), factura("BtcpayMedia0001Fx"), AHORA);
+    const segunda = await importarFacturaBtcpay(almacenArchivos(datos), factura("BtcpayMedia0001Fx"), AHORA);
     assert.ok("ticket" in primera && "ticket" in segunda);
     assert.equal(primera.nueva, true);
     assert.equal(segunda.nueva, false);
@@ -81,42 +82,42 @@ test("importing the same invoice twice is idempotent", () => {
   });
 });
 
-test("a factura that is not Settled, or lacks Cacao metadata, is omitted with its reason", () => {
-  conDatos((datos) => {
-    const nueva = importarFacturaBtcpay(datos, factura("BtcpayNuevo0005Fx"), AHORA);
+test("a factura that is not Settled, or lacks Cacao metadata, is omitted with its reason", async () => {
+  await conDatos(async (datos) => {
+    const nueva = await importarFacturaBtcpay(almacenArchivos(datos), factura("BtcpayNuevo0005Fx"), AHORA);
     assert.deepEqual(nueva, { omitida: "la factura no está pagada (estado New)" });
-    const sinMeta = importarFacturaBtcpay(datos, factura("BtcpaySinMeta0006Fx"), AHORA);
+    const sinMeta = await importarFacturaBtcpay(almacenArchivos(datos), factura("BtcpaySinMeta0006Fx"), AHORA);
     assert.ok("omitida" in sinMeta);
     assert.match(sinMeta.omitida, /metadata\.producto|producto de Cacao/);
     const sinDesc = { ...factura("BtcpayMedia0001Fx"), metadata: { ...factura("BtcpayMedia0001Fx").metadata, itemDesc: "   " } };
-    assert.deepEqual(importarFacturaBtcpay(datos, sinDesc, AHORA), { omitida: "la factura no trae metadata.itemDesc" });
+    assert.deepEqual(await importarFacturaBtcpay(almacenArchivos(datos), sinDesc, AHORA), { omitida: "la factura no trae metadata.itemDesc" });
     assert.equal(listarTickets(datos).length, 0);
   });
 });
 
-test("a market invoice whose order already came from CacaoMarket is a duplicate", () => {
-  conDatos((datos) => {
+test("a market invoice whose order already came from CacaoMarket is a duplicate", async () => {
+  await conDatos(async (datos) => {
     importarOrdenMarket(datos, leerFixture("market-orden-1042.json"), AHORA);
     const cobro = { ...factura("BtcpayMarket0003Fx"), metadata: { ...factura("BtcpayMarket0003Fx").metadata, orderId: "1042" } };
-    const r = importarFacturaBtcpay(datos, cobro, AHORA);
+    const r = await importarFacturaBtcpay(almacenArchivos(datos), cobro, AHORA);
     assert.ok("omitida" in r);
     assert.match(r.omitida, /^ya importada desde CacaoMarket \(ticket TK-/);
     assert.equal(listarTickets(datos).length, 1);
   });
 });
 
-test("an invoice whose payment hash already settles another ticket is omitted", () => {
-  conDatos((datos) => {
+test("an invoice whose payment hash already settles another ticket is omitted", async () => {
+  await conDatos(async (datos) => {
     importarOrdenMarket(datos, leerFixture("market-orden-1042.json"), AHORA);
     const otra = { ...factura("BtcpayPay0004Fx"), paymentHash: "6cceee99be38297f789659390dd3f6f042be99fffd2036287a77a99e980436e0" };
-    const r = importarFacturaBtcpay(datos, otra, AHORA);
+    const r = await importarFacturaBtcpay(almacenArchivos(datos), otra, AHORA);
     assert.ok("omitida" in r);
     assert.match(r.omitida, /ese pago ya cubre el ticket TK-/);
   });
 });
 
-test("the CLI reads the offline file, prints one line per invoice and a total, and is idempotent", () => {
-  conDatos((datos) => {
+test("the CLI reads the offline file, prints one line per invoice and a total, and is idempotent", async () => {
+  await conDatos(async (datos) => {
     const archivo = join("fixtures", "btcpay-facturas.json");
     const primera = ledger(datos, ["importar", "btcpay", "--archivo", archivo]);
     assert.equal(primera.code, 0, primera.err);
@@ -136,16 +137,16 @@ test("the CLI reads the offline file, prints one line per invoice and a total, a
   });
 });
 
-test("without the BTCPay settings the CLI says which are missing and exits with code 2", () => {
-  conDatos((datos) => {
+test("without the BTCPay settings the CLI says which are missing and exits with code 2", async () => {
+  await conDatos(async (datos) => {
     const r = ledger(datos, ["importar", "btcpay"]);
     assert.equal(r.code, 2);
     assert.match(r.err, /faltan variables de entorno para BTCPay: LEDGER_BTCPAY_URL, LEDGER_BTCPAY_API_KEY, LEDGER_BTCPAY_TIENDAS/);
   });
 });
 
-test("--desde cannot be combined with --archivo", () => {
-  conDatos((datos) => {
+test("--desde cannot be combined with --archivo", async () => {
+  await conDatos(async (datos) => {
     const r = ledger(datos, ["importar", "btcpay", "--archivo", join("fixtures", "btcpay-facturas.json"), "--desde", "2026-10-01"]);
     assert.equal(r.code, 1);
     assert.match(r.err, /--desde no se usa con --archivo/);

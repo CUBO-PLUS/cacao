@@ -4,6 +4,15 @@ import { Suspense } from 'react';
 
 import { Boton } from '@/componentes/Boton';
 import { Vacio } from '@/componentes/Vacio';
+import {
+  enlaceDeFiltros,
+  ETIQUETA_FILTRO,
+  estadosDeFiltro,
+  FILTROS_ESTADO,
+  parsearFiltros,
+  textoVacio,
+  type FiltroEstado,
+} from '@/lib/filtrosEnvios';
 import { exigirSesion } from '@/servidor/sesion';
 import { misEnvios, POR_PAGINA, type PaginaEnvios } from '@/servidor/transferencias';
 
@@ -14,7 +23,7 @@ export const metadata: Metadata = {
   title: 'Mis envíos',
 };
 
-// The page number comes from the URL, so it is read per request and checked here.
+// The filter, the search and the page come from the URL, so they are read per request.
 export default function PaginaEnvios(props: PageProps<'/envios'>) {
   return (
     <Suspense fallback={<p role="status">Cargando tus envíos…</p>}>
@@ -26,14 +35,23 @@ export default function PaginaEnvios(props: PageProps<'/envios'>) {
 async function Lista({ busqueda }: { busqueda: PageProps<'/envios'>['searchParams'] }) {
   await connection();
   const params = await busqueda;
+  // A redirect to the sign-in page happens here, outside any try block.
   const sesion = await exigirSesion('/envios');
-  const pagina = paginaDesde(params.pagina);
-  const datos = await envios(sesion.usuario.id, pagina);
-  const totalPaginas = Math.max(1, Math.ceil(datos.total / POR_PAGINA));
+  const { filtro, busqueda: texto, pagina } = parsearFiltros(params);
 
-  // The transfers still waiting for the sender come first. The order inside a page is newest first.
-  const porConfirmar = datos.envios.filter((envio) => envio.estado === 'creada');
-  const demas = datos.envios.filter((envio) => envio.estado !== 'creada');
+  let datos: PaginaEnvios;
+  try {
+    datos = await misEnvios(sesion.usuario.id, { pagina, estados: estadosDeFiltro(filtro), busqueda: texto });
+  } catch (error) {
+    console.error('Cargar envíos:', error instanceof Error ? error.message : error);
+    return <ErrorCarga filtro={filtro} busqueda={texto} />;
+  }
+
+  const totalPaginas = Math.max(1, Math.ceil(datos.total / POR_PAGINA));
+  const sinFiltros = filtro === 'todos' && texto === '';
+  // With no filter, the transfers still waiting for the sender come first, then the rest.
+  const porConfirmar = sinFiltros ? datos.envios.filter((envio) => envio.estado === 'creada') : [];
+  const demas = sinFiltros ? datos.envios.filter((envio) => envio.estado !== 'creada') : datos.envios;
 
   return (
     <div className={estilos.lista}>
@@ -44,12 +62,21 @@ async function Lista({ busqueda }: { busqueda: PageProps<'/envios'>['searchParam
         </div>
       </section>
 
-      {datos.total === 0 && (
-        <Vacio texto="Todavía no enviaste dinero." accion={{ href: '/enviar', etiqueta: 'Enviar dinero' }} />
+      <Filtros filtro={filtro} busqueda={texto} />
+
+      {datos.envios.length === 0 && datos.total === 0 && (
+        <Vacio
+          texto={textoVacio(filtro, texto)}
+          accion={
+            sinFiltros
+              ? { href: '/enviar', etiqueta: 'Enviar dinero' }
+              : { href: '/envios', etiqueta: 'Ver todos mis envíos' }
+          }
+        />
       )}
 
-      {datos.total > 0 && datos.envios.length === 0 && (
-        <Vacio texto="No hay envíos en esta página." accion={{ href: '/envios', etiqueta: 'Ver la primera página' }} />
+      {datos.envios.length === 0 && datos.total > 0 && (
+        <Vacio texto="No hay envíos en esta página." accion={{ href: enlaceDeFiltros(filtro, texto), etiqueta: 'Ver la primera página' }} />
       )}
 
       {porConfirmar.length > 0 && (
@@ -67,7 +94,7 @@ async function Lista({ busqueda }: { busqueda: PageProps<'/envios'>['searchParam
 
       {demas.length > 0 && (
         <section className={estilos.bloque} aria-labelledby="titulo-demas">
-          <h2 id="titulo-demas">{porConfirmar.length > 0 ? 'Los demás envíos' : 'Todos tus envíos'}</h2>
+          <h2 id="titulo-demas">{porConfirmar.length > 0 ? 'Los demás envíos' : 'Envíos'}</h2>
           <ul className={estilos.tarjetas}>
             {demas.map((envio) => (
               <li key={envio.id}>
@@ -81,7 +108,7 @@ async function Lista({ busqueda }: { busqueda: PageProps<'/envios'>['searchParam
       {datos.total > POR_PAGINA && (
         <nav aria-label="Páginas de envíos" className={estilos.paginas}>
           {pagina > 1 && (
-            <Boton href={`/envios?pagina=${pagina - 1}`} variante="secundario">
+            <Boton href={enlaceDeFiltros(filtro, texto, pagina - 1)} variante="secundario">
               Anterior
             </Boton>
           )}
@@ -89,7 +116,7 @@ async function Lista({ busqueda }: { busqueda: PageProps<'/envios'>['searchParam
             Página {pagina} de {totalPaginas}
           </p>
           {pagina < totalPaginas && (
-            <Boton href={`/envios?pagina=${pagina + 1}`} variante="secundario">
+            <Boton href={enlaceDeFiltros(filtro, texto, pagina + 1)} variante="secundario">
               Siguiente
             </Boton>
           )}
@@ -99,22 +126,61 @@ async function Lista({ busqueda }: { busqueda: PageProps<'/envios'>['searchParam
   );
 }
 
-// A page past the last one is refused by the database, which the server layer reports as an error.
-// The first page still gives the total, so that page can say there is nothing here.
-async function envios(usuarioId: string, pagina: number): Promise<PaginaEnvios> {
-  try {
-    return await misEnvios(usuarioId, { pagina });
-  } catch (error) {
-    if (pagina === 1) throw error;
-    const primera = await misEnvios(usuarioId, { pagina: 1 });
-    return { envios: [], total: primera.total, pagina, porPagina: POR_PAGINA };
-  }
+/** The chips for each state and the search box. Plain GET links and a GET form: no script needed. */
+function Filtros({ filtro, busqueda }: { filtro: FiltroEstado; busqueda: string }) {
+  return (
+    <div className={estilos.filtros}>
+      <nav aria-label="Filtrar envíos por estado" className={estilos.chips}>
+        {FILTROS_ESTADO.map((valor) => (
+          <a
+            key={valor}
+            href={enlaceDeFiltros(valor, busqueda)}
+            className={`${estilos.chip} ${valor === filtro ? estilos.chipActual : ''}`}
+            aria-current={valor === filtro ? 'page' : undefined}
+          >
+            {ETIQUETA_FILTRO[valor]}
+          </a>
+        ))}
+      </nav>
+
+      <form action="/envios" method="get" role="search" className={estilos.buscador}>
+        {filtro !== 'todos' && <input type="hidden" name="estado" value={filtro} />}
+        <label htmlFor="buscar-envio" className="campo-etiqueta">
+          Buscar por código o por nombre
+        </label>
+        <div className={estilos.buscadorFila}>
+          <input
+            id="buscar-envio"
+            name="q"
+            type="search"
+            className="campo"
+            defaultValue={busqueda}
+            maxLength={60}
+            autoComplete="off"
+            placeholder="CP-XXXX-XXXX o Marta"
+          />
+          <button type="submit" className="boton boton--secundario">
+            Buscar
+          </button>
+        </div>
+      </form>
+    </div>
+  );
 }
 
-// Anything that is not a whole page number from 1 up shows the first page.
-function paginaDesde(valor: string | string[] | undefined): number {
-  const texto = Array.isArray(valor) ? valor[0] : valor;
-  if (!texto || !/^\d{1,6}$/.test(texto)) return 1;
-  const numero = Number(texto);
-  return numero >= 1 ? numero : 1;
+function ErrorCarga({ filtro, busqueda }: { filtro: FiltroEstado; busqueda: string }) {
+  return (
+    <div className={estilos.lista}>
+      <section className={estilos.encabezado}>
+        <h1>Mis envíos</h1>
+      </section>
+      <Filtros filtro={filtro} busqueda={busqueda} />
+      <div role="alert" className={estilos.errorCarga}>
+        <p>No pudimos cargar tus envíos. Probá de nuevo en un momento.</p>
+        <Boton href={enlaceDeFiltros(filtro, busqueda)} variante="secundario">
+          Volver a intentar
+        </Boton>
+      </div>
+    </div>
+  );
 }

@@ -947,6 +947,12 @@ export type Database = {
           btcpay_tienda_id: string | null
           cancelada_en: string | null
           clave_idempotencia: string
+          cobrada_en: string | null
+          cobro_estado: "pagando" | "pagado" | "fallido" | null
+          cobro_factura: string | null
+          cobro_hash: string | null
+          cobro_motivo: string | null
+          cobro_token: string | null
           codigo: string
           comision_centavos: number
           completada_en: string | null
@@ -980,6 +986,12 @@ export type Database = {
           btcpay_tienda_id?: string | null
           cancelada_en?: string | null
           clave_idempotencia: string
+          cobrada_en?: string | null
+          cobro_estado?: "pagando" | "pagado" | "fallido" | null
+          cobro_factura?: string | null
+          cobro_hash?: string | null
+          cobro_motivo?: string | null
+          cobro_token?: string | null
           codigo: string
           comision_centavos: number
           completada_en?: string | null
@@ -1013,6 +1025,12 @@ export type Database = {
           btcpay_tienda_id?: string | null
           cancelada_en?: string | null
           clave_idempotencia?: string
+          cobrada_en?: string | null
+          cobro_estado?: "pagando" | "pagado" | "fallido" | null
+          cobro_factura?: string | null
+          cobro_hash?: string | null
+          cobro_motivo?: string | null
+          cobro_token?: string | null
           codigo?: string
           comision_centavos?: number
           completada_en?: string | null
@@ -2431,6 +2449,102 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      pay_iniciar_cobro: {
+        Args: { p_factura: string; p_sats: number; p_token: string }
+        Returns: {
+          btcpay_factura_id: string | null
+          btcpay_tienda_id: string | null
+          cancelada_en: string | null
+          clave_idempotencia: string
+          cobrada_en: string | null
+          cobro_estado: "pagando" | "pagado" | "fallido" | null
+          cobro_factura: string | null
+          cobro_hash: string | null
+          cobro_motivo: string | null
+          cobro_token: string | null
+          codigo: string
+          comision_centavos: number
+          completada_en: string | null
+          creada_en: string
+          destinatario_contacto: string
+          destinatario_id: string | null
+          destinatario_nombre: string
+          entrega: Database["public"]["Enums"]["pay_entrega"]
+          estado: Database["public"]["Enums"]["pay_estado"]
+          factura: string | null
+          factura_expira: string | null
+          factura_sats: number | null
+          factura_usd_centavos: number | null
+          fallida_en: string | null
+          id: string
+          moneda_destino: Database["public"]["Enums"]["pay_moneda"]
+          moneda_origen: Database["public"]["Enums"]["pay_moneda"]
+          monto_destino: number
+          monto_origen_centavos: number
+          motivo: string | null
+          neto_centavos: number
+          nota: string
+          pagada_en: string | null
+          procesando_en: string | null
+          remitente_id: string
+          tasa: number
+          tasa_fuente: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "pay_transferencias"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      pay_terminar_cobro: {
+        Args: { p_hash: string | null; p_motivo: string | null; p_ok: boolean; p_token: string }
+        Returns: {
+          btcpay_factura_id: string | null
+          btcpay_tienda_id: string | null
+          cancelada_en: string | null
+          clave_idempotencia: string
+          cobrada_en: string | null
+          cobro_estado: "pagando" | "pagado" | "fallido" | null
+          cobro_factura: string | null
+          cobro_hash: string | null
+          cobro_motivo: string | null
+          cobro_token: string | null
+          codigo: string
+          comision_centavos: number
+          completada_en: string | null
+          creada_en: string
+          destinatario_contacto: string
+          destinatario_id: string | null
+          destinatario_nombre: string
+          entrega: Database["public"]["Enums"]["pay_entrega"]
+          estado: Database["public"]["Enums"]["pay_estado"]
+          factura: string | null
+          factura_expira: string | null
+          factura_sats: number | null
+          factura_usd_centavos: number | null
+          fallida_en: string | null
+          id: string
+          moneda_destino: Database["public"]["Enums"]["pay_moneda"]
+          moneda_origen: Database["public"]["Enums"]["pay_moneda"]
+          monto_destino: number
+          monto_origen_centavos: number
+          motivo: string | null
+          neto_centavos: number
+          nota: string
+          pagada_en: string | null
+          procesando_en: string | null
+          remitente_id: string
+          tasa: number
+          tasa_fuente: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "pay_transferencias"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       pay_procesar: {
         Args: { p_actor: string; p_transferencia: string }
         Returns: {
@@ -2523,6 +2637,10 @@ export type Database = {
           estado: Database["public"]["Enums"]["pay_estado"]
           monto_origen_usd_centavos: number
         }[]
+      }
+      pay_vincular_recibidos: {
+        Args: { p_usuario: string }
+        Returns: number
       }
       publicar_necesidad: {
         Args: {

@@ -12,7 +12,7 @@ ese archivo desde la base de datos de CacaoMarket es un paso aparte, que todaví
 
 ## Requisitos y arranque
 
-Necesitás Node 24 y nada más. Node 24 ejecuta TypeScript directamente.
+Necesitás Node 24. La CLI corre TypeScript directamente; la aplicación web usa Next.js 16 (`npm install` lo baja).
 
 ```
 npm install
@@ -20,11 +20,69 @@ npm test
 npm run demo
 ```
 
-`npm install` baja solo `ajv`, `ajv-formats`, `typescript` y los tipos de Node. `npm test` corre las
+`npm install` baja `ajv`, `ajv-formats`, `next`, `react`, `qrcode`, `typescript` y los tipos. `npm test` corre las
 pruebas. `npm run demo` muestra el recorrido completo con datos de prueba, con reloj fijo y sin red.
 Para la otra generación de esquemas: `npm run demo -- --esquemas 2026`.
 
 El uso diario es `node src/cli.ts ayuda`. Los datos viven en `datos/`, que no entra al repositorio.
+
+## Aplicación web (CacaoLedger en el navegador)
+
+Next.js 16 en `app/`, en el mismo paquete que la CLI. Muestra las ventas reales de Grupo Cacao sin terminal.
+Es pública y de solo lectura (empresa de demostración, `noindex`); no tiene inicio de sesión.
+
+```
+npm install
+npm run dev          # http://localhost:4325
+npm run build && npm start
+```
+
+Variables de entorno (solo en el servidor; ninguna llega al navegador):
+
+| Variable | Para qué |
+|---|---|
+| `SUPABASE_URL` | Proyecto de Supabase donde están `ledger_tickets` y `ledger_sincronizaciones`. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Clave de servicio de ese proyecto. No se pone en el cliente. |
+| `LEDGER_BTCPAY_URL` | Dirección de BTCPay Server (http o https). |
+| `LEDGER_BTCPAY_API_KEY` | Clave de API de solo lectura de BTCPay. |
+| `LEDGER_BTCPAY_TIENDAS` | Ids de las tiendas, separados por coma. |
+| `CRON_SECRET` | Clave que Vercel Cron manda como `Authorization: Bearer ...` a `/api/sincronizar`. |
+| `LEDGER_ESQUEMAS` | Opcional: `caso` (por defecto) o `2026`. Elige el esquema de la vista previa y de la emisión de los tickets que no son Lightning. Los cobros Lightning se emiten siempre con `2026` (forma de pago 11). |
+
+Rutas:
+
+| Ruta | Qué muestra |
+|---|---|
+| `/` | Tablero: hoy, semana y mes en USD y sats, ventas por producto, cómo te pagan, últimos 30 días y últimas ventas. Estado de la sincronización y botón "Sincronizar ahora". |
+| `/tickets` | Lista con filtros en la URL (`producto`, `estado`, `desde`, `hasta`, `q`) y "Ver más" por cursor (`despues`). |
+| `/tickets/[id]` | Detalle del ticket, totales con IVA, pago y el documento tributario. Si el ticket ya tiene documento emitido (`ledger_dtes`), muestra estado, número de control, código de generación, fecha de recepción y el sello SIMULADO (o las observaciones, si fue rechazado). Si no, muestra la vista previa rotulada como tal: versión legible, QR, "Descargar JSON" e "Imprimir". 404 si no existe. |
+| `/tickets/[id]/json` | El documento emitido como JSON si existe; si no, el de la vista previa. |
+| `/mes` y `/mes/[yyyy-mm]` | Libros de IVA del mes, cifras para F-07 y F-14, tickets no incluidos y selector de mes. |
+| `/mes/[yyyy-mm]/csv/[libro]` | CSV del mes: `consumidor`, `contribuyentes`, `anexo1`, `anexo2`. Mismos archivos que `mes --csv`. |
+| `/api/sincronizar` | `GET` con `Authorization: Bearer $CRON_SECRET`. Sincroniza sin límite de tiempo. Vercel lo llama cada día (`vercel.json`). |
+
+Sincronización con BTCPay (`src/servidor/sincronizacion.ts`): la página lee la última fila de
+`ledger_sincronizaciones`; si tiene menos de 60 s, no vuelve a consultar BTCPay. Si no, corre
+`sincronizarBtcpay` con un límite de 6 s para que un BTCPay lento no bloquee la página. El botón usa un
+límite de 10 s. Cada corrida deja una fila en el registro. Los errores aparecen en la línea de estado.
+
+Emisión: después de importar, cada corrida emite hasta 50 tickets `pagado` (los nuevos y los pendientes) con
+la misma lógica que la CLI (`src/emitir.ts`, detalle en `docs/web-datos.md`). Cada ticket queda `emitido`
+con sello simulado o `rechazado` con sus observaciones, y el documento se guarda en `ledger_dtes`. La línea
+de estado del tablero muestra "N documentos emitidos". Requiere aplicar la migración
+`market/supabase/migrations/20261021000004_ledger_dte.sql` antes de desplegar.
+
+Notas de la vista previa: el documento de cada ticket que aún no se emitió se arma al abrir la página con
+`construirDte`. No consume `ledger_siguiente_correlativo`, así que su número se deriva del id del ticket y
+no coincide con el que se emite. Los libros cuentan solo los tickets en estado `emitido`, con referencias y
+sello guardados en Supabase.
+
+Despliegue: `vercel.json` usa `framework: nextjs`, `buildCommand: next build` y un cron diario a las
+12:00 UTC (06:00 en El Salvador). El sitio estático anterior sigue disponible con `npm run sitio`.
+
+Pruebas: `npm test` cubre la CLI y el almacén, incluida la sincronización con un BTCPay falso. Las rutas
+de la aplicación se probaron en `next build` y con un PostgREST y un BTCPay de prueba; la migración
+SQL todavía no se ejecutó contra el proyecto.
 
 ## Comandos
 

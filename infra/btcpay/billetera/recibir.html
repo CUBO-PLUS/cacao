@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recibir con la billetera de prueba</title>
+<style>
+  :root { --fondo: #f6f1ea; --texto: #2b1d14; --suave: #6f5a4a; --linea: #e2d6c8; --cacao: #6b3e26; --ok: #2f7a3e; --error: #a23b2a; }
+  @media (prefers-color-scheme: dark) { :root { --fondo: #1b1410; --texto: #f3e9df; --suave: #b9a593; --linea: #3a2c22; --cacao: #d69a6f; --ok: #7cc68a; --error: #f08a78; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fondo); color: var(--texto); font: 16px/1.5 system-ui, sans-serif; }
+  main { max-width: 32rem; margin: 0 auto; padding: 2rem 1rem; }
+  h1 { font-size: 1.5rem; margin: 0 0 .25rem; }
+  p { margin: .5rem 0; color: var(--suave); }
+  input, textarea { width: 100%; padding: .75rem; border: 1px solid var(--linea); border-radius: .5rem; background: transparent; color: var(--texto); font: inherit; }
+  textarea { min-height: 7rem; font: 13px/1.4 ui-monospace, monospace; word-break: break-all; }
+  button { width: 100%; margin-top: 1rem; padding: .9rem; border: 0; border-radius: .5rem; background: var(--cacao); color: var(--fondo); font: inherit; font-weight: 600; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  .aviso { margin-top: 1rem; padding: .75rem; border-radius: .5rem; border: 1px solid var(--linea); }
+  .ok { color: var(--ok); border-color: var(--ok); }
+  .error { color: var(--error); border-color: var(--error); }
+  a { color: var(--cacao); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Recibir sats</h1>
+  <p>Crea una factura Lightning en la billetera de prueba. Copiala y pegala donde te van a pagar. Es bitcoin de prueba (regtest), sin valor.</p>
+  <label for="sats"><p>Monto en sats</p></label>
+  <input id="sats" type="number" min="1" max="1000000" step="1" inputmode="numeric">
+  <button id="crear">Crear factura</button>
+  <div id="resultado" hidden>
+    <p>Tu factura:</p>
+    <textarea id="factura" readonly></textarea>
+    <button id="copiar">Copiar factura</button>
+  </div>
+  <div class="aviso" id="aviso" role="status" hidden></div>
+  <p><a href="/billetera">Pagar una factura</a></p>
+</main>
+<script>
+  const campo = document.getElementById('sats');
+  const crear = document.getElementById('crear');
+  const copiar = document.getElementById('copiar');
+  const factura = document.getElementById('factura');
+  const resultado = document.getElementById('resultado');
+  const aviso = document.getElementById('aviso');
+  const formato = new Intl.NumberFormat('es-SV');
+  let hash = null, vigia = null;
+
+  function avisar(texto, clase) { aviso.hidden = false; aviso.className = 'aviso ' + clase; aviso.textContent = texto; }
+
+  crear.addEventListener('click', async () => {
+    clearInterval(vigia);
+    crear.disabled = true; aviso.hidden = true;
+    try {
+      const r = await fetch('/billetera/api/recibir', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sats: Number(campo.value) }) });
+      const d = await r.json();
+      if (!r.ok) { avisar(d.error, 'error'); return; }
+      factura.value = d.factura; resultado.hidden = false; hash = d.hash;
+      avisar('Esperando el pago de ' + formato.format(d.sats) + ' sats…', '');
+      vigia = setInterval(async () => {
+        const e = await fetch('/billetera/api/recibida?hash=' + hash).then((x) => x.json()).catch(() => null);
+        if (e && e.pagada) { clearInterval(vigia); avisar('Recibiste ' + formato.format(e.sats) + ' sats.', 'ok'); }
+      }, 3000);
+    } catch { avisar('No se pudo crear la factura.', 'error'); }
+    finally { crear.disabled = false; }
+  });
+
+  copiar.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(factura.value); copiar.textContent = 'Copiada'; setTimeout(() => (copiar.textContent = 'Copiar factura'), 1500); }
+    catch { factura.select(); }
+  });
+
+  const inicial = Number(new URLSearchParams(location.search).get('sats'));
+  if (Number.isInteger(inicial) && inicial > 0) campo.value = String(inicial);
+</script>
+</body>
+</html>

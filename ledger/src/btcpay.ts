@@ -1,7 +1,8 @@
+import type { AlmacenTickets } from "./almacen/tipos.ts";
 import { ErrorLedger } from "./errores.ts";
 import type { Factura } from "./pagos/btcpay-api.ts";
 import type { PagoLightning } from "./pagos/tipos.ts";
-import { crearTicket, guardarTicket, registrarPago, ticketConHashDePago, ticketDeOrigen, totalDeTicket, validarEntrada, type ProductoCacao, type Ticket } from "./ticket.ts";
+import { crearTicket, registrarPago, totalDeTicket, validarEntrada, type ProductoCacao, type Ticket } from "./ticket.ts";
 
 // Turns a settled BTCPay Server invoice into a paid ticket. The invoice metadata contract is
 // MetadatosCacao in pagos/btcpay-api.ts, and docs/importar-btcpay.md explains the rules.
@@ -44,7 +45,8 @@ export function leerFacturasArchivo(raw: unknown): Factura[] {
 }
 
 // Imports one invoice. A repeated invoice returns the ticket it already made, and writes nothing.
-export function importarFacturaBtcpay(datos: string, factura: Factura, ahora: Date): ResultadoFacturaBtcpay {
+// The tickets go through the storage interface, so the web app and the CLI share these rules.
+export async function importarFacturaBtcpay(almacen: AlmacenTickets, factura: Factura, ahora: Date): Promise<ResultadoFacturaBtcpay> {
   if (factura.estado !== "Settled") return omitida(`la factura no está pagada (estado ${factura.estado})`);
   const meta = factura.metadata ?? {};
   if (typeof meta.producto !== "string" || !PRODUCTOS.includes(meta.producto)) {
@@ -65,14 +67,14 @@ export function importarFacturaBtcpay(datos: string, factura: Factura, ahora: Da
     return omitida("la factura no trae la referencia del pago (paymentHash)");
   }
 
-  const previo = ticketDeOrigen(datos, "btcpay", factura.id);
+  const previo = await almacen.porOrigen("btcpay", factura.id);
   if (previo) return { ticket: previo, nueva: false };
   if (producto === "market") {
-    const deCacao = ticketDeOrigen(datos, "cacaomarket", orderId);
+    const deCacao = await almacen.porOrigen("cacaomarket", orderId);
     if (deCacao) return omitida(`ya importada desde CacaoMarket (ticket ${deCacao.id})`);
   }
-  const otro = ticketConHashDePago(datos, factura.paymentHash, "");
-  if (otro) return omitida(`ese pago ya cubre el ticket ${otro}`);
+  const otro = await almacen.porHash(factura.paymentHash);
+  if (otro) return omitida(`ese pago ya cubre el ticket ${otro.id}`);
 
   // One line for the whole invoice. The price already includes IVA, as the consumer sees it.
   const entrada = validarEntrada({
@@ -92,6 +94,6 @@ export function importarFacturaBtcpay(datos: string, factura: Factura, ahora: Da
   };
   const pagado = registrarPago(abierto, pago, ahora);
   const ticket: Ticket = { ...pagado, origen: { plataforma: "btcpay", producto, numero: factura.id } };
-  guardarTicket(datos, ticket);
+  await almacen.guardar(ticket);
   return { ticket, nueva: true };
 }

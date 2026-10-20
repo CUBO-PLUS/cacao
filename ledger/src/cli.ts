@@ -32,6 +32,8 @@ import {
 import { firmarDocumentoSvfe, resolverUrlFirmador } from "./firma/svfe-firmador.ts";
 import { importarOrdenMarket } from "./market.ts";
 import { importarFacturaBtcpay, leerFacturasArchivo } from "./btcpay.ts";
+import { almacenArchivos } from "./almacen/archivos.ts";
+import { correlativosArchivo, siguienteCorrelativo } from "./correlativos.ts";
 import { configDesdeEntorno, ErrorBtcpay, facturasPagadas, type Factura } from "./pagos/btcpay-api.ts";
 import { escribirLibrosCsv, informeMes, leerDocumentosEmitidos, lineasMes, validarMes } from "./mes.ts";
 import { generarSitio } from "./web/generar.ts";
@@ -205,11 +207,6 @@ function cmdPagar(id: string, a: Argumentos, datos: string): Resultado {
   return { datos: pagado, lineas };
 }
 
-function leerCorrelativos(datos: string): Record<string, number> {
-  const ruta = join(datos, "correlativos.json");
-  return existsSync(ruta) ? (leerJson(ruta) as Record<string, number>) : {};
-}
-
 function nombreArchivoDte(tipo: string, codigo: string): string {
   return `${tipo}-${codigo}.json`;
 }
@@ -218,7 +215,7 @@ function lineaGeneracion(generacion: Generacion, archivo: string | null, origen:
   return `Generación de esquemas: ${generacion} (${archivo ?? "sin esquema"}; ${origen ?? ""})`;
 }
 
-function cmdDteConstruir(id: string, a: Argumentos, datos: string): Resultado {
+async function cmdDteConstruir(id: string, a: Argumentos, datos: string): Promise<Resultado> {
   const ticket = leerTicket(datos, id);
   if (ticket.estado !== "pagado" || ticket.pago === null) {
     throw new ErrorLedger(`El ticket ${id} está ${ticket.estado}; hay que pagarlo antes de construir el documento.`);
@@ -232,8 +229,8 @@ function cmdDteConstruir(id: string, a: Argumentos, datos: string): Resultado {
   const ambiente = ambienteTexto;
   const forzar = unico(a, "forzar-codigo");
   const claveSerie = `${tipo}-${emisor.codEstable}${emisor.codPuntoVenta}`;
-  const correlativos = leerCorrelativos(datos);
-  const siguiente = (correlativos[claveSerie] ?? 0) + 1;
+  const correlativos = correlativosArchivo(datos);
+  const siguiente = await siguienteCorrelativo(correlativos, claveSerie);
   const instante = ahora();
   const confirmarProduccion = a.interruptores.has("confirmar-produccion");
 
@@ -262,7 +259,7 @@ function cmdDteConstruir(id: string, a: Argumentos, datos: string): Resultado {
 
   const ruta = join(datos, "dte", nombre);
   escribirJson(ruta, construido.documento);
-  escribirJson(join(datos, "correlativos.json"), { ...correlativos, [claveSerie]: siguiente });
+  await correlativos.guardar(claveSerie, siguiente);
   if (ticket.pago.rail === "lightning") {
     // The DTE has no field for the rate. The attestation keeps what it cannot hold.
     registrarAtestacion(datos, {
@@ -557,11 +554,13 @@ async function cmdImportarBtcpay(a: Argumentos, datos: string, json: boolean): P
   }
 
   const momento = ahora();
-  const filas = facturas.map((factura) => {
-    const r = importarFacturaBtcpay(datos, factura, momento);
-    if ("omitida" in r) return { factura: factura.id, resultado: "omitida" as const, motivo: r.omitida, ticket: null };
-    return { factura: factura.id, resultado: r.nueva ? ("nueva" as const) : ("repetida" as const), motivo: null, ticket: r.ticket.id };
-  });
+  const almacen = almacenArchivos(datos);
+  const filas: { factura: string; resultado: "nueva" | "repetida" | "omitida"; motivo: string | null; ticket: string | null }[] = [];
+  for (const factura of facturas) {
+    const r = await importarFacturaBtcpay(almacen, factura, momento);
+    if ("omitida" in r) filas.push({ factura: factura.id, resultado: "omitida", motivo: r.omitida, ticket: null });
+    else filas.push({ factura: factura.id, resultado: r.nueva ? "nueva" : "repetida", motivo: null, ticket: r.ticket.id });
+  }
   const cuenta = (tipo: string) => filas.filter((f) => f.resultado === tipo).length;
   const resumen = { nuevas: cuenta("nueva"), repetidas: cuenta("repetida"), omitidas: cuenta("omitida") };
 
@@ -678,7 +677,7 @@ async function main(argv: string[]): Promise<number> {
   else if (grupo === "ticket" && orden === "ver") r = cmdTicketVer(needArg(resto[0], "identificador del ticket"), datos);
   else if (grupo === "ticket" && orden === "lista") r = cmdTicketLista(datos);
   else if (grupo === "pagar") r = cmdPagar(needArg(orden, "identificador del ticket"), a, datos);
-  else if (grupo === "dte" && orden === "construir") r = cmdDteConstruir(needArg(resto[0], "identificador del ticket"), a, datos);
+  else if (grupo === "dte" && orden === "construir") r = await cmdDteConstruir(needArg(resto[0], "identificador del ticket"), a, datos);
   else if (grupo === "dte" && orden === "validar") r = cmdDteValidar(needArg(resto[0], "archivo o identificador"), a, datos);
   else if (grupo === "dte" && orden === "transmitir") r = cmdDteTransmitir(needArg(resto[0], "identificador del ticket"), a, datos);
   else if (grupo === "atestacion") r = cmdAtestacion(orden, resto, a, datos);

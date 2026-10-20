@@ -3,29 +3,39 @@ import { notFound, redirect } from 'next/navigation';
 import { connection } from 'next/server';
 
 import { ChipEstado } from '@/componentes/ChipEstado';
+import { CodigoQr } from '@/componentes/CodigoQr';
 import { fechaEnvio, fraseDeLaSuma } from '@/componentes/formatoEnvio';
 import { LineasDinero } from '@/componentes/LineasDinero';
 import { Logo } from '@/componentes/Logo';
+import { primerNombre } from '@/componentes/textosEnvio';
 import { formatoUsd } from '@/lib/dinero';
+import { formatoMonto } from '@/lib/cotizacion';
+import { enlaceRastreo, enlaceWhatsapp, mensajeRastreo } from '@/lib/compartir';
 import { desgloseTributarioEnvio } from '@/lib/hacienda';
 import {
   accionesPosibles,
   descripcionDeEstado,
   ETIQUETA_ENTREGA,
-  ETIQUETA_ESTADO,
 } from '@/lib/transferencias';
+import { cobroDeEnvio, enlaceDeCobro } from '@/servidor/cobro';
 import { exigirSesion } from '@/servidor/sesion';
 import { envioPara, pagoLightningActivo } from '@/servidor/transferencias';
 
 import { AccionesEnvio } from './AccionesEnvio';
 import { BotonImprimir } from './BotonImprimir';
 import { CopiarCodigo } from './CopiarCodigo';
+import { EnlaceCobro } from './EnlaceCobro';
 import estilos from './estilos.module.css';
 import { LineaTiempo } from './LineaTiempo';
 import { SeguimientoEnCamino } from './SeguimientoEnCamino';
 
 // Blocking, so a transfer that is not the visitor's gets a real 404 before anything streams.
 export const instant = false;
+
+// Shortens a payment hash for a receipt: the first and the last characters.
+function hashCorto(hash: string): string {
+  return hash.length > 16 ? `${hash.slice(0, 10)}…${hash.slice(-6)}` : hash;
+}
 
 // One transfer, for its sender or an administrator. The recipient is sent to their own view.
 export default async function PaginaEnvio(props: PageProps<'/envios/[id]'>) {
@@ -36,9 +46,22 @@ export default async function PaginaEnvio(props: PageProps<'/envios/[id]'>) {
   if (!envio) notFound();
   if (envio.rol === 'destinatario') redirect(`/recibidos/${envio.id}`);
 
-  const acciones = accionesPosibles(envio.estado, envio.rol);
+  const acciones = accionesPosibles(envio.estado, envio.rol, envio.entrega, {
+    pagada: envio.pagadaEn !== null,
+    facturaViva: envio.facturaViva,
+  });
   const enCamino = envio.estado === 'procesando';
   const tributario = desgloseTributarioEnvio(envio);
+  const cobro = envio.entrega === 'lightning' ? await cobroDeEnvio(envio.id) : null;
+  // The sender shares the claim link once the transfer is paid and until the recipient collects it. Before the
+  // payment the link would only lead to a "waiting" page.
+  const enlaceCobro =
+    envio.rol === 'remitente' && envio.entrega === 'lightning' && envio.estado === 'procesando'
+      ? enlaceDeCobro(cobro)
+      : null;
+  const rastreo = enlaceRastreo(envio.codigo);
+  const whatsapp = enlaceWhatsapp(mensajeRastreo(envio.codigo, rastreo));
+  const completada = envio.estado === 'completada';
 
   return (
     <article className={estilos.envio}>
@@ -56,8 +79,13 @@ export default async function PaginaEnvio(props: PageProps<'/envios/[id]'>) {
           <Link href={`/t/${envio.codigo}`} className="dato">
             /t/{envio.codigo}
           </Link>
+          <a className="boton boton--secundario" href={whatsapp} target="_blank" rel="noopener">
+            Compartir por WhatsApp
+          </a>
         </div>
       </header>
+
+      {enlaceCobro && <EnlaceCobro enlace={enlaceCobro} sats={formatoMonto(envio.montoDestino, envio.monedaDestino)} />}
 
       <AccionesEnvio
         envioId={envio.id}
@@ -98,20 +126,21 @@ export default async function PaginaEnvio(props: PageProps<'/envios/[id]'>) {
       </section>
 
       <section className={estilos.bloque} aria-labelledby="titulo-hacienda">
-        <h2 id="titulo-hacienda">Tratamiento tributario en El Salvador (DGII · BCR)</h2>
+        <h2 id="titulo-hacienda">Impuestos del envío</h2>
         <dl className={estilos.datos}>
           <div>
-            <dt>Principal de la remesa</dt>{' '}
-            <dd>Valores recibidos del exterior: no constituyen renta según el Art. 3 num. 4 LISR (alcance para remesas familiares no confirmado). IVA no verificado.</dd>
+            <dt>Principal</dt>{' '}
+            <dd>Valores recibidos del exterior, que no constituyen renta según el Art. 3 núm. 4 de la LISR.</dd>
           </div>
           <div>
-            <dt>Desglose fiscal del servicio (DTE 01)</dt>{' '}
+            <dt>Comisión</dt>{' '}
             <dd className="dato">
-              Base sin IVA {formatoUsd(tributario.baseSinIvaUsdCentavos)} + IVA 13% {formatoUsd(tributario.ivaUsdCentavos)} (F-07, v14 sin vigencia confirmada) · Pago a Cuenta 1.75% {formatoUsd(tributario.pagoACuentaUsdCentavos)} (F-14 v17). La base sin IVA es un supuesto de cálculo.
+              Base sin IVA {formatoUsd(tributario.baseSinIvaUsdCentavos)} + IVA 13% {formatoUsd(tributario.ivaUsdCentavos)} ·
+              Pago a cuenta 1.75% {formatoUsd(tributario.pagoACuentaUsdCentavos)}
             </dd>
           </div>
           <div>
-            <dt>Forma de pago CAT-017</dt> <dd className="dato">{tributario.etiquetaCat017}</dd>
+            <dt>Forma de pago</dt> <dd className="dato">{tributario.etiquetaCat017}</dd>
           </div>
         </dl>
         <p className={estilos.nota}>
@@ -119,59 +148,63 @@ export default async function PaginaEnvio(props: PageProps<'/envios/[id]'>) {
         </p>
       </section>
 
-      <section className={estilos.comprobante} aria-labelledby="titulo-comprobante">
-        <div className={estilos.comprobanteCabecera}>
-          <Logo />
-          <h2 id="titulo-comprobante">Comprobante del envío</h2>
-        </div>
-        <dl className={estilos.datosComprobante}>
-          <div>
-            <dt>Código</dt> <dd className="dato">{envio.codigo}</dd>
+      {completada && (
+        <section className={estilos.comprobante} aria-labelledby="titulo-comprobante">
+          <div className={estilos.comprobanteCabecera}>
+            <Logo />
+            <h2 id="titulo-comprobante">Comprobante del envío</h2>
           </div>
-          <div>
-            <dt>Creado</dt> <dd>{fechaEnvio(envio.creadaEn, true)}</dd>
+          <dl className={estilos.datosComprobante}>
+            <div>
+              <dt>Número</dt> <dd className="dato">{envio.codigo}</dd>
+            </div>
+            <div>
+              <dt>Fecha</dt> <dd>{fechaEnvio(envio.completadaEn ?? envio.creadaEn, true)}</dd>
+            </div>
+            <div>
+              <dt>De</dt> <dd>{primerNombre(envio.remitenteNombre, 'Quien envió')}</dd>
+            </div>
+            <div>
+              <dt>Para</dt> <dd>{primerNombre(envio.destinatarioNombre)}</dd>
+            </div>
+            <div>
+              <dt>Enviado</dt> <dd className="dato">{formatoMonto(envio.montoOrigenCentavos, envio.monedaOrigen)}</dd>
+            </div>
+            <div>
+              <dt>Comisión</dt> <dd className="dato">{formatoMonto(envio.comisionCentavos, envio.monedaOrigen)}</dd>
+            </div>
+            <div>
+              <dt>Recibido</dt> <dd className="dato">{formatoMonto(envio.montoDestino, envio.monedaDestino)}</dd>
+            </div>
+            <div>
+              <dt>Entrega</dt> <dd>{ETIQUETA_ENTREGA[envio.entrega]}</dd>
+            </div>
+            {envio.entrega === 'lightning' && cobro?.hash && (
+              <div>
+                <dt>Hash del pago</dt> <dd className="dato">{hashCorto(cobro.hash)}</dd>
+              </div>
+            )}
+          </dl>
+          <div className={estilos.qr}>
+            <CodigoQr texto={rastreo} titulo={`Escaneá para ver el envío ${envio.codigo}`} />
           </div>
-          {envio.procesandoEn && (
-            <div>
-              <dt>Salió</dt> <dd>{fechaEnvio(envio.procesandoEn, true)}</dd>
-            </div>
-          )}
-          {envio.completadaEn && (
-            <div>
-              <dt>Entregado</dt> <dd>{fechaEnvio(envio.completadaEn, true)}</dd>
-            </div>
-          )}
-          {envio.fallidaEn && (
-            <div>
-              <dt>No se pudo entregar</dt> <dd>{fechaEnvio(envio.fallidaEn, true)}</dd>
-            </div>
-          )}
-          {envio.canceladaEn && (
-            <div>
-              <dt>Cancelado</dt> <dd>{fechaEnvio(envio.canceladaEn, true)}</dd>
-            </div>
-          )}
-          <div>
-            <dt>Estado</dt> <dd>{ETIQUETA_ESTADO[envio.estado]}</dd>
-          </div>
-          <div>
-            <dt>Destinatario</dt> <dd>{envio.destinatarioNombre}</dd>
-          </div>
-          <div>
-            <dt>Cómo lo recibe</dt> <dd>{ETIQUETA_ENTREGA[envio.entrega]}</dd>
-          </div>
-          {envio.motivo && (
-            <div>
-              <dt>Motivo</dt> <dd>{envio.motivo}</dd>
-            </div>
-          )}
-        </dl>
-        <LineasDinero datos={envio} tiempo="pasado" />
-        <p className={estilos.pieComprobante}>Comprobante de una simulación. No es un documento tributario.</p>
-      </section>
+        </section>
+      )}
 
-      <div className={estilos.noImprimir}>
-        <BotonImprimir />
+      <div className={`${estilos.noImprimir} no-imprimir`}>
+        {completada && (
+          <div className={estilos.botonesRecibo}>
+            <BotonImprimir />
+            <a className="boton boton--secundario" href={whatsapp} target="_blank" rel="noopener">
+              Compartir por WhatsApp
+            </a>
+          </div>
+        )}
+        {envio.rol === 'remitente' && (
+          <Link href={`/enviar?repetir=${envio.id}`} className="boton boton--secundario">
+            Repetir envío
+          </Link>
+        )}
         <Link href="/envios" className={estilos.volver}>
           Volver a mis envíos
         </Link>

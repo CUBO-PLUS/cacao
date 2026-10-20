@@ -5,10 +5,12 @@ import { ErrorLedger } from "./errores.ts";
 
 // Data lives in plain JSON files. Default: ledger/datos/ (git-ignored).
 // Override with --datos <dir> or the LEDGER_DATOS environment variable.
-const RAIZ_LEDGER = fileURLToPath(new URL("..", import.meta.url));
+// Same folder as new URL("..", import.meta.url), written as a path so the Next build does not treat it as an asset.
+const RAIZ_LEDGER = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 export function dirDatos(opcion?: string): string {
-  return resolve(opcion ?? process.env.LEDGER_DATOS ?? join(RAIZ_LEDGER, "datos"));
+  // The web app never calls this; the comment only keeps the Next build from tracing the whole project.
+  return resolve(/*turbopackIgnore: true*/ opcion ?? process.env.LEDGER_DATOS ?? join(RAIZ_LEDGER, "datos"));
 }
 
 export function raizLedger(): string {

@@ -196,3 +196,37 @@
   font-size: 0.9375rem;
   font-weight: 600;
 }
+
+/* Recent recipients: one tap chips, at least 44px tall, wrapping in a row. */
+.recientes {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  display: grid;
+  gap: 2px;
+  min-height: var(--alto-toque);
+  padding: 8px 12px;
+  border: 2px solid var(--tostado);
+  border-radius: var(--radio-chico);
+  background: var(--blanco);
+  color: var(--tostado);
+  text-align: start;
+  cursor: pointer;
+}
+
+.chip small {
+  font-size: 0.8125rem;
+  opacity: 0.8;
+}

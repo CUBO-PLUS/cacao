@@ -4,12 +4,15 @@ import { Suspense } from 'react';
 
 import { Boton } from '@/componentes/Boton';
 import { Cotizador } from '@/componentes/Cotizador';
+import { comisionExplicada } from '@/componentes/formatoEnvio';
+import { ETIQUETA_ENTREGA } from '@/lib/transferencias';
 import { cotizacionUsdBtc } from '@/lib/precio/fuente';
+import { leerTarifas } from '@/servidor/tasas';
 
 import estilos from './page.module.css';
 
-// The promise and the points are static. The quote needs the BTC price, which is fetched at
-// request time, so only the calculator waits for it.
+// The promise and the steps are static. The quote needs the BTC price, which is fetched at request
+// time, so only the calculator and the fee line wait for it.
 export default function Inicio() {
   return (
     <div className={estilos.inicio}>
@@ -28,25 +31,41 @@ export default function Inicio() {
         </Suspense>
       </section>
 
-      <section className={estilos.bloque} aria-labelledby="titulo-puntos">
-        <h2 id="titulo-puntos" className="solo-lectores">
-          Cómo funciona
-        </h2>
-        <ul className={estilos.puntos}>
-          <li>Las comisiones aparecen aparte del tipo de cambio.</li>
-          <li>Ves cuánto llega antes de confirmar.</li>
-          <li>Cada envío tiene un código para seguirlo.</li>
+      <section className={estilos.bloque} aria-labelledby="titulo-como">
+        <h2 id="titulo-como">Cómo funciona</h2>
+        <ol className={estilos.pasos}>
           <li>
-            En El Salvador, el Art. 3 num. 4 de la LISR dice que los valores recibidos del exterior no constituyen renta; el alcance para remesas familiares no está confirmado.{' '}
-            <Link href="/hacienda">Mirá el marco de Hacienda y del BCR</Link>.
+            <span className={estilos.numero} aria-hidden="true">1</span>
+            <div>
+              <strong>Cotizá</strong>
+              <p>Ves el tipo de cambio, la comisión y cuánto recibe tu familia antes de pagar.</p>
+            </div>
           </li>
-        </ul>
+          <li>
+            <span className={estilos.numero} aria-hidden="true">2</span>
+            <div>
+              <strong>Pagá con Lightning</strong>
+              <p>Pagás desde tu billetera de bitcoin. El envío sale cuando la factura se paga.</p>
+            </div>
+          </li>
+          <li>
+            <span className={estilos.numero} aria-hidden="true">3</span>
+            <div>
+              <strong>Tu familia cobra con un enlace</strong>
+              <p>Recibe un enlace por WhatsApp y cobra sin cuenta, o retira en efectivo o en su banco.</p>
+            </div>
+          </li>
+        </ol>
+        <Suspense fallback={null}>
+          <ComparacionComisiones />
+        </Suspense>
+        <p className={estilos.nota}>
+          <Link href="/hacienda">Mirá el marco tributario de Hacienda y del BCR</Link>.
+        </p>
         <div>
           <Boton href="/enviar">Enviar dinero</Boton> <Boton href="/rastrear" variante="secundario">Seguir un envío</Boton>
         </div>
       </section>
-
-      <p className={estilos.pie}>CacaoPay es una simulación. No mueve dinero real.</p>
     </div>
   );
 }
@@ -64,4 +83,17 @@ async function CotizadorConPrecio() {
     console.error('Precio de bitcoin:', error instanceof Error ? error.message : error);
   }
   return <Cotizador usdBtc={usdBtc} fuenteBtc={fuenteBtc} />;
+}
+
+// The fee of each way of delivery, side by side. Shown only when the fee table could be read.
+async function ComparacionComisiones() {
+  await connection();
+  const tarifas = await leerTarifas();
+  if (!tarifas || tarifas.length === 0) return null;
+  const orden = ['lightning', 'cuenta', 'efectivo'] as const;
+  const partes = orden
+    .map((entrega) => tarifas.find((t) => t.entrega === entrega))
+    .filter((t): t is NonNullable<typeof t> => t !== undefined)
+    .map((t) => `${ETIQUETA_ENTREGA[t.entrega]}: ${comisionExplicada(t, 'USD')}`);
+  return <p className={estilos.comparacion}>Comisiones: {partes.join(' · ')}.</p>;
 }

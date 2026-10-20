@@ -5,3 +5,7 @@ sitio/
 
 .vercel
 .env*
+
+# next.js
+/.next/
+*.tsbuildinfo

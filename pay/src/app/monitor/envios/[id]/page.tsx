@@ -7,11 +7,13 @@ import { EtiquetaEstado } from '@/componentes/EtiquetaEstado';
 import { fechaSv, tiempoEstimado } from '@/componentes/textosEnvio';
 import { formatoMonto } from '@/lib/cotizacion';
 import { accionesPosibles, ETIQUETA_ENTREGA, ETIQUETA_MONEDA } from '@/lib/transferencias';
+import { cobroDeEnvio, type EstadoCobroEnvio } from '@/servidor/cobro';
 import { exigirAdmin } from '@/servidor/sesion';
 import { envioPara } from '@/servidor/transferencias';
 
 import estilos from '../../estilos.module.css';
 
+import { AccionesCobroAdmin } from './AccionesCobroAdmin';
 import { AccionesEnvioAdmin } from './AccionesEnvioAdmin';
 
 export const metadata: Metadata = {
@@ -21,6 +23,12 @@ export const metadata: Metadata = {
 // Blocking, so an unknown transfer gets a real 404 before anything streams.
 export const instant = false;
 
+const ETIQUETA_COBRO: Record<EstadoCobroEnvio, string> = {
+  pagando: 'Pagando la factura',
+  pagado: 'Cobrado por Lightning',
+  fallido: 'Factura fallida, el destinatario puede pedir otra',
+};
+
 // Everything about one transfer, with the full contact and the admin's actions.
 export default async function PaginaDetalleEnvio(props: PageProps<'/monitor/envios/[id]'>) {
   await connection();
@@ -28,6 +36,8 @@ export default async function PaginaDetalleEnvio(props: PageProps<'/monitor/envi
   const sesion = await exigirAdmin(`/monitor/envios/${id}`);
   const envio = await envioPara(sesion.usuario, id);
   if (!envio) notFound();
+  // A lightning transfer is collected by its recipient; the admin only sees how that claim went.
+  const cobro = envio.entrega === 'lightning' ? await cobroDeEnvio(envio.id) : null;
 
   const tasa = envio.tasa.toLocaleString('en-US', { maximumFractionDigits: 8 });
 
@@ -102,6 +112,27 @@ export default async function PaginaDetalleEnvio(props: PageProps<'/monitor/envi
         </div>
       </dl>
 
+      {cobro && (
+        <dl className={estilos.datos}>
+          <div>
+            <dt>Cobro por Lightning</dt>
+            <dd>{cobro.estado ? ETIQUETA_COBRO[cobro.estado] : 'Sin cobrar todavía'}</dd>
+          </div>
+          {cobro.motivo && (
+            <div>
+              <dt>Motivo del cobro</dt>
+              <dd>{cobro.motivo}</dd>
+            </div>
+          )}
+          {cobro.hash && (
+            <div>
+              <dt>Hash del pago</dt>
+              <dd className={estilos.mono}>{cobro.hash}</dd>
+            </div>
+          )}
+        </dl>
+      )}
+
       <section aria-labelledby="titulo-historial">
         <h3 id="titulo-historial">Historial</h3>
         <ol className={estilos.historial}>
@@ -114,7 +145,9 @@ export default async function PaginaDetalleEnvio(props: PageProps<'/monitor/envi
         </ol>
       </section>
 
-      <AccionesEnvioAdmin envioId={envio.id} acciones={accionesPosibles(envio.estado, 'admin')} />
+      {cobro?.estado === 'pagando' && <AccionesCobroAdmin envioId={envio.id} />}
+
+      <AccionesEnvioAdmin envioId={envio.id} acciones={accionesPosibles(envio.estado, 'admin', envio.entrega)} />
     </article>
   );
 }

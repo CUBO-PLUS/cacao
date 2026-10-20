@@ -1,5 +1,7 @@
 {
-  "buildCommand": "npm run sitio",
-  "outputDirectory": "sitio",
-  "framework": null
+  "framework": "nextjs",
+  "buildCommand": "next build",
+  "crons": [
+    { "path": "/api/sincronizar", "schedule": "0 12 * * *" }
+  ]
 }

@@ -714,6 +714,7 @@ export type Database = {
       negocios: {
         Row: {
           abierto: boolean
+          btcpay_tienda_id: string | null
           creado_en: string
           credencial_pago_cifrada: string | null
           descripcion: string
@@ -727,6 +728,7 @@ export type Database = {
         }
         Insert: {
           abierto?: boolean
+          btcpay_tienda_id?: string | null
           creado_en?: string
           credencial_pago_cifrada?: string | null
           descripcion?: string
@@ -740,6 +742,7 @@ export type Database = {
         }
         Update: {
           abierto?: boolean
+          btcpay_tienda_id?: string | null
           creado_en?: string
           credencial_pago_cifrada?: string | null
           descripcion?: string
@@ -1473,6 +1476,7 @@ export type Database = {
         }
         Returns: {
           abierto: boolean
+          btcpay_tienda_id: string | null
           creado_en: string
           credencial_pago_cifrada: string | null
           descripcion: string
@@ -1508,6 +1512,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      asignar_tienda_btcpay: { Args: { p_negocio: string; p_tienda: string }; Returns: undefined }
       cambiar_estado_negocio: {
         Args: {
           p_actor: string
@@ -1516,6 +1521,7 @@ export type Database = {
         }
         Returns: {
           abierto: boolean
+          btcpay_tienda_id: string | null
           creado_en: string
           credencial_pago_cifrada: string | null
           descripcion: string
@@ -2613,6 +2619,7 @@ export type Database = {
         }
         Returns: {
           abierto: boolean
+          btcpay_tienda_id: string | null
           creado_en: string
           credencial_pago_cifrada: string | null
           descripcion: string
@@ -2686,7 +2693,7 @@ export type Database = {
         | "no_corresponde_pagar"
       tipo_orden: "productos" | "servicio"
       tipo_precio: "fijo" | "cotizar"
-      tipo_proveedor: "manual" | "falso" | "nwc" | "blink"
+      tipo_proveedor: "manual" | "falso" | "nwc" | "blink" | "btcpay"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2863,7 +2870,7 @@ export const Constants = {
       ],
       tipo_orden: ["productos", "servicio"],
       tipo_precio: ["fijo", "cotizar"],
-      tipo_proveedor: ["manual", "falso", "nwc", "blink"],
+      tipo_proveedor: ["manual", "falso", "nwc", "blink", "btcpay"],
     },
   },
 } as const

@@ -86,3 +86,13 @@ Una vez que la transferencia entra en `procesando`, el despachador de pagos ejec
 Al pasar la transferencia a `completada`:
 1. El evento de liquidación exporta hacia **CacaoLedger** un registro con la comisión cobrada (`comision_centavos` convertida a USD), la tasa `USD/BTC` aplicada, la cantidad de satoshis y el `paymentHash`.
 2. **CacaoLedger** construye la **Factura Electrónica (`tipoDte = "01"`)** por la comisión del servicio (con el 13% de IVA desglosado en `resumen.totalIva`), encadena la atestación de tasa en `atestaciones.jsonl` (registro local; su valor probatorio ante Hacienda no está confirmado), firma el documento con JWS (`RS512`) y lo incluye en el cierre diario y en los **Anexos 1 y 2 del Formulario F-07** y el **Formulario F-14 v17** (1.75% de Pago a Cuenta).
+
+## 5. Pago Lightning con BTCPay Server (implementado)
+
+Cuando el servidor tiene `BTCPAY_URL`, `BTCPAY_API_KEY` y `BTCPAY_STORE_ID`, el remitente paga el envío completo (`monto_origen`) con una factura Lightning de BTCPay. En la demostración BTCPay corre en regtest y las facturas no tienen valor. Sin esas variables, "Enviar ahora" funciona como antes.
+
+- **Monto en sats**: `sats = ceil(usd_centavos * 1e6 / cotizacion)`, con la cotización de `src/lib/precio/fuente.ts`. Los euros pasan a dólares con la tasa EUR/USD de `pay_tasas`. Lo calcula `satsParaFactura` (`src/lib/lightning.ts`).
+- **Factura**: `crearFactura` (cliente de `infra/btcpay/btcpay.ts`, copiado sin cambios en `src/servidor/btcpay.ts`) crea una factura de 15 minutos solo con `BTC-LN`. La factura se guarda en `pay_transferencias` con `pay_registrar_factura`. Mientras esté vigente, el remitente recibe la misma.
+- **Confirmación**: el envío pasa a `procesando` solo cuando BTCPay responde `Settled` (`leerFactura`). La página pregunta cada 3 segundos mientras la pestaña está visible. El webhook `POST /api/pagos/btcpay/` (firma `BTCPay-Sig` con `BTCPAY_WEBHOOK_SECRET`) solo pide volver a mirar: su cuerpo nunca cuenta como pago. La transición la hace `pay_confirmar_btcpay`, que es idempotente.
+- **Lo que no cambia**: completar (`pay_completar`) y fallar siguen en manos del administrador o del simulador. Con BTCPay activo, el remitente no puede llamar `pay_procesar` por su cuenta.
+- **Pendiente**: si llega un pago a una factura ya reemplazada o de un envío cancelado, no se devuelve ni se marca. Hay que revisarlo a mano en BTCPay.

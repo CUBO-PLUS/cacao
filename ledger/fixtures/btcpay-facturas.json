@@ -1,0 +1,92 @@
+[
+  {
+    "id": "BtcpayMedia0001Fx",
+    "storeId": "TiendaPruebaCacao01",
+    "estado": "Settled",
+    "sats": 12183,
+    "bolt11": null,
+    "paymentHash": "ab9aa89c0f08ff6988d3e4aad547f1d532415487c458a755bdb0c7468e73f00b",
+    "expiraEn": "2026-10-12T18:10:00.000Z",
+    "metadata": {
+      "producto": "media",
+      "orderId": "cobro-7781",
+      "itemDesc": "Historia: El cacao de Izalco",
+      "usdCentavos": 450,
+      "cotizacionUsdBtc": 36940.18
+    }
+  },
+  {
+    "id": "BtcpayTravel0002Fx",
+    "storeId": "TiendaPruebaCacao01",
+    "estado": "Settled",
+    "sats": 70354,
+    "bolt11": null,
+    "paymentHash": "30fdc068ff06bd96734f3ecc193df77271777541c421d7fcbcf5448bd1e4d55c",
+    "expiraEn": "2026-10-12T19:05:00.000Z",
+    "metadata": {
+      "producto": "travel",
+      "orderId": "reserva-0093",
+      "itemDesc": "Tour de cacao en Izalco, 1 persona",
+      "usdCentavos": 2599,
+      "cotizacionUsdBtc": 36940.18
+    }
+  },
+  {
+    "id": "BtcpayMarket0003Fx",
+    "storeId": "TiendaPruebaCacao01",
+    "estado": "Settled",
+    "sats": 48051,
+    "bolt11": null,
+    "paymentHash": "e75b7b4734ff1c8ef1c767011e389c021697b4fccb1d0758545c2f1e30e5189b",
+    "expiraEn": "2026-10-12T18:40:00.000Z",
+    "metadata": {
+      "producto": "market",
+      "orderId": "2077",
+      "itemDesc": "Miel de abeja de Suchitoto, 500 g",
+      "usdCentavos": 1775,
+      "cotizacionUsdBtc": 36939.92
+    }
+  },
+  {
+    "id": "BtcpayPay0004Fx",
+    "storeId": "TiendaPruebaCacao01",
+    "estado": "Settled",
+    "sats": 54161,
+    "bolt11": null,
+    "paymentHash": "da46fc4c1790bc63f44e2d8eb39862fc30f7a394336a0337e95595c9982a352d",
+    "expiraEn": "2026-10-13T09:00:00.000Z",
+    "metadata": {
+      "producto": "pay",
+      "orderId": "recarga-12",
+      "itemDesc": "Recarga de Cacao Pay, 20 USD",
+      "usdCentavos": 2000,
+      "cotizacionUsdBtc": 36929.61
+    }
+  },
+  {
+    "id": "BtcpayNuevo0005Fx",
+    "storeId": "TiendaPruebaCacao01",
+    "estado": "New",
+    "sats": 12183,
+    "bolt11": null,
+    "paymentHash": null,
+    "expiraEn": "2026-10-13T10:00:00.000Z",
+    "metadata": {
+      "producto": "media",
+      "orderId": "cobro-7790",
+      "itemDesc": "Historia: Pupusas de loroco",
+      "usdCentavos": 420,
+      "cotizacionUsdBtc": 36940.18
+    }
+  },
+  {
+    "id": "BtcpaySinMeta0006Fx",
+    "storeId": "TiendaPruebaCacao01",
+    "estado": "Settled",
+    "sats": 11370,
+    "bolt11": null,
+    "paymentHash": "8a448fd7f2d71a4f6875e1d2cf5eff20ef0c649441133f3570bf4159e04f4544",
+    "expiraEn": "2026-10-13T11:00:00.000Z",
+    "metadata": {}
+  }
+]

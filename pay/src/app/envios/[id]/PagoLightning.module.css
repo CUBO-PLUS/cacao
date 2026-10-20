@@ -1,0 +1,58 @@
+/* Paying a transfer in Lightning: the invoice, its amount and its countdown. Brand variables only. */
+.pago {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border-radius: var(--radio);
+  background: var(--blanco);
+  min-width: 0;
+}
+
+.pago h2 {
+  font-size: 1.1rem;
+}
+
+.regtest {
+  font-size: 0.9375rem;
+  padding: 10px 14px;
+  border-radius: var(--radio-chico);
+  background: var(--arena);
+}
+
+.factura {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.monto {
+  font-size: 1.05rem;
+  overflow-wrap: anywhere;
+}
+
+.textoFactura {
+  width: 100%;
+  min-width: 0;
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+  resize: vertical;
+  padding: 10px 12px;
+  border-radius: var(--radio-chico);
+  background: var(--pulpa);
+  color: var(--tostado);
+}
+
+.botones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.error {
+  padding: 10px 14px;
+  border-radius: var(--radio-chico);
+  background: var(--mazorca);
+  color: var(--tostado);
+  font-weight: 600;
+}

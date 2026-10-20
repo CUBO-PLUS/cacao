@@ -181,7 +181,7 @@ export type OrdenParaAcciones = {
     reembolsoMarcado: boolean;
     reembolsoConfirmado: boolean;
   } | null;
-  proveedor: 'manual' | 'falso' | 'nwc' | 'blink';
+  proveedor: 'manual' | 'falso' | 'nwc' | 'blink' | 'btcpay';
 };
 
 // Buyer may open a dispute from payment until 48 h after delivery, and only once.

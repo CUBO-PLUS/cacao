@@ -1,21 +1,27 @@
-// Confirms a booking. The server recomputes everything from the catalogue: the client only says
+// Starts a booking. The server recomputes everything from the catalogue: the client only says
 // which tour, which date, how many people, and optionally shows a reader token.
 //
-// DEMO: no payment is taken and seats are not counted. This is where a paid Lightning invoice has to
-// be verified before the confirmation is signed, and where the split below would be paid out.
+// With BTCPay configured, the booking is a Lightning invoice and no pase is signed yet: the browser
+// polls /api/reservar/estado/ until BTCPay says the invoice is Settled. Without BTCPay this is the
+// demo: nothing is charged and the booking is marked demo:true.
 import { createHash } from 'node:crypto';
 import type { APIContext } from 'astro';
-import { DIA, firmar } from '../../lib/firma';
-import { cotizar, diaDe, hoyEnElSalvador, NOMBRE_DIA, repartir } from '../../lib/reparto';
+import { crearFactura, enlaceBilleteraDePrueba } from '../../lib/btcpay';
+import { cotizacionUsdBtc } from '../../lib/precio';
+import { cotizar, diaDe, hoyEnElSalvador, NOMBRE_DIA } from '../../lib/reparto';
 import { MEDIA_URL, personas as limites, todosLosTours } from '../../lib/tours';
 import { esLector } from '../../lib/lector';
+import {
+  construirReserva,
+  MINUTOS_DE_PAGO,
+  metadatosDeFactura,
+  pagosConfigurados,
+} from '../../lib/reserva';
 
 export const prerender = false;
 
-/** Reading that comes with a booking stays open this long. */
-const DIAS_DE_LECTURA = 30;
-
 const error = (mensaje: string, status = 400) => Response.json({ error: mensaje }, { status });
+const sinCache = { headers: { 'Cache-Control': 'no-store' } };
 
 export async function POST({ request }: APIContext) {
   let c: { tour?: unknown; fecha?: unknown; personas?: unknown; lector?: unknown };
@@ -45,27 +51,53 @@ export async function POST({ request }: APIContext) {
   if (!Number.isInteger(n) || n < min || n > max) return error(`El grupo es de ${min} a ${max} personas.`);
 
   const lector = esLector(c.lector, d.historias);
-  const cotizacion = cotizar(d.precio, n, lector);
   const ahora = Date.now();
   const codigo = createHash('sha256').update(`${tour.id}|${fecha}|${n}|${ahora}|${Math.random()}`).digest('hex').slice(0, 8).toUpperCase();
+  const reserva = { codigo, fecha, personas: n, lector, ahora, mediaUrl: MEDIA_URL };
 
-  return Response.json(
-    {
-      codigo,
-      demo: true,
-      creada: ahora,
-      tour: { id: tour.id, titulo: d.titulo, lugar: d.lugar, duracion: d.duracion },
-      fecha,
-      personas: n,
-      ...cotizacion,
-      lector,
-      reparto: repartir(cotizacion.total, d.historias.length > 0),
-      // The booking opens the stories about the place on Cacao Media.
-      lecturas: d.historias.map((slug) => ({ slug, url: `${MEDIA_URL}/historias/${slug}/` })),
-      pase: d.historias.length
-        ? firmar({ tipo: 'reserva', slugs: d.historias, exp: ahora + DIAS_DE_LECTURA * DIA, codigo })
-        : null,
-    },
-    { headers: { 'Cache-Control': 'no-store' } },
-  );
+  const pagos = pagosConfigurados(process.env);
+  if (!pagos) {
+    // Demo: no BTCPay configured, so the booking is confirmed without a payment and marked as demo.
+    return Response.json(construirReserva(tour, reserva), sinCache);
+  }
+
+  const cotizacion = cotizar(d.precio, n, lector);
+  let cotizacionUsd: number;
+  try {
+    cotizacionUsd = await cotizacionUsdBtc();
+  } catch {
+    return error('No hay cotización del bitcoin. Probá de nuevo en un minuto.', 503);
+  }
+
+  try {
+    const factura = await crearFactura(pagos.config, {
+      storeId: pagos.storeId,
+      sats: cotizacion.total,
+      minutos: MINUTOS_DE_PAGO,
+      metadata: metadatosDeFactura(tour, {
+        codigo,
+        fecha,
+        personas: n,
+        lector,
+        cotizacionUsdBtc: cotizacionUsd,
+        usdCentavos: Math.ceil((cotizacion.total * cotizacionUsd) / 1e6),
+      }),
+    });
+    if (!factura.bolt11) return error('No se pudo crear la factura. Probá de nuevo.', 502);
+    return Response.json(
+      {
+        estado: 'pendiente',
+        factura: {
+          id: factura.id,
+          bolt11: factura.bolt11,
+          sats: factura.sats,
+          expiraEn: factura.expiraEn.toISOString(),
+          billeteraDePrueba: enlaceBilleteraDePrueba(pagos.config, factura.bolt11),
+        },
+      },
+      sinCache,
+    );
+  } catch {
+    return error('No se pudo crear la factura. Probá de nuevo.', 502);
+  }
 }

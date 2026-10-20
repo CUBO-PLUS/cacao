@@ -33,7 +33,7 @@ export type LineaOrden = {
 };
 
 export type PagoOrden = {
-  proveedor: 'manual' | 'falso' | 'nwc' | 'blink';
+  proveedor: 'manual' | 'falso' | 'nwc' | 'blink' | 'btcpay';
   estado: 'pendiente' | 'pagado' | 'expirado' | 'cancelado';
 };
 

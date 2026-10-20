@@ -36,6 +36,7 @@ export const ETIQUETA_PROVEEDOR: Record<string, string> = {
   falso: 'Prueba (sin pago real)',
   nwc: 'Nostr Wallet Connect',
   blink: 'Blink',
+  btcpay: 'BTCPay Server (Lightning)',
 };
 
 export const ETIQUETA_COBRO: Record<string, string> = {

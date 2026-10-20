@@ -14,6 +14,7 @@ ni conexión a internet.
 | `blink-receive-lightning-pupusas.json` | Tercer webhook de Blink, por $4.20, para el ticket de pupusas. Es el cobro Lightning que la demostración deja sin documento. |
 | `ticket-consumidor-pupusas.json` | Venta a consumidor final de $4.20 con IVA incluido: pupusas y horchata. |
 | `market-orden-1042.json` | Pedido 1042 de CacaoMarket: dos productos de una tienda de Suchitoto, $17.75, pagados por Lightning. Formato en `docs/importar-market.md`. El pago es un fixture: no hay una orden real detrás. |
+| `btcpay-facturas.json` | Seis facturas de BTCPay inventadas (ids y hashes falsos) para `importar btcpay --archivo`: cuatro pagadas de los cuatro productos, una sin pagar y una sin metadatos. Formato en `docs/importar-btcpay.md`. |
 
 ## Cómo se construyeron los webhooks de Blink
 

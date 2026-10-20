@@ -154,6 +154,8 @@ import { MEDIA_URL } from '../lib/tours';
     reparto?: unknown;
     lecturas?: unknown;
     pase?: unknown;
+    /** True for bookings paid through BTCPay. Demo bookings have no such field. */
+    pagada?: unknown;
   }
 
   const texto = (v: unknown): string => (typeof v === 'string' ? v : '');
@@ -213,7 +215,7 @@ import { MEDIA_URL } from '../lib/tours';
     const articulo = el('article', 'ticket');
     const cuerpo = el('div', 'ticket__cuerpo');
 
-    cuerpo.append(el('p', 'dato ticket__etiqueta', 'Reserva de muestra confirmada'));
+    cuerpo.append(el('p', 'dato ticket__etiqueta', r.pagada === true ? 'Pagada' : 'Reserva de muestra confirmada'));
 
     const titulo = el('h2', 'ticket__titulo');
     const nombre = texto(tour.titulo) || 'Experiencia';

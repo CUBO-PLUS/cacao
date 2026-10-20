@@ -4,7 +4,7 @@ import { Suspense } from 'react';
 
 import type { EstadoOrden } from '@/lib/estados';
 import { registrarEvento, sesionDeVisita } from '@/servidor/eventos';
-import { asegurarCobro, estadoDePago } from '@/servidor/pagos';
+import { asegurarCobro, enlaceBilleteraDePruebaDe, estadoDePago } from '@/servidor/pagos';
 import { exigirSesion } from '@/servidor/sesion';
 
 import { PagoCliente } from './PagoCliente';
@@ -83,5 +83,11 @@ async function PagoOrden({
     });
   }
 
-  return <PagoCliente ordenId={id} inicial={estado} errorCobro={problema} />;
+  // Only for a BTCPay invoice the buyer can still pay: the regtest test wallet pays it for them.
+  const billeteraDePrueba =
+    estado.proveedor === 'btcpay' && estado.estado === 'esperando_pago' ? enlaceBilleteraDePruebaDe(estado.bolt11) : null;
+
+  return (
+    <PagoCliente ordenId={id} inicial={estado} errorCobro={problema} billeteraDePrueba={billeteraDePrueba} />
+  );
 }

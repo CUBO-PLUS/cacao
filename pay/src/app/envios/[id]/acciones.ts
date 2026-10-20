@@ -2,12 +2,15 @@
 
 import { refresh } from 'next/cache';
 
+import type { PagoLightning } from '@/lib/lightning';
 import type { EstadoEnvio } from '@/lib/transferencias';
 import { exigirSesion } from '@/servidor/sesion';
 import type { Resultado } from '@/servidor/resultado';
 import {
   cancelarEnvio,
   envioPara,
+  estadoDePagoEnvio,
+  pagarEnvio,
   procesarEnvio,
   simularCompletar,
   simularFallar,
@@ -55,4 +58,16 @@ export async function estadoDeEnvioAccion(envioId: string): Promise<EstadoEnvio 
   const sesion = await exigirSesion(`/envios/${envioId}`);
   const envio = await envioPara(sesion.usuario, envioId);
   return envio?.estado ?? null;
+}
+
+/** The Lightning invoice for a transfer the sender is about to pay. Reuses a live invoice. */
+export async function pagarEnvioAccion(envioId: string): Promise<Resultado<PagoLightning>> {
+  const sesion = await exigirSesion(`/envios/${envioId}`);
+  return pagarEnvio(sesion.usuario.id, envioId);
+}
+
+/** The state of a transfer the sender is paying in Lightning. Asks BTCPay; does not refresh the page. */
+export async function estadoDePagoAccion(envioId: string): Promise<EstadoEnvio | null> {
+  const sesion = await exigirSesion(`/envios/${envioId}`);
+  return estadoDePagoEnvio(sesion.usuario.id, envioId);
 }

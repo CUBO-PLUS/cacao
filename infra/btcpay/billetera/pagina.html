@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Billetera de prueba</title>
+<style>
+  :root { --fondo: #f6f1ea; --texto: #2b1d14; --suave: #6f5a4a; --linea: #e2d6c8; --cacao: #6b3e26; --ok: #2f7a3e; --error: #a23b2a; }
+  @media (prefers-color-scheme: dark) { :root { --fondo: #1b1410; --texto: #f3e9df; --suave: #b9a593; --linea: #3a2c22; --cacao: #d69a6f; --ok: #7cc68a; --error: #f08a78; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fondo); color: var(--texto); font: 16px/1.5 system-ui, sans-serif; }
+  main { max-width: 32rem; margin: 0 auto; padding: 2rem 1rem; }
+  h1 { font-size: 1.5rem; margin: 0 0 .25rem; }
+  p { margin: .5rem 0; color: var(--suave); }
+  textarea { width: 100%; min-height: 7rem; padding: .75rem; border: 1px solid var(--linea); border-radius: .5rem; background: transparent; color: var(--texto); font: 13px/1.4 ui-monospace, monospace; word-break: break-all; }
+  button { width: 100%; margin-top: 1rem; padding: .9rem; border: 0; border-radius: .5rem; background: var(--cacao); color: var(--fondo); font: inherit; font-weight: 600; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  .monto { font-size: 2rem; font-weight: 700; color: var(--texto); margin: 1rem 0 0; }
+  .aviso { margin-top: 1rem; padding: .75rem; border-radius: .5rem; border: 1px solid var(--linea); }
+  .ok { color: var(--ok); border-color: var(--ok); }
+  .error { color: var(--error); border-color: var(--error); }
+  small { display: block; margin-top: 2rem; color: var(--suave); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Billetera de prueba</h1>
+  <p>Paga facturas Lightning del demo de Grupo Cacao. Usa bitcoin de prueba (regtest), que no tiene valor.</p>
+  <label for="factura"><p>Factura Lightning</p></label>
+  <textarea id="factura" placeholder="lnbcrt…" spellcheck="false" autocomplete="off"></textarea>
+  <div class="monto" id="monto" hidden></div>
+  <p id="descripcion" hidden></p>
+  <button id="pagar" disabled>Pagar</button>
+  <div class="aviso" id="aviso" role="status" hidden></div>
+  <small>Cuando el pago sale, volvé a la pestaña de Cacao: se actualiza sola.</small>
+</main>
+<script>
+  const campo = document.getElementById('factura');
+  const boton = document.getElementById('pagar');
+  const monto = document.getElementById('monto');
+  const desc = document.getElementById('descripcion');
+  const aviso = document.getElementById('aviso');
+  const formato = new Intl.NumberFormat('es-SV');
+  let lista = false;
+
+  function avisar(texto, clase) { aviso.hidden = false; aviso.className = 'aviso ' + clase; aviso.textContent = texto; }
+
+  async function ver() {
+    const factura = campo.value.trim();
+    lista = false; boton.disabled = true; monto.hidden = true; desc.hidden = true; aviso.hidden = true;
+    if (!factura) return;
+    try {
+      const r = await fetch('/billetera/api/ver?factura=' + encodeURIComponent(factura));
+      const d = await r.json();
+      if (!r.ok) return avisar(d.error, 'error');
+      monto.textContent = formato.format(d.sats) + ' sats'; monto.hidden = false;
+      if (d.descripcion) { desc.textContent = d.descripcion; desc.hidden = false; }
+      lista = true; boton.disabled = false;
+    } catch { avisar('No se pudo leer la factura.', 'error'); }
+  }
+
+  boton.addEventListener('click', async () => {
+    if (!lista) return;
+    boton.disabled = true; boton.textContent = 'Pagando…';
+    try {
+      const r = await fetch('/billetera/api/pagar', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ factura: campo.value.trim() }) });
+      const d = await r.json();
+      if (!r.ok) { avisar(d.error, 'error'); boton.disabled = false; }
+      else { avisar('Pagado: ' + formato.format(d.sats) + ' sats. Ya podés volver a Cacao.', 'ok'); }
+    } catch { avisar('El pago no salió. Probá de nuevo.', 'error'); boton.disabled = false; }
+    boton.textContent = 'Pagar';
+  });
+
+  let espera;
+  campo.addEventListener('input', () => { clearTimeout(espera); espera = setTimeout(ver, 300); });
+  const inicial = new URLSearchParams(location.search).get('factura');
+  if (inicial) { campo.value = inicial; ver(); }
+</script>
+</body>
+</html>

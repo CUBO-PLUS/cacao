@@ -68,10 +68,14 @@ export interface Rechazo {
 }
 
 // Where the ticket came from, when it was imported. Absent on tickets typed by hand.
-export interface OrigenTicket {
-  plataforma: "cacaomarket";
-  numero: string;
-}
+// CacaoMarket: the order number. BTCPay: the invoice id, and the product that created it.
+export type ProductoCacao = "media" | "travel" | "market" | "pay";
+
+export type OrigenTicket =
+  | { plataforma: "cacaomarket"; numero: string }
+  | { plataforma: "btcpay"; producto: ProductoCacao; numero: string };
+
+export type PlataformaOrigen = OrigenTicket["plataforma"];
 
 export interface Ticket {
   id: string;
@@ -298,7 +302,7 @@ export function ticketConHashDePago(dirDatos: string, hash: string, idTicket: st
   return null;
 }
 
-// The ticket already imported from this order number, if any.
-export function ticketDeOrigen(dirDatos: string, plataforma: "cacaomarket", numero: string): Ticket | null {
+// The ticket already imported from this order number or invoice id, if any.
+export function ticketDeOrigen(dirDatos: string, plataforma: PlataformaOrigen, numero: string): Ticket | null {
   return listarTickets(dirDatos).find((t) => t.origen?.plataforma === plataforma && t.origen.numero === numero) ?? null;
 }

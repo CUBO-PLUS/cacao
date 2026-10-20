@@ -291,7 +291,9 @@ export function paginaTicket(ticket: Ticket, d: DatosSitio): string {
     ["Creado", t(`${fecha.fecEmi} ${fecha.horEmi}`)],
     ["Estado", `<span class="chip chip-${ticket.estado}">${t(ticket.estado)}</span>`],
   ];
-  if (ticket.origen) {
+  if (ticket.origen?.plataforma === "btcpay") {
+    filasCliente.push(["Factura de BTCPay", cod(ticket.origen.numero)], ["Producto", t(ticket.origen.producto)]);
+  } else if (ticket.origen) {
     filasCliente.push(["Pedido de CacaoMarket", cod(ticket.origen.numero)]);
   }
   if (ticket.receptor) {

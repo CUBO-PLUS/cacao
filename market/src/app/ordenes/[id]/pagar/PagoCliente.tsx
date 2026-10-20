@@ -49,10 +49,13 @@ export function PagoCliente({
   ordenId,
   inicial,
   errorCobro,
+  billeteraDePrueba,
 }: {
   ordenId: string;
   inicial: EstadoPago;
   errorCobro: string | null;
+  /** Regtest test-wallet link for a BTCPay invoice, built on the server. Null otherwise. */
+  billeteraDePrueba: string | null;
 }) {
   const router = useRouter();
   const [estado, setEstado] = useState<EstadoPago>(inicial);
@@ -392,6 +395,14 @@ export function PagoCliente({
               Abrir en mi billetera
             </a>
           </div>
+          {billeteraDePrueba !== null && (
+            <div className={styles.acciones}>
+              <a className="boton boton--secundario" href={billeteraDePrueba} target="_blank" rel="noopener">
+                Pagar con la billetera de prueba
+              </a>
+              <p className={styles.nota}>Bitcoin de prueba (regtest): no tiene valor.</p>
+            </div>
+          )}
           <label htmlFor="campo-factura" className="campo-etiqueta">
             Factura
           </label>

@@ -4,6 +4,7 @@
   "description": "",
   "scripts": {
     "test": "playwright test",
+    "test:unit": "node --test \"tests/unit/*.test.ts\"",
     "dev": "node --env-file-if-exists=.env.local node_modules/astro/bin/astro.mjs dev",
     "build": "astro build && node scripts/arreglar-funcion.mjs",
     "preview": "astro preview",

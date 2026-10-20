@@ -48,7 +48,11 @@ async function Recibo({ params }: { params: Promise<{ id: string }> }) {
     detalle.rol === 'comprador' ? detalle.otraParte : (sesion.negocio?.nombre ?? detalle.otraParte);
   const cotizacion = Math.round(detalle.cotizacionUsdBtc * 100);
   const formaDePago =
-    detalle.pago?.proveedor === 'falso' ? 'Bitcoin por Lightning, pago simulado' : 'Bitcoin por Lightning';
+    detalle.pago?.proveedor === 'falso'
+      ? 'Bitcoin por Lightning, pago simulado'
+      : detalle.pago?.proveedor === 'btcpay'
+        ? 'Bitcoin por Lightning (BTCPay)'
+        : 'Bitcoin por Lightning';
 
   return (
     <>

@@ -31,6 +31,8 @@ import {
 } from "./comercio/almacen.ts";
 import { firmarDocumentoSvfe, resolverUrlFirmador } from "./firma/svfe-firmador.ts";
 import { importarOrdenMarket } from "./market.ts";
+import { importarFacturaBtcpay, leerFacturasArchivo } from "./btcpay.ts";
+import { configDesdeEntorno, ErrorBtcpay, facturasPagadas, type Factura } from "./pagos/btcpay-api.ts";
 import { escribirLibrosCsv, informeMes, leerDocumentosEmitidos, lineasMes, validarMes } from "./mes.ts";
 import { generarSitio } from "./web/generar.ts";
 import { centavosDesdeTexto, formatoSats, formatoUsd } from "./dinero.ts";
@@ -70,6 +72,7 @@ const CON_VALOR = new Set([
   "password-pri",
   "clave-privada",
   "firmador-url",
+  "archivo",
 ]);
 const INTERRUPTORES = new Set(["json", "efectivo", "confirmar-produccion", "ayuda", "simulado"]);
 
@@ -498,7 +501,7 @@ function cmdCierre(fechaTexto: string | undefined, a: Argumentos, datos: string)
 
 function cmdImportar(origen: string | undefined, archivo: string | undefined, datos: string): Resultado {
   if (origen !== "market") {
-    throw new ErrorLedger('Origen de importación desconocido. Usá "importar market <archivo.json>".');
+    throw new ErrorLedger('Origen de importación desconocido. Usá "importar market <archivo.json>" o "importar btcpay".');
   }
   const ruta = needArg(archivo, "archivo del pedido");
   const r = importarOrdenMarket(datos, leerJson(resolve(ruta)), ahora());
@@ -507,6 +510,73 @@ function cmdImportar(origen: string | undefined, archivo: string | undefined, da
     ? `Pedido de CacaoMarket ${numero} importado como ticket ${r.ticket.id}.`
     : `El pedido ${numero} ya estaba importado como ${r.ticket.id}; no se creó otro ticket.`;
   return { datos: { ...r.ticket, nueva: r.nueva }, lineas: [cabecera, ...vistaTicket(r.ticket)] };
+}
+
+const CODIGO_CONFIGURACION = 2;
+const VARIABLES_BTCPAY = ["LEDGER_BTCPAY_URL", "LEDGER_BTCPAY_API_KEY", "LEDGER_BTCPAY_TIENDAS"];
+
+// importar btcpay: reads the settled invoices of the stores (or of --archivo) and prints one line each.
+// Exit code 2 means the BTCPay settings are missing; nothing was read.
+async function cmdImportarBtcpay(a: Argumentos, datos: string, json: boolean): Promise<number> {
+  const archivo = unico(a, "archivo");
+  const desde = unico(a, "desde");
+  if (archivo !== undefined && desde !== undefined) {
+    throw new ErrorLedger("--desde no se usa con --archivo: el archivo ya trae las facturas que se importan.");
+  }
+  if (desde !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(desde)) {
+    throw new ErrorLedger(`La fecha "${desde}" no tiene la forma YYYY-MM-DD.`);
+  }
+  // Start of that day in El Salvador (UTC-6, no daylight saving).
+  const inicio = desde === undefined ? undefined : new Date(`${desde}T00:00:00-06:00`);
+
+  let facturas: Factura[];
+  if (archivo !== undefined) {
+    facturas = leerFacturasArchivo(leerJson(resolve(archivo)));
+  } else {
+    const faltan = VARIABLES_BTCPAY.filter((v) => (process.env[v] ?? "").trim() === "");
+    if (faltan.length > 0) {
+      process.stderr.write(`error: faltan variables de entorno para BTCPay: ${faltan.join(", ")}. Ver docs/importar-btcpay.md.
+`);
+      return CODIGO_CONFIGURACION;
+    }
+    const config = configDesdeEntorno({ BTCPAY_URL: process.env.LEDGER_BTCPAY_URL, BTCPAY_API_KEY: process.env.LEDGER_BTCPAY_API_KEY });
+    if (config === null) {
+      process.stderr.write("error: LEDGER_BTCPAY_URL debe ser la dirección completa de BTCPay (http o https).\n");
+      return CODIGO_CONFIGURACION;
+    }
+    const tiendas = (process.env.LEDGER_BTCPAY_TIENDAS ?? "").split(",").map((s) => s.trim()).filter((s) => s.length > 0);
+    facturas = [];
+    for (const tienda of tiendas) {
+      try {
+        facturas.push(...(await facturasPagadas(config, tienda, inicio)));
+      } catch (e) {
+        if (e instanceof ErrorBtcpay) throw new ErrorLedger(`No se pudieron leer las facturas de la tienda ${tienda}: ${e.message}`);
+        throw e;
+      }
+    }
+  }
+
+  const momento = ahora();
+  const filas = facturas.map((factura) => {
+    const r = importarFacturaBtcpay(datos, factura, momento);
+    if ("omitida" in r) return { factura: factura.id, resultado: "omitida" as const, motivo: r.omitida, ticket: null };
+    return { factura: factura.id, resultado: r.nueva ? ("nueva" as const) : ("repetida" as const), motivo: null, ticket: r.ticket.id };
+  });
+  const cuenta = (tipo: string) => filas.filter((f) => f.resultado === tipo).length;
+  const resumen = { nuevas: cuenta("nueva"), repetidas: cuenta("repetida"), omitidas: cuenta("omitida") };
+
+  if (json) {
+    process.stdout.write(`${JSON.stringify({ ...resumen, facturas: filas }, null, 2)}
+`);
+  } else {
+    const lineas = filas.map((f) =>
+      f.resultado === "omitida" ? `omitida: ${f.motivo} (factura ${f.factura})` : `${f.ticket} factura ${f.factura} ${f.resultado === "nueva" ? "nueva" : "ya importada"}`,
+    );
+    if (filas.length === 0) lineas.push("No hay facturas pagadas en las tiendas indicadas.");
+    lineas.push(`Nuevas: ${resumen.nuevas}. Repetidas: ${resumen.repetidas}. Omitidas: ${resumen.omitidas}.`);
+    process.stdout.write(`${lineas.join("\n")}\n`);
+  }
+  return 0;
 }
 
 function cmdMes(mesTexto: string | undefined, a: Argumentos, datos: string): Resultado {
@@ -543,6 +613,7 @@ const AYUDA = `Uso: ledger <orden> [opciones]
   pagar <id> --blink <archivo.json>
   pagar <id> --efectivo
   importar market <archivo.json>   pedido pagado exportado de CacaoMarket (docs/importar-market.md)
+  importar btcpay [--desde YYYY-MM-DD] [--archivo <facturas.json>]   facturas pagadas de BTCPay (docs/importar-btcpay.md)
   dte construir <id> [--forzar-codigo <código>]
                      [--ambiente 01 --confirmar-produccion]
   dte validar <archivo o id> [--confirmar-produccion]
@@ -567,6 +638,9 @@ Opciones generales:
 Variables (no van en datos/ ni en fixtures):
   LEDGER_CLAVE_MAESTRA  descifra credenciales por comercio
   LEDGER_FIRMADOR_URL   URL del SVFE-API-Firmador
+  LEDGER_BTCPAY_URL     dirección de BTCPay Server (importar btcpay)
+  LEDGER_BTCPAY_API_KEY clave de API de solo lectura (importar btcpay)
+  LEDGER_BTCPAY_TIENDAS ids de las tiendas, separados por coma (importar btcpay)
 `;
 
 async function main(argv: string[]): Promise<number> {
@@ -598,6 +672,8 @@ async function main(argv: string[]): Promise<number> {
       }
       return 0;
     });
+  } else if (grupo === "importar" && orden === "btcpay") {
+    return cmdImportarBtcpay(a, datos, json);
   } else if (grupo === "ticket" && orden === "nuevo") r = cmdTicketNuevo(a, datos);
   else if (grupo === "ticket" && orden === "ver") r = cmdTicketVer(needArg(resto[0], "identificador del ticket"), datos);
   else if (grupo === "ticket" && orden === "lista") r = cmdTicketLista(datos);

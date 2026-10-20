@@ -3,6 +3,7 @@ import 'server-only';
 import type { EstadoPago, ProveedorCobro } from '@/app/ordenes/[id]/pagar/tipos';
 import { usdCentavosASats } from '@/lib/dinero';
 import type { EstadoOrden } from '@/lib/estados';
+import { configDesdeEntorno, enlaceBilleteraDePrueba } from '@/lib/pagos/btcpay-api';
 import { proveedorPara } from '@/lib/pagos';
 import type { Cobro } from '@/lib/pagos';
 import { cotizacionUsdBtc } from '@/lib/precio/fuente';
@@ -52,7 +53,7 @@ async function leerCobro(servicio: Servicio, ordenId: string) {
 async function leerNegocio(servicio: Servicio, negocioId: string) {
   const { data, error } = await servicio
     .from('negocios')
-    .select('nombre, tipo_proveedor_pago, lightning_address')
+    .select('nombre, tipo_proveedor_pago, lightning_address, btcpay_tienda_id')
     .eq('id', negocioId)
     .single();
   if (error) throw error;
@@ -100,11 +101,34 @@ export async function confirmarPagoEnBD(
   return null;
 }
 
+// BTCPay settings come from the environment here, not in the lib. Null when BTCPay is not configured.
 function proveedorDe(negocio: NegocioLeido) {
-  return proveedorPara({
-    tipoProveedorPago: negocio.tipo_proveedor_pago,
-    lightningAddress: negocio.lightning_address,
-  });
+  return proveedorPara(
+    {
+      tipoProveedorPago: negocio.tipo_proveedor_pago,
+      lightningAddress: negocio.lightning_address,
+      btcpayTiendaId: negocio.btcpay_tienda_id,
+    },
+    { btcpay: configDesdeEntorno(process.env) },
+  );
+}
+
+/**
+ * What the payer sees in the wallet: the invoice's text and the business name, so the BTCPay ticket
+ * (CacaoLedger) can say what was bought. The product id is the order id.
+ */
+function metadatosDeCobro(
+  orden: FilaOrdenCobro,
+  negocioNombre: string,
+  cotizacionUsdBtc: number,
+  etiqueta: 'Orden' | 'Trabajo',
+) {
+  return {
+    orderId: orden.id,
+    itemDesc: `${etiqueta} ${orden.numero} · ${negocioNombre}`,
+    usdCentavos: orden.total_usd_centavos,
+    cotizacionUsdBtc,
+  };
 }
 
 type FilaOrdenCobro = NonNullable<Awaited<ReturnType<typeof leerOrden>>>;
@@ -143,6 +167,7 @@ async function asegurarCobroDeTrabajo(servicio: Servicio, orden: FilaOrdenCobro)
       sats,
       memo: `CacaoMarket trabajo ${orden.numero}`,
       expiraEnSeg: SEGUNDOS_COBRO,
+      metadatos: metadatosDeCobro(orden, negocio.nombre, cotizacion, 'Trabajo'),
     });
   } catch (error) {
     // The job stays 'hecha': the client can ask for a new request once the provider works.
@@ -195,6 +220,7 @@ export async function asegurarCobro(ordenId: string): Promise<Resultado<null>> {
         sats: orden.total_sats,
         memo: `CacaoMarket orden ${orden.numero}`,
         expiraEnSeg: SEGUNDOS_COBRO,
+        metadatos: metadatosDeCobro(orden, negocio.nombre, orden.cotizacion_usd_btc, 'Orden'),
       });
     } catch (error) {
       // The order stays creada; it expires by itself and the stock comes back.
@@ -303,6 +329,16 @@ export async function estadoDePago(ordenId: string, usuarioId: string): Promise<
   } catch (error) {
     return desdeError(error);
   }
+}
+
+/**
+ * The regtest test-wallet link for a BTCPay invoice, or null. Only for demo invoices (lnbcrt...) and
+ * only when BTCPay is configured. Read on the server so the URL never depends on client code.
+ */
+export function enlaceBilleteraDePruebaDe(bolt11: string | null): string | null {
+  const config = configDesdeEntorno(process.env);
+  if (!config || !bolt11) return null;
+  return enlaceBilleteraDePrueba(config, bolt11);
 }
 
 /** Payment screen retry: creates the missing request, then reads the order again. */

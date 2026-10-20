@@ -33,7 +33,7 @@ export type Cobro = {
 };
 ```
 
-`crearCobro` pide una solicitud por el monto exacto en sats. `consultarCobro` dice si esa solicitud se pagó. Ni la base de datos ni la pantalla saben qué proveedor hay detrás: solo usan estos dos métodos.
+`crearCobro` pide una solicitud por el monto exacto en sats. Puede recibir `metadatos` (orden, descripción, precio en dólares y cotización); solo BTCPay los escribe en la factura. `consultarCobro` dice si esa solicitud se pagó. Ni la base de datos ni la pantalla saben qué proveedor hay detrás: solo usan estos dos métodos.
 
 ## Adaptadores
 
@@ -43,6 +43,7 @@ export type Cobro = {
 |---|---|---|
 | `manual` | Implementado (`manual.ts`) | Usa la Lightning Address del vendedor. Pide una factura por LNURL-pay por el monto exacto. Si la factura se pudo pedir, la pantalla muestra la factura. Si no, muestra la dirección y el monto, y el vendedor confirma el pago a mano. Si la factura trae una URL de verificación (LUD-21), el estado se consulta solo. |
 | `falso` | Implementado (`falso.ts`), solo demostración | Genera una factura falsa (`lnbcfalso` más una referencia). No consulta ninguna red. El pago se confirma con `simularPago`, y la pantalla muestra el botón de simulación. |
+| `btcpay` | Implementado (`btcpay.ts`, cliente en `btcpay-api.ts`) | Usa la tienda de BTCPay Server del negocio (`negocios.btcpay_tienda_id`). Crea una factura Lightning por el monto exacto en sats, y consulta si está `Settled`. Ver [BTCPay Server](#btcpay-server-lightning). |
 | `nwc` | Solo nombrado | Existe en el enum de la base y en la columna de credenciales, pero `proveedorPara` lanza `NO_DISPONIBLE`. |
 | `blink` | Solo nombrado | Igual que `nwc`. |
 
@@ -161,36 +162,13 @@ Además, `expirar_ordenes` usa `for update skip locked`, de modo que dos página
 
 El recibo dice explícitamente que no es un documento tributario, y que la factura electrónica (DTE) la emite el vendedor. La factura electrónica de El Salvador la genera CacaoLedger, la herramienta del grupo para tickets, pagos y documentos tributarios. CacaoMarket no emite DTE.
 
-## Integración con un procesador real
+## BTCPay Server (Lightning)
 
-Esta sección describe lo que haría falta para aceptar pagos Lightning reales. No está implementado.
+Es el proveedor de los negocios que tienen tienda en BTCPay. BTCPay no custodia dinero: cada tienda recibe en su propia billetera. La guía de la infraestructura está en `infra/btcpay/README.md`.
 
-### Qué cambia y qué se queda
-
-Se queda igual: la tabla `cobros`, las funciones `confirmar_pago`, `expirar_ordenes`, `cancelar_orden` y `registrar_cobro`, los estados de las órdenes, la pantalla de pago y los eventos del embudo. El resto de la aplicación no sabe qué proveedor hay detrás.
-
-Cambia: un adaptador nuevo, su registro en `proveedorPara`, la forma en que se confirma el pago (sondeo, webhook o ambos), y la forma en que se guarda la credencial del vendedor.
-
-### Pasos
-
-1. **Elegir el servicio.** Los dos nombrados en el enum son `nwc` (Nostr Wallet Connect, que deja a la aplicación pedir facturas y consultar pagos a la billetera del vendedor) y `blink` (una API de cuenta con facturas y estado de pago). Hay que escribir contra la API del servicio elegido, no contra la red Lightning.
-2. **Crear el adaptador.** Un archivo nuevo, por ejemplo `src/lib/pagos/nwc.ts`, con una función `crearProveedorNwc(credencial, opciones)` que devuelva un `ProveedorDePago`. `crearCobro` pide una factura por `sats` con el `memo` y la expiración que recibe. `consultarCobro` devuelve `pagado` cuando el servicio lo confirma. Pruebas en `src/lib/pagos/nwc.test.ts`, con un `fetch` falso, como `manual.test.ts`.
-3. **Registrarlo.** En `src/lib/pagos/index.ts`, los casos `nwc` y `blink` de `proveedorPara` dejan de lanzar `NO_DISPONIBLE` y construyen el adaptador con la credencial del negocio.
-4. **Guardar la credencial.** La columna `negocios.credencial_pago_cifrada` ya existe y ya está fuera de los permisos de sesión. Hay que escribirla con una función SQL nueva (solo `service_role`), cifrada en el servidor con una clave que no esté en la base de datos, y con un formulario en `src/app/mi-negocio` que la envíe por una acción de servidor. La credencial nunca va al navegador ni a un registro.
-5. **Confirmar desde la red (opcional).** El sondeo de la pantalla ya confirma los pagos mientras el comprador mira. Un webhook agrega confirmación aunque el comprador cierre la pantalla. Sería una ruta nueva, por ejemplo `src/app/api/pagos/nwc/route.ts`, que:
-   - verifica la firma del servicio;
-   - busca el cobro por `cobros.referencia_externa` con la clave de servicio;
-   - llama a `confirmarPagoEnBD(ordenId, null, null)`;
-   - trata `ESTADO_INVALIDO` como éxito, porque significa que el pago ya estaba confirmado.
-6. **Usar la fecha de vencimiento de la factura.** `crearCobro` debe devolver como `expiraEn` la fecha que da el servicio, en lugar del reloj de 600 segundos.
-7. **Trabajos.** No cambia: pasan por el mismo `proveedorDe` y por `registrar_cobro_servicio`.
-8. **Pruebas.** Unitarias del adaptador. De base de datos, un caso con dos avisos del mismo pago (tests/db). Y un recorrido de navegador con el servicio en su red de pruebas. El proyecto no debe usar fondos reales en ningún momento.
-
-### Decisiones que hay que tomar antes
-
-- **Custodia.** El dinero tiene que llegar a la billetera del vendedor. Si el procesador retiene los fondos y los reenvía, la plataforma pasa a custodiar dinero de otras personas. Eso cambia el modelo legal y operativo del proyecto. Hay que decidirlo antes de escribir el adaptador.
-- **Reembolsos.** Siguen fuera de la aplicación. El vendedor paga y marca el reembolso, y el comprador lo confirma. Si el procesador debe hacer reembolsos automáticos, hay que cambiar `resolver_disputa` y `marcar_reembolso`.
-- **Comisión.** La comisión teórica del 1 % se guarda, pero no se cobra. Hay que decidir si se cobra, cómo (con una división del pago en el procesador, o con una factura aparte) y quién la paga.
-- **Credenciales.** Quién entrega la credencial del vendedor, cómo se revoca y qué pasa cuando cambia.
-- **Pagos tardíos.** Hoy, una factura pagada después del vencimiento se rechaza, y la orden expira. Si el procesador ya cobró, el vendedor tendría que devolver ese dinero fuera de la aplicación. Hay que decidir si el procesador puede cancelarlo.
-- **Registro.** Cada confirmación que llega desde la red debe quedar en `auditoria`, con el origen.
+- **Una tienda por negocio.** `scripts/tiendas-btcpay.mjs` crea la tienda, la billetera on-chain, Lightning, el usuario de mercado (rol empleado) y el webhook de cada negocio aprobado que no tenga tienda. Después guarda el id con `asignar_tienda_btcpay`, que también pasa el negocio a `btcpay`. El id nunca va al navegador (la columna no tiene permiso de lectura para sesiones).
+- **Configuración.** `BTCPAY_URL`, `BTCPAY_API_KEY` y `BTCPAY_WEBHOOK_SECRET`, leídas en el servidor. Sin ellas, el cobro dice que BTCPay no está configurado.
+- **Factura.** `crearCobro` crea una factura en la tienda, solo `BTC-LN`, por el monto en sats y con el plazo de la solicitud. Su metadata lleva `producto: 'market'`, el id de la orden, la descripción y el precio, para el ticket de CacaoLedger. La referencia guardada es `<tienda>:<factura>`.
+- **Pago.** La pantalla consulta el estado cada pocos segundos. Solo `Settled` cuenta como pagado; `Expired` e `Invalid` cuentan como expirado. Un error de BTCPay cuenta como "todavía no".
+- **Aviso.** `POST /api/pagos/btcpay` acepta los avisos firmados (`BTCPay-Sig`). Solo `InvoiceSettled` importa. El cuerpo no se usa como prueba: la factura se vuelve a leer en BTCPay, y si está `Settled` se confirma con `confirmar_pago`, igual que la pantalla. Un aviso repetido no paga dos veces.
+- **Billetera de prueba.** En regtest, la pantalla ofrece pagar la factura con la billetera de prueba. Esos bitcoin no tienen valor.

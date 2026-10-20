@@ -122,12 +122,27 @@ const datos = [
             </details>
             <p class="reserva__error" id="error-reserva" role="alert" data-error hidden></p>
             <button class="boton" type="submit" data-reservar>Reservar</button>
-            <p class="reserva__nota">Modo demo · no se cobra nada. El pago con bitcoin llega más adelante.</p>
+            <p class="reserva__nota">Modo demo · se paga por Lightning con bitcoin de prueba (regtest), sin valor.</p>
           </div>
         </form>
 
+        <div class="reserva__pago" data-pago hidden aria-live="polite">
+          <p class="reserva__sello">Pagá con Lightning</p>
+          <p class="reserva__pago-monto"><span>Monto</span> <strong data-pago-monto></strong></p>
+          <div class="reserva__pago-campo">
+            <span>Factura</span>
+            <textarea class="reserva__factura" readonly rows="4" data-pago-factura></textarea>
+          </div>
+          <button class="boton" type="button" data-pago-copiar>Copiar factura</button>
+          <p class="reserva__pago-cuenta" data-pago-cuenta></p>
+          <a class="reserva__pago-prueba" data-pago-prueba href="#" target="_blank" rel="noopener" hidden>Pagar con la billetera de prueba</a>
+          <p class="reserva__nota">Bitcoin de prueba (regtest): no tiene valor.</p>
+          <p class="reserva__error" data-pago-vencida role="alert" hidden>La factura venció. Volvé a intentar.</p>
+          <button class="boton" type="button" data-pago-reintentar hidden>Volver a intentar</button>
+        </div>
+
         <div class="reserva__lista" data-confirmada hidden tabindex="-1">
-          <p class="reserva__sello">Reserva de muestra confirmada</p>
+          <p class="reserva__sello" data-sello>Reserva de muestra confirmada</p>
           <p class="reserva__codigo" data-codigo></p>
           <p data-resumen></p>
           <div data-lecturas-reserva hidden>
@@ -183,7 +198,7 @@ const datos = [
             </div>
             <div>
               <dt>Cancelación</dt>
-              <dd>No hay nada que cancelar: la reserva es de muestra y no se cobra.</dd>
+              <dd>La reserva es de muestra y se paga con bitcoin de prueba, sin valor: no hay nada que devolver.</dd>
             </div>
           </dl>
         </section>
@@ -328,6 +343,29 @@ const datos = [
   .reserva .boton:hover:not(:disabled) { background: var(--tostado); color: var(--pulpa); }
   .reserva .boton:disabled { opacity: 0.6; cursor: progress; }
   .reserva__nota { font-size: 0.8125rem; color: var(--tinta-suave); }
+
+  .reserva__pago { display: grid; gap: 12px; padding: 22px 24px 24px; }
+  .reserva__pago[hidden], .reserva__pago [hidden] { display: none; }
+  .reserva__pago-monto { margin: 0; font-family: var(--mono); }
+  .reserva__pago-monto span { font-family: var(--fuente); font-size: 0.8125rem; font-weight: 600; color: var(--tinta-suave); }
+  .reserva__pago-monto strong { font-size: 1.5rem; font-weight: 500; letter-spacing: -0.03em; }
+  .reserva__pago-campo { display: grid; gap: 6px; }
+  .reserva__pago-campo > span { font-size: 0.8125rem; font-weight: 600; color: var(--tinta-suave); }
+  .reserva__factura {
+    width: 100%;
+    padding: 0.6em 0.8em;
+    border: 1.5px solid var(--arena-oscura);
+    border-radius: var(--radio-chico);
+    background: var(--pulpa);
+    color: var(--tostado);
+    font: 0.8125rem/1.4 var(--mono);
+    overflow-wrap: anywhere;
+    resize: none;
+  }
+  .reserva__pago-cuenta { margin: 0; font-size: 0.875rem; font-weight: 600; }
+  .reserva__pago-prueba { font-size: 0.9375rem; font-weight: 600; color: var(--mazorca); }
+  .reserva__pago .reserva__error { margin: 0; }
+  .reserva__pago .reserva__error[hidden] { display: none; }
 
   .reserva__lista { display: grid; gap: 12px; padding: 24px; }
   .reserva__lista:focus-visible { outline: 3px solid var(--mazorca); outline-offset: -3px; border-radius: var(--radio); }
@@ -482,6 +520,111 @@ const datos = [
         .finally(terminarComprobacion);
     }
 
+    // Shows a Lightning invoice and waits for BTCPay to say it is paid. The browser never decides that:
+    // it only asks /api/reservar/estado/, and the server asks BTCPay. Resolves with the paid booking.
+    // Rejects when the invoice cannot be paid anymore, or when the check itself is refused.
+    const panelPago = caja.querySelector<HTMLElement>('[data-pago]')!;
+    const ocultarPago = () => {
+      panelPago.hidden = true;
+    };
+    const pagar = (factura: { id: string; sats: number; bolt11: string; expiraEn: string; billeteraDePrueba: string | null }) =>
+      new Promise<any>((resolver, rechazar) => {
+        const monto = caja.querySelector<HTMLElement>('[data-pago-monto]')!;
+        const texto = caja.querySelector<HTMLTextAreaElement>('[data-pago-factura]')!;
+        const copiar = caja.querySelector<HTMLButtonElement>('[data-pago-copiar]')!;
+        const cuenta = caja.querySelector<HTMLElement>('[data-pago-cuenta]')!;
+        const prueba = caja.querySelector<HTMLAnchorElement>('[data-pago-prueba]')!;
+        const vencida = caja.querySelector<HTMLElement>('[data-pago-vencida]')!;
+        const reintentar = caja.querySelector<HTMLButtonElement>('[data-pago-reintentar]')!;
+        const vence = new Date(factura.expiraEn).getTime();
+        let consultando = false;
+        let terminado = false;
+        let reloj = 0;
+        let cronometro = 0;
+
+        const parar = () => {
+          terminado = true;
+          clearInterval(reloj);
+          clearInterval(cronometro);
+          document.removeEventListener('visibilitychange', alVolver);
+        };
+
+        const pintarCuenta = () => {
+          const falta = Math.max(0, Math.ceil((vence - Date.now()) / 1000));
+          cuenta.textContent = falta > 0
+            ? `Vence en ${Math.floor(falta / 60)}:${String(falta % 60).padStart(2, '0')}`
+            : 'La factura ya venció.';
+        };
+
+        const mostrarVencida = () => {
+          parar();
+          cuenta.textContent = '';
+          vencida.hidden = false;
+          reintentar.hidden = false;
+          reintentar.onclick = () => rechazar(new Error('La factura venció. Volvé a intentar.'));
+        };
+
+        const sondear = async () => {
+          if (terminado || consultando || document.visibilityState !== 'visible') return;
+          consultando = true;
+          try {
+            const r = await fetch(`/api/reservar/estado/?id=${encodeURIComponent(factura.id)}`);
+            if (terminado) return;
+            if (r.status === 404 || r.status === 409) {
+              let mensaje = 'No se pudo confirmar el pago.';
+              try {
+                mensaje = (await r.json()).error ?? mensaje;
+              } catch {}
+              parar();
+              rechazar(new Error(mensaje));
+              return;
+            }
+            // Any other failure is treated as "not yet": the next poll tries again.
+            if (!r.ok) return;
+            const j = await r.json();
+            if (j?.estado === 'vencida') return mostrarVencida();
+            if (j?.estado === 'pendiente' || typeof j?.codigo !== 'string') return;
+            parar();
+            resolver(j);
+          } catch {
+            // Offline for a moment: keep polling.
+          } finally {
+            consultando = false;
+          }
+        };
+        const alVolver = () => {
+          if (document.visibilityState === 'visible') void sondear();
+        };
+
+        monto.textContent = sats(factura.sats);
+        texto.value = factura.bolt11;
+        copiar.textContent = 'Copiar factura';
+        copiar.onclick = async () => {
+          try {
+            await navigator.clipboard.writeText(factura.bolt11);
+            copiar.textContent = 'Factura copiada';
+          } catch {
+            // No clipboard here: select the text so the visitor can copy it by hand.
+            texto.select();
+          }
+        };
+        if (factura.billeteraDePrueba) {
+          prueba.href = factura.billeteraDePrueba;
+          prueba.hidden = false;
+        } else {
+          prueba.hidden = true;
+        }
+        vencida.hidden = true;
+        reintentar.hidden = true;
+
+        form.hidden = true;
+        panelPago.hidden = false;
+        pintarCuenta();
+        cronometro = window.setInterval(pintarCuenta, 1000);
+        reloj = window.setInterval(sondear, 3000);
+        document.addEventListener('visibilitychange', alVolver);
+      });
+
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       if (!validarFecha()) return fecha.focus();
@@ -502,6 +645,12 @@ const datos = [
         if (!r.ok) throw new Error(reserva?.error ?? 'No se pudo reservar. Probá de nuevo.');
         if (!reserva || typeof reserva !== 'object') throw new Error('No se pudo reservar. Probá de nuevo.');
 
+        // With BTCPay the booking waits for the Lightning payment; the server answers with the booking once it is paid.
+        if (reserva.estado === 'pendiente') {
+          reserva = await pagar(reserva.factura);
+          ocultarPago();
+        }
+
         // Each story takes its title from the reading cards on this page; the slug is only a fallback.
         const tarjetas = [...document.querySelectorAll<HTMLAnchorElement>('[data-lecturas] a.lectura')];
         const lecturas: { slug: string; url: string }[] = Array.isArray(reserva.lecturas) ? reserva.lecturas : [];
@@ -518,6 +667,7 @@ const datos = [
         } catch {}
 
         const lista = caja.querySelector<HTMLElement>('[data-confirmada]')!;
+        poner('[data-sello]', reserva.pagada ? 'Pagada' : 'Reserva de muestra confirmada');
         poner('[data-codigo]', reserva.codigo);
         const cuando = new Date(`${reserva.fecha}T12:00:00`).toLocaleDateString('es-SV', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
         poner('[data-resumen]', `${cuando} · ${reserva.personas} personas · ${sats(reserva.total)}`);
@@ -538,6 +688,9 @@ const datos = [
         lista.hidden = false;
         lista.focus();
       } catch (err) {
+        // Back to the form, so the error and the retry button are visible.
+        ocultarPago();
+        form.hidden = false;
         mostrarError(err instanceof Error ? err.message : 'No se pudo reservar.');
         boton.disabled = false;
         boton.textContent = 'Reservar';

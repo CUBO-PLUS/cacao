@@ -40,6 +40,10 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
         <button class="boton muro__secundario" type="button" data-gate-copiar>Copiar factura</button>
       </div>
     </div>
+    <div class="muro__prueba" data-gate-prueba hidden>
+      <a class="boton muro__secundario" data-gate-billetera href="#" target="_blank" rel="noopener">Pagar con la billetera de prueba</a>
+      <p class="muro__nota">Bitcoin de prueba (regtest): no tiene valor.</p>
+    </div>
     <p class="muro__cuenta">Vence en <span class="mono" data-gate-cuenta>5:00</span></p>
     {
       demo && (
@@ -143,6 +147,7 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
     overflow-wrap: anywhere;
     max-width: 100%;
   }
+  .muro__prueba { display: grid; gap: 8px; justify-items: start; }
   .muro__cuenta { font-size: 1.125rem; }
   .muro__cuenta .mono { font-weight: 500; }
   .muro__demo {
@@ -181,6 +186,7 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
     precioSats?: number;
     precioUsdCentavos?: number | null;
     segundosRestantes?: number;
+    billeteraDePrueba?: string | null;
     token?: string;
     motivo?: string | null;
     error?: string;
@@ -235,6 +241,8 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
     const pedir = dentro<HTMLButtonElement>('[data-gate-pedir]');
     const estadoTexto = dentro('[data-gate-estado-texto]');
     const aviso = dentro('[data-gate-error]');
+    const prueba = dentro('[data-gate-prueba]');
+    const billetera = dentro<HTMLAnchorElement>('[data-gate-billetera]');
 
     let cobro: string | null = null;
     let vence = 0;
@@ -279,6 +287,13 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
       if (!usd) return;
       usd.hidden = !centavos;
       usd.textContent = centavos ? `· ${textoUsd(centavos)}` : '';
+    }
+
+    // The test-wallet link, only for BTCPay invoices on a regtest demo. Hidden otherwise.
+    function pintarPrueba(enlace: string | null | undefined): void {
+      if (!prueba) return;
+      prueba.hidden = !enlace;
+      if (billetera) billetera.href = enlace ?? '#';
     }
 
     function detenerPendiente(): void {
@@ -335,6 +350,7 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
         case 'pendiente':
           vence = Date.now() + (datos.segundosRestantes ?? 0) * 1000;
           venciendo = false;
+          pintarPrueba(datos.billeteraDePrueba);
           pintarCuenta();
           return;
         case 'pagada':
@@ -357,6 +373,7 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
       if (qr) qr.src = await codigoQr(datos.factura);
       if (copiar) copiar.textContent = 'Copiar factura';
       vence = Date.now() + (datos.segundosRestantes ?? 0) * 1000;
+      pintarPrueba(datos.billeteraDePrueba);
       mostrar('pendiente', 'Esperando el pago. Esta página se actualiza sola.');
       pintarCuenta();
       vigilar(datos.id);

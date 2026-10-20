@@ -34,6 +34,7 @@ El uso diario es `node src/cli.ts ayuda`. Los datos viven en `datos/`, que no en
 | `ticket ver <id>`, `ticket lista` | Muestra un ticket o la lista. |
 | `pagar <id> --blink <archivo>` o `pagar <id> --efectivo` | Registra el pago por Lightning (webhook de Blink) o en efectivo. |
 | `importar market <archivo>` | Crea un ticket pagado desde un pedido exportado de CacaoMarket. Ver `docs/importar-market.md`. |
+| `importar btcpay [--desde YYYY-MM-DD] [--archivo <facturas.json>]` | Crea un ticket pagado por cada factura pagada de BTCPay. Ver `docs/importar-btcpay.md`. |
 | `dte construir <id>` | Construye el DTE 01 o 03 y lo valida. Escribe la atestación si el pago es Lightning. |
 | `dte validar <archivo o id>` | Valida un documento contra el esquema y las reglas propias. |
 | `dte firmar <id> [--comercio <id>] [--firmador-url <url>]` | Pide un JWS al SVFE-API-Firmador (URL configurable). Opcional; sin firmador, el ciclo simulado sigue. |
@@ -157,6 +158,7 @@ Además, la reforma municipal (D.L. 762; texto no verificado en esta revisión) 
 - `docs/estrategia-y-hacienda.md`: límite regulatorio ante la CNAD y Ley Bitcoin (D.L. 199), custodia de certificados MTIST 2.0 §6.4, economía unitaria frente al Art. 239-A CT y texto íntegro de la consulta vinculante ante la DGII (Art. 26 CT, no verificado).
 - `docs/atestacion.md`: qué prueba la cadena SHA-256 de tasas USD/BTC y cómo se audita.
 - `docs/importar-market.md`: formato del pedido de CacaoMarket y sus validaciones.
+- `docs/importar-btcpay.md`: facturas pagadas de BTCPay, variables de entorno y omisiones.
 - `docs/firma-y-comercios.md`: firmador SVFE, JWS (`RS512`), varios comercios y cifrado AES-256-GCM.
 - `esquemas/README.md`: origen y huellas SHA-256 de cada archivo de esquema.
 - `fixtures/README.md`: qué es cada dato de prueba.

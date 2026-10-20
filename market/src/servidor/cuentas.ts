@@ -19,7 +19,7 @@ export type Negocio = DatosNegocio & {
   id: string;
   estado: 'pendiente' | 'aprobado' | 'suspendido';
   abierto: boolean;
-  tipoProveedorPago: 'manual' | 'falso' | 'nwc' | 'blink';
+  tipoProveedorPago: 'manual' | 'falso' | 'nwc' | 'blink' | 'btcpay';
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

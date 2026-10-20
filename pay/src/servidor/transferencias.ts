@@ -12,6 +12,17 @@ import {
   type RolEnvio,
 } from '@/lib/transferencias';
 
+import { cotizacionUsdBtc } from '@/lib/precio/fuente';
+import { satsParaFactura, type PagoLightning } from '@/lib/lightning';
+
+import {
+  configDesdeEntorno,
+  crearFactura,
+  enlaceBilleteraDePrueba,
+  ErrorBtcpay,
+  leerFactura,
+  type ConfigBtcpay,
+} from './btcpay';
 import { registrarEvento } from './eventos';
 import { desdeError, exito, fallo, type Resultado } from './resultado';
 import { clienteServicio } from './supabase';
@@ -104,6 +115,24 @@ export const COLUMNAS_ENVIO =
 const COLUMNAS_RASTREO = 'id, codigo, estado, moneda_destino, monto_destino, entrega, creada_en, destinatario_nombre';
 
 const COLUMNAS_CAMBIO = 'id, codigo, remitente_id, estado, moneda_origen, monto_origen_centavos';
+
+// What the Lightning payment needs: the sender, the state, the amount and the invoice of the transfer.
+const COLUMNAS_PAGO =
+  'id, codigo, remitente_id, estado, moneda_origen, monto_origen_centavos, btcpay_factura_id, btcpay_tienda_id, factura, factura_sats, factura_usd_centavos, factura_expira';
+
+// Lightning through BTCPay Server. The invoice is valid for this long.
+const FACTURA_MINUTOS = 15;
+const SIN_PRECIO_BTC = 'No pudimos obtener el precio del bitcoin. Probá de nuevo en un momento.';
+const SIN_FACTURA = 'No pudimos crear la factura Lightning. Probá de nuevo en un momento.';
+
+type FilaPago = Pick<FilaEnvio, 'id' | 'codigo' | 'remitente_id' | 'estado' | 'moneda_origen' | 'monto_origen_centavos'> & {
+  btcpay_factura_id: string | null;
+  btcpay_tienda_id: string | null;
+  factura: string | null;
+  factura_sats: number | null;
+  factura_usd_centavos: number | null;
+  factura_expira: string | null;
+};
 
 export type FilaEnvio = {
   id: string;
@@ -428,12 +457,171 @@ async function puedeCambiar(usuarioId: string, fila: { remitente_id: string }): 
   return esAdministrador(usuarioId);
 }
 
+// BTCPay is used only when the server has its address, its key and the store of Cacao Pay.
+// Without it, the sender's "Enviar ahora" works as it did before.
+function configuracionBtcpay(): { config: ConfigBtcpay; tienda: string } | null {
+  const config = configDesdeEntorno(process.env);
+  const tienda = (process.env.BTCPAY_STORE_ID ?? '').trim();
+  if (!config || !/^[A-Za-z0-9]{10,64}$/.test(tienda)) return null;
+  return { config, tienda };
+}
+
+/** True when the sender pays with Lightning: BTCPay is set up on this server. */
+export function pagoLightningActivo(): boolean {
+  return configuracionBtcpay() !== null;
+}
+
+function aPagoLightning(
+  envioId: string,
+  config: ConfigBtcpay,
+  factura: { bolt11: string; sats: number; usdCentavos: number; expiraEn: string },
+): PagoLightning {
+  return {
+    envioId,
+    sats: factura.sats,
+    usdCentavos: factura.usdCentavos,
+    bolt11: factura.bolt11,
+    expiraEn: factura.expiraEn,
+    enlaceBilleteraDePrueba: enlaceBilleteraDePrueba(config, factura.bolt11),
+  };
+}
+
+// The sender pays the whole amount, so the invoice is for the origin amount in US cents.
+async function cargarPago(envioId: string): Promise<FilaPago | null> {
+  const { data, error } = await clienteServicio()
+    .from('pay_transferencias')
+    .select(COLUMNAS_PAGO)
+    .eq('id', envioId)
+    .maybeSingle();
+  if (error) throw new Error(`No pudimos leer la transferencia: ${error.message}`);
+  return data as unknown as FilaPago | null;
+}
+
+/**
+ * The Lightning invoice the sender pays for a transfer that is only created. A live invoice is
+ * returned again; otherwise BTCPay makes one for the exact amount in sats at the current BTC price.
+ */
+export async function pagarEnvio(usuarioId: string, envioId: string): Promise<Resultado<PagoLightning>> {
+  try {
+    if (!esUuid(usuarioId) || !esUuid(envioId)) return fallo('NO_ENCONTRADA', MENSAJE_NO_ENCONTRADA);
+    const btc = configuracionBtcpay();
+    if (!btc) return fallo('NO_DISPONIBLE', 'El pago con Lightning no está activo en este servidor.');
+
+    const fila = await cargarPago(envioId);
+    if (!fila || fila.remitente_id !== usuarioId) return fallo('NO_ENCONTRADA', MENSAJE_NO_ENCONTRADA);
+    if (fila.estado !== 'creada') return fallo('ESTADO_INVALIDO', 'Este envío ya no se puede pagar.');
+
+    const vigente =
+      fila.factura !== null &&
+      fila.factura_sats !== null &&
+      fila.factura_usd_centavos !== null &&
+      fila.factura_expira !== null &&
+      Date.parse(fila.factura_expira) > Date.now();
+    if (vigente && fila.factura) {
+      return exito(
+        aPagoLightning(envioId, btc.config, {
+          bolt11: fila.factura,
+          sats: Number(fila.factura_sats),
+          usdCentavos: Number(fila.factura_usd_centavos),
+          expiraEn: fila.factura_expira ?? '',
+        }),
+      );
+    }
+
+    const usdCentavos = await valorUsdDe(fila.monto_origen_centavos, fila.moneda_origen);
+    let usdBtc: number;
+    try {
+      usdBtc = await cotizacionUsdBtc();
+    } catch {
+      return fallo('SIN_COTIZACION', SIN_PRECIO_BTC);
+    }
+    const sats = satsParaFactura(usdCentavos, usdBtc);
+
+    const factura = await crearFactura(btc.config, {
+      storeId: btc.tienda,
+      sats,
+      minutos: FACTURA_MINUTOS,
+      metadata: {
+        producto: 'pay',
+        orderId: fila.codigo,
+        itemDesc: `Envío ${fila.codigo}`,
+        usdCentavos,
+        cotizacionUsdBtc: usdBtc,
+      },
+    });
+    if (!factura.bolt11) return fallo('SIN_LIGHTNING', 'La tienda de BTCPay no tiene Lightning activado.');
+    const expiraEn = factura.expiraEn.toISOString();
+
+    const { error } = await clienteServicio().rpc('pay_registrar_factura', {
+      p_transferencia: envioId,
+      p_actor: usuarioId,
+      p_factura_id: factura.id,
+      p_tienda: btc.tienda,
+      p_factura: factura.bolt11,
+      p_sats: sats,
+      p_expira: expiraEn,
+      p_usd_centavos: usdCentavos,
+    });
+    if (error) return desdeError(error);
+
+    return exito(aPagoLightning(envioId, btc.config, { bolt11: factura.bolt11, sats, usdCentavos, expiraEn }));
+  } catch (error) {
+    if (error instanceof ErrorBtcpay) {
+      console.error('BTCPay al pagar envío:', error.message);
+      return fallo('BTCPAY', SIN_FACTURA);
+    }
+    return desdeError(error);
+  }
+}
+
+/**
+ * The state of a transfer the sender is paying in Lightning. While it is only created and has an
+ * invoice, BTCPay is asked whether the invoice is Settled; if it is, the transfer moves on.
+ * Anyone but the sender gets null. If BTCPay cannot be reached, the stored state is returned.
+ */
+export async function estadoDePagoEnvio(usuarioId: string, envioId: string): Promise<EstadoEnvio | null> {
+  if (!esUuid(usuarioId) || !esUuid(envioId)) return null;
+  const fila = await cargarPago(envioId);
+  if (!fila || fila.remitente_id !== usuarioId) return null;
+  const btc = configuracionBtcpay();
+  if (!btc || fila.estado !== 'creada' || !fila.btcpay_factura_id || !fila.btcpay_tienda_id) return fila.estado;
+
+  try {
+    const factura = await leerFactura(btc.config, fila.btcpay_tienda_id, fila.btcpay_factura_id);
+    if (factura.estado !== 'Settled') return fila.estado;
+  } catch (error) {
+    console.error('BTCPay al revisar factura:', error instanceof Error ? error.message : error);
+    return fila.estado;
+  }
+  const cambio = await confirmarPagoBtcpay(fila.btcpay_factura_id);
+  return cambio.ok ? cambio.dato.estado : fila.estado;
+}
+
+/**
+ * Moves a transfer to processing once its invoice is paid. Call it only after BTCPay said Settled.
+ * Repeating it changes nothing.
+ */
+export async function confirmarPagoBtcpay(facturaId: string): Promise<Resultado<CambioEnvio>> {
+  try {
+    if (!/^[A-Za-z0-9]{10,64}$/.test(facturaId)) return fallo('NO_ENCONTRADA', 'No encontramos esa factura.');
+    const { data, error } = await clienteServicio().rpc('pay_confirmar_btcpay', { p_factura_id: facturaId });
+    if (error) return desdeError(error);
+    return exito({ id: data.id, estado: data.estado });
+  } catch (error) {
+    return desdeError(error);
+  }
+}
+
 /** The sender confirms, or an administrator starts it, and the transfer goes on its way. */
 export async function procesarEnvio(usuarioId: string, envioId: string): Promise<Resultado<CambioEnvio>> {
   try {
     if (!esUuid(usuarioId) || !esUuid(envioId)) return fallo('NO_ENCONTRADA', MENSAJE_NO_ENCONTRADA);
     const fila = await cargarCambio(envioId);
     if (!fila || !(await puedeCambiar(usuarioId, fila))) return fallo('NO_ENCONTRADA', MENSAJE_NO_ENCONTRADA);
+    // With BTCPay on, the sender starts the transfer by paying its invoice, not by this button.
+    if (fila.remitente_id === usuarioId && pagoLightningActivo()) {
+      return fallo('NO_PERMITIDO', 'Pagá el envío con Lightning para que salga.');
+    }
 
     const { data, error } = await clienteServicio().rpc('pay_procesar', {
       p_transferencia: envioId,

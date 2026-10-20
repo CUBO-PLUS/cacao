@@ -12,6 +12,7 @@ import {
   simularFallarAccion,
 } from './acciones';
 import estilos from './estilos.module.css';
+import { PagoLightning } from './PagoLightning';
 
 const MOTIVO_MINIMO = 4;
 const MOTIVO_MAXIMO = 200;
@@ -22,7 +23,16 @@ type Confirmacion = 'procesar' | 'cancelar' | null;
  * What the person can do with the transfer now. The list comes from the server (accionesPosibles);
  * this only shows it, asks before the irreversible step, and reports the result.
  */
-export function AccionesEnvio({ envioId, acciones }: { envioId: string; acciones: AccionEnvio[] }) {
+export function AccionesEnvio({
+  envioId,
+  acciones,
+  pagoLightning,
+}: {
+  envioId: string;
+  acciones: AccionEnvio[];
+  /** BTCPay is set up and the viewer is the sender: "Enviar ahora" becomes a Lightning payment. */
+  pagoLightning: boolean;
+}) {
   const [confirmando, setConfirmando] = useState<Confirmacion>(null);
   const [enCurso, setEnCurso] = useState<AccionEnvio | null>(null);
   const [resultado, setResultado] = useState<ResultadoAccion | null>(null);
@@ -53,13 +63,17 @@ export function AccionesEnvio({ envioId, acciones }: { envioId: string; acciones
     ejecutar('fallar', () => simularFallarAccion(envioId, limpio));
   }
 
-  const puedeProcesar = acciones.includes('procesar');
+  // With Lightning on, the sender pays the invoice instead of starting the transfer by hand.
+  const puedeProcesar = acciones.includes('procesar') && !pagoLightning;
+  const puedePagar = acciones.includes('procesar') && pagoLightning;
   const puedeCancelar = acciones.includes('cancelar');
   const puedeCompletar = acciones.includes('completar');
   const puedeFallar = acciones.includes('fallar');
 
   return (
     <div className={estilos.acciones}>
+      {puedePagar && <PagoLightning envioId={envioId} />}
+
       {(puedeProcesar || puedeCancelar) && (
         <section className={estilos.bloqueAcciones} aria-labelledby="titulo-acciones">
           <h2 id="titulo-acciones" className="solo-lectores">

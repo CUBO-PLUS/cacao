@@ -3,7 +3,7 @@
 
 import type { EstadoOrden, TipoOrden } from '@/lib/estados';
 
-export type ProveedorCobro = 'manual' | 'falso' | 'nwc' | 'blink';
+export type ProveedorCobro = 'manual' | 'falso' | 'nwc' | 'blink' | 'btcpay';
 
 export type EstadoPago = {
   estado: EstadoOrden;

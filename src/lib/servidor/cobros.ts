@@ -4,6 +4,7 @@ import { DIA, firmar } from '../firma';
 import { todasLasHistorias } from '../historias';
 import { cotizacionUsdBtc } from './precio';
 import { bd, leerError } from './bd';
+import { enlaceBilleteraDePrueba, type ConfigBtcpay } from './btcpay';
 
 export type EstadoCobro = 'pendiente' | 'pagada' | 'vencida' | 'fallida';
 
@@ -19,6 +20,10 @@ export interface Cobro {
   estado: EstadoCobro;
   expira_en: string;
   motivo: string | null;
+  /** 'simulado' for the demo invoices, 'btcpay' for real Lightning invoices from BTCPay Server. */
+  proveedor: 'simulado' | 'btcpay';
+  btcpay_factura_id: string | null;
+  btcpay_tienda_id: string | null;
 }
 
 export interface HistoriaDePago {
@@ -116,8 +121,11 @@ export function segundosRestantes(cobro: Cobro, ahora: number = Date.now()): num
   return Math.max(0, Math.ceil((Date.parse(cobro.expira_en) - ahora) / 1000));
 }
 
-/** The invoice as the browser sees it. Money in integers: cents for USD, sats for Bitcoin. */
-export function vistaCobro(cobro: Cobro) {
+/**
+ * The invoice as the browser sees it. Money in integers: cents for USD, sats for Bitcoin.
+ * The test-wallet link is only for BTCPay invoices, and only when BTCPay is configured.
+ */
+export function vistaCobro(cobro: Cobro, config: ConfigBtcpay | null = null) {
   return {
     id: cobro.id,
     factura: cobro.factura,
@@ -126,6 +134,8 @@ export function vistaCobro(cobro: Cobro) {
     estado: cobro.estado,
     expiraEn: cobro.expira_en,
     segundosRestantes: segundosRestantes(cobro),
+    billeteraDePrueba:
+      cobro.proveedor === 'btcpay' && config ? enlaceBilleteraDePrueba(config, cobro.factura) : null,
   };
 }
 

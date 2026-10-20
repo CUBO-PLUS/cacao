@@ -15,7 +15,7 @@ import {
   ETIQUETA_ESTADO,
 } from '@/lib/transferencias';
 import { exigirSesion } from '@/servidor/sesion';
-import { envioPara } from '@/servidor/transferencias';
+import { envioPara, pagoLightningActivo } from '@/servidor/transferencias';
 
 import { AccionesEnvio } from './AccionesEnvio';
 import { BotonImprimir } from './BotonImprimir';
@@ -59,7 +59,11 @@ export default async function PaginaEnvio(props: PageProps<'/envios/[id]'>) {
         </div>
       </header>
 
-      <AccionesEnvio envioId={envio.id} acciones={acciones} />
+      <AccionesEnvio
+        envioId={envio.id}
+        acciones={acciones}
+        pagoLightning={envio.rol === 'remitente' && pagoLightningActivo()}
+      />
       {enCamino && <SeguimientoEnCamino envioId={envio.id} />}
 
       <section className={estilos.bloque} aria-labelledby="titulo-camino">

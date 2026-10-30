@@ -1,6 +1,6 @@
 # Cacao Media y Cacao Travel
 
-Dos sitios que funcionan juntos. Cacao Media es una publicación editorial sobre El Salvador: cada historia tiene precio en satoshis y se desbloquea de a una, sin cuenta ni suscripción. Cacao Travel es un catálogo de experiencias en El Salvador, también con precio en satoshis, que nace de los lugares de esas historias. Hoy los dos son una demo y no se cobra ningún pago (ver "Estado actual: demo").
+Dos sitios que funcionan juntos. Cacao Media es una publicación editorial sobre El Salvador: cada historia tiene precio en satoshis y se desbloquea de a una, sin cuenta ni suscripción. Cacao Travel es un catálogo de experiencias en El Salvador, también con precio en satoshis, que nace de los lugares de esas historias. Hoy los dos son una demo que cobra con bitcoin de prueba por Lightning, vía BTCPay (ver "Estado actual: demo").
 
 Sitios en vivo:
 
@@ -20,7 +20,7 @@ Este repositorio contiene la página de la empresa, Cacao, y cinco productos hec
 | CacaoPay | `pay/` | Simulador de remesas: lo que se envía, la comisión, el tipo de cambio y lo que llega | https://cacao-pay.vercel.app |
 | CacaoLedger | `ledger/` | App web y herramienta de terminal: la venta, su pago y su factura electrónica (DTE) | https://cacao-cuentas.vercel.app |
 
-Media, Market y Pay comparten una base de datos (las migraciones viven en `market/supabase/`). Todos los pagos son simulados: no se mueve dinero real. Lo que sigue en este documento describe Cacao Media y Cacao Travel; los otros tienen su `README.md` en su carpeta.
+Media, Market y Pay comparten una base de datos (las migraciones viven en `market/supabase/`). Todos los pagos usan bitcoin de prueba (regtest): no se mueve dinero real. Lo que sigue en este documento describe Cacao Media y Cacao Travel; los otros tienen su `README.md` en su carpeta.
 
 Para retomar el trabajo en otra computadora (instalar, correr, probar, publicar y lo que quedó pendiente), leé [docs/operacion.md](docs/operacion.md).
 
@@ -32,13 +32,12 @@ Para retomar el trabajo en otra computadora (instalar, correr, probar, publicar 
 
 ## Estado actual: demo
 
-- No se cobra ningún pago. Desbloquear historias y reservar funcionan, pero sin costo.
-- En Cacao Media el pago de cada historia es una factura simulada: la confirma el propio navegador en modo demo (ver "Cacao Gate"). Cuando haya un proveedor Lightning, la confirmación tiene que venir de él.
-- En Cacao Travel, `travel/src/pages/api/reservar.ts` firma la reserva sin verificar ningún pago: hay que verificarlo antes de firmar.
-- Las 13 experiencias son de muestra y no tienen un operador real.
-- Las reservas y los borradores de operador se guardan solo en el navegador de cada visitante. No hay cuentas, no hay base de datos y los cupos no se descuentan.
-- Las historias son textos de muestra que no pasaron por verificación editorial.
+- Los cinco productos cobran por BTCPay, solo por Lightning, con bitcoin de prueba (regtest). Ese bitcoin no tiene valor y no se mueve dinero real.
+- Cacao Media cobra cada historia de pago con una factura de BTCPay, y la confirmación llega de BTCPay. Los botones de pago simulado solo existen con `PUBLIC_DEMO=1`.
+- Cacao Travel cobra cada reserva con una factura de BTCPay cuando el servidor tiene BTCPay configurado. Sin BTCPay, la reserva se confirma sin pago y queda marcada como demo.
+- Las historias de Media y las 13 experiencias de Travel son de muestra: no pasaron por verificación editorial y no tienen un operador real.
 - Los dos sitios piden a los buscadores que no los indexen: Cacao Media con una etiqueta `noindex` y `robots.txt`, Cacao Travel con `noindex`.
+- Los términos y la privacidad del grupo están en `cacao/legal.html`.
 
 ## Cómo funciona
 
@@ -84,16 +83,16 @@ Si no hay base de datos configurada, el muro dice "Los pagos no están disponibl
 
 **Estado.** `GET /api/cobro/<id>/` devuelve la factura. Solo la ve el lector que la creó: a cualquier otro le responde 404. Antes de responder, marca como vencidas las facturas que pasaron de plazo. Cuando está pagada, la respuesta incluye el token firmado.
 
-**Acceso.** Pagar crea una fila en `media_accesos`: un acceso permanente por lector y por historia. Como el acceso está ligado a la cookie, volver al mismo navegador abre la historia sin pagar de nuevo, aunque se haya borrado el token guardado. El token firmado de 7 días (el mismo formato de siempre, `src/lib/firma.ts`) se guarda en `localStorage`, con la clave `cacao-gate:<slug>`. Ahí lo lee el widget de Cacao Travel para dar el descuento. Si el token vence, `POST /api/desbloquear/` emite uno nuevo solo a un lector que ya tiene acceso; si no, responde 402.
+**Acceso.** Pagar crea una fila en `media_accesos`: un acceso sin vencimiento por lector y por historia. Como el acceso está ligado a la cookie, volver al mismo navegador abre la historia sin pagar de nuevo, aunque se haya borrado el token guardado. El token firmado de 7 días (el mismo formato de siempre, `src/lib/firma.ts`) se guarda en `localStorage`, con la clave `cacao-gate:<slug>`. Ahí lo lee el widget de Cacao Travel para dar el descuento. Si el token vence, `POST /api/desbloquear/` emite uno nuevo solo a un lector que ya tiene acceso; si no, responde 402.
 
-**Qué es simulado.** No hay proveedor de Lightning. Las facturas son cadenas `lnsim1` seguidas de 40 caracteres hexadecimales, las genera la base de datos, y la confirmación del pago la da el propio navegador con dos rutas que solo responden con `PUBLIC_DEMO=1` (sin esa variable responden 403):
+**Cómo se cobra.** La factura la crea BTCPay y la confirmación llega de BTCPay: por un webhook firmado y, al consultar el estado, leyendo otra vez la factura. Un pago cuenta solo cuando BTCPay la reporta como pagada. Hoy es bitcoin de prueba (regtest), sin valor.
+
+**Qué es simulado.** Con `PUBLIC_DEMO=1` existen además dos rutas de demostración; sin esa variable responden 403:
 
 - `POST /api/cobro/<id>/pagar/` ("Simular pago").
 - `POST /api/cobro/<id>/fallar/` ("Simular pago fallido").
 
 Ninguna de las dos mueve dinero. Las dos sirven solo para el lector dueño de la factura.
-
-**Cómo entra un proveedor real de Lightning.** En el servidor, las dos rutas de simulación se quitan y la confirmación llega del proveedor por un webhook con firma verificada. Ese webhook llama a `media_pagar_cobro` (y a `media_fallar_cobro` si la factura no se paga). La factura real reemplaza a la simulada: hace falta una migración que cambie la restricción de `media_cobros.factura`, que hoy solo acepta `lnsim1`. El navegador no cambia: sigue consultando `GET /api/cobro/<id>/`. Las funciones de la base de datos, la cookie y el token firmado se mantienen igual.
 
 **Eventos del embudo.** `POST /api/evento/` recibe `vista_historia` (al abrir una historia de pago), `vio_muro` (cuando el muro entra en pantalla) y `leyo_completa` (cuando llega al final del texto abierto). El servidor agrega `creo_cobro` y `pago`. Se guardan en `eventos` con el sitio `media` y el embudo se lee con `embudo`. La ruta siempre responde 204 y nunca rompe la página.
 

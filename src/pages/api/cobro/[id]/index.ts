@@ -23,7 +23,7 @@ export const prerender = false;
  * Any BTCPay error answers null, so the invoice stays pending and the next poll tries again.
  */
 async function confirmarEnBtcpay(cobro: Cobro, lector: string): Promise<Cobro | null> {
-  const config = configBtcpay();
+  const config = await configBtcpay();
   if (!config || !cobro.btcpay_factura_id || !cobro.btcpay_tienda_id) return null;
   try {
     const factura = await leerFactura(config, cobro.btcpay_tienda_id, cobro.btcpay_factura_id);
@@ -67,7 +67,7 @@ export async function GET(context: APIContext) {
     if (cobro.estado === 'pendiente' && cobro.proveedor === 'btcpay') {
       cobro = (await confirmarEnBtcpay(cobro, lector)) ?? cobro;
     }
-    const cuerpo: Record<string, unknown> = { ...vistaCobro(cobro, configBtcpay()) };
+    const cuerpo: Record<string, unknown> = { ...vistaCobro(cobro, await configBtcpay()) };
     if (cobro.estado === 'pagada') cuerpo.token = tokenDeAcceso(cobro.slug).token;
     if (cobro.estado === 'fallida') cuerpo.motivo = cobro.motivo;
     return Response.json(cuerpo, { headers: sinGuardar });

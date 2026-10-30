@@ -19,7 +19,7 @@ import { lectorDe } from '../../../lib/servidor/lector';
 import { registrarEvento } from '../../../lib/servidor/eventos';
 import { cotizacionUsdBtc } from '../../../lib/servidor/precio';
 import { crearFactura, type ConfigBtcpay } from '../../../lib/servidor/btcpay';
-import { configBtcpay, tiendaBtcpay } from '../../../lib/servidor/pagos-btcpay';
+import { btcpayEnPausa, configBtcpay, PAUSA_BTCPAY, tiendaBtcpay } from '../../../lib/servidor/pagos-btcpay';
 
 export const prerender = false;
 
@@ -64,7 +64,8 @@ async function cobroBtcpay(
     } catch (error) {
       // BTCPay or the price service is down, or refused the invoice. The reader can try again.
       console.error(error);
-      return Response.json({ error: SIN_FACTURA }, { status: 503, headers: sinGuardar });
+      const mensaje = btcpayEnPausa(error) ? PAUSA_BTCPAY : SIN_FACTURA;
+      return Response.json({ error: mensaje }, { status: 503, headers: sinGuardar });
     }
     if (!factura.bolt11) {
       return Response.json({ error: SIN_FACTURA }, { status: 503, headers: sinGuardar });
@@ -127,7 +128,7 @@ export async function POST(context: APIContext) {
 
   // Outside the demo, the invoice is a real Lightning invoice from BTCPay Server, or there is no payment at all.
   if (!modoDemo()) {
-    const config = configBtcpay();
+    const config = await configBtcpay();
     const tienda = tiendaBtcpay();
     if (!config || !tienda) {
       return Response.json({ error: SIN_BASE }, { status: 503, headers: sinGuardar });

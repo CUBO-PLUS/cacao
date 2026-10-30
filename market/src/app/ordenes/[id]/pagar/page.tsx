@@ -85,7 +85,7 @@ async function PagoOrden({
 
   // Only for a BTCPay invoice the buyer can still pay: the regtest test wallet pays it for them.
   const billeteraDePrueba =
-    estado.proveedor === 'btcpay' && estado.estado === 'esperando_pago' ? enlaceBilleteraDePruebaDe(estado.bolt11) : null;
+    estado.proveedor === 'btcpay' && estado.estado === 'esperando_pago' ? await enlaceBilleteraDePruebaDe(estado.bolt11) : null;
 
   return (
     <PagoCliente ordenId={id} inicial={estado} errorCobro={problema} billeteraDePrueba={billeteraDePrueba} />

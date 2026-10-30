@@ -3,7 +3,7 @@
 import type { APIContext } from 'astro';
 import { ErrorBtcpay, leerFactura } from '../../../lib/btcpay';
 import { MEDIA_URL, todosLosTours } from '../../../lib/tours';
-import { pagosConfigurados, reconstruirReserva, ErrorReserva } from '../../../lib/reserva';
+import { btcpayEnPausa, pagosConfigurados, PAUSA_BTCPAY, reconstruirReserva, ErrorReserva } from '../../../lib/reserva';
 
 export const prerender = false;
 
@@ -11,7 +11,7 @@ const error = (mensaje: string, status: number) => Response.json({ error: mensaj
 const sinCache = { headers: { 'Cache-Control': 'no-store' } };
 
 export async function GET({ url }: APIContext) {
-  const pagos = pagosConfigurados(process.env);
+  const pagos = await pagosConfigurados(process.env);
   if (!pagos) return error('Los pagos no están configurados.', 503);
 
   const facturaId = url.searchParams.get('id') ?? '';
@@ -21,6 +21,7 @@ export async function GET({ url }: APIContext) {
   } catch (e) {
     // An id that is malformed or not in this store counts as unknown.
     if (e instanceof ErrorBtcpay && (e.estado === 400 || e.estado === 404)) return error('Factura no encontrada.', 404);
+    if (btcpayEnPausa(e)) return error(PAUSA_BTCPAY, 503);
     return error('No se pudo consultar el pago. Probá de nuevo.', 502);
   }
 

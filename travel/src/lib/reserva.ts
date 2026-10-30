@@ -1,9 +1,18 @@
 // Builds the booking that the booking API returns, and rebuilds it from a paid BTCPay invoice.
 // Both paths use construirReserva, so a paid booking has the same numbers as the one priced at checkout.
-// Server only. No I/O here: the routes fetch the catalogue and talk to BTCPay.
+// Server only. The only I/O here is reading the BTCPay address (./url-btcpay.ts); the routes fetch the catalogue and talk to BTCPay.
 import { DIA, firmar } from './firma';
 import { cotizar, repartir, DESCUENTO_LECTOR } from './reparto';
-import { configDesdeEntorno, type ConfigBtcpay } from './btcpay';
+import { configDesdeEntorno, ErrorBtcpay, type ConfigBtcpay } from './btcpay';
+import { urlBtcpay } from './url-btcpay';
+
+/** What the reader sees when BTCPay cannot be reached. Never a stack trace. */
+export const PAUSA_BTCPAY = 'Los pagos están en pausa por unos minutos. Probá de nuevo en un rato.';
+
+/** True when BTCPay did not answer (status 0) or failed on its side (5xx). The reader is then asked to wait. */
+export function btcpayEnPausa(error: unknown): boolean {
+  return error instanceof ErrorBtcpay && (error.estado === 0 || error.estado >= 500);
+}
 
 /** Reading that comes with a booking stays open this long. */
 const DIAS_DE_LECTURA = 30;
@@ -45,9 +54,17 @@ export class ErrorReserva extends Error {
   }
 }
 
-/** BTCPay is used only when the URL, the key and the store id are all set. */
-export function pagosConfigurados(entorno: Record<string, string | undefined>): { config: ConfigBtcpay; storeId: string } | null {
-  const config = configDesdeEntorno(entorno);
+/**
+ * BTCPay is used only when the URL, the key and the store id are all set. The URL comes from Supabase,
+ * with BTCPAY_URL as the fallback (see ./url-btcpay.ts).
+ */
+export async function pagosConfigurados(
+  entorno: Record<string, string | undefined>,
+): Promise<{ config: ConfigBtcpay; storeId: string } | null> {
+  const config = configDesdeEntorno({
+    BTCPAY_URL: (await urlBtcpay({ env: entorno })) ?? undefined,
+    BTCPAY_API_KEY: entorno.BTCPAY_API_KEY,
+  });
   const storeId = (entorno.BTCPAY_STORE_ID ?? '').trim();
   return config && storeId ? { config, storeId } : null;
 }

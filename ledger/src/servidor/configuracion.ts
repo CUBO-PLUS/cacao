@@ -3,6 +3,7 @@ import { createAlmacenSupabase } from "../almacen/supabase.ts";
 import type { AlmacenTickets } from "../almacen/tipos.ts";
 import { ErrorLedger } from "../errores.ts";
 import type { ConfigSincronizacion } from "../sincronizar.ts";
+import { urlBtcpay } from "./url-btcpay.ts";
 
 // Server-side configuration of the web app, read from the environment. Nothing here reaches the browser.
 
@@ -31,12 +32,13 @@ export function almacenDtesDeEntorno(entorno: Entorno = process.env): AlmacenDte
   return createAlmacenDtesSupabase(config);
 }
 
-// BTCPay for the sync. Null when the address or the key is missing; an empty store list is reported by the sync itself.
-export function btcpayDeEntorno(entorno: Entorno = process.env): ConfigSincronizacion | null {
-  const url = (entorno.LEDGER_BTCPAY_URL ?? "").trim().replace(/\/+$/, "");
-  const clave = (entorno.LEDGER_BTCPAY_API_KEY ?? "").trim();
+// BTCPay for the sync. The address comes from Supabase, with LEDGER_BTCPAY_URL as the fallback (url-btcpay.ts).
+// Null when the address or the key is missing; an empty store list is reported by the sync itself.
+export async function btcpayDeEntorno(): Promise<ConfigSincronizacion | null> {
+  const url = (await urlBtcpay()) ?? "";
+  const clave = (process.env.LEDGER_BTCPAY_API_KEY ?? "").trim();
   if (url === "" || clave === "") return null;
-  const tiendas = (entorno.LEDGER_BTCPAY_TIENDAS ?? "")
+  const tiendas = (process.env.LEDGER_BTCPAY_TIENDAS ?? "")
     .split(",")
     .map((s) => s.trim())
     .filter((s) => s.length > 0);

@@ -1,5 +1,6 @@
-import { ErrorBtcpay, configDesdeEntorno, firmaValida, leerAviso, leerFactura } from '@/servidor/btcpay';
+import { ErrorBtcpay, firmaValida, leerAviso, leerFactura } from '@/servidor/btcpay';
 import { confirmarPagoBtcpay } from '@/servidor/transferencias';
+import { configBtcpay } from '@/servidor/url-btcpay';
 
 // BTCPay calls this when an invoice changes. The body is only a hint to look again: the invoice is
 // read back from BTCPay, and only one it says is Settled moves a transfer on.
@@ -13,7 +14,7 @@ export async function POST(peticion: Request): Promise<Response> {
   const aviso = leerAviso(cuerpo);
   if (!aviso) return new Response('Aviso inválido.', { status: 400 });
 
-  const config = configDesdeEntorno(process.env);
+  const config = await configBtcpay();
   const tienda = (process.env.BTCPAY_STORE_ID ?? '').trim();
   if (!config || !tienda) return new Response('BTCPay no está configurado.', { status: 503 });
 

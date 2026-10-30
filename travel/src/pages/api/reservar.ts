@@ -12,9 +12,11 @@ import { cotizar, diaDe, hoyEnElSalvador, NOMBRE_DIA } from '../../lib/reparto';
 import { MEDIA_URL, personas as limites, todosLosTours } from '../../lib/tours';
 import { esLector } from '../../lib/lector';
 import {
+  btcpayEnPausa,
   construirReserva,
   MINUTOS_DE_PAGO,
   metadatosDeFactura,
+  PAUSA_BTCPAY,
   pagosConfigurados,
 } from '../../lib/reserva';
 
@@ -55,7 +57,7 @@ export async function POST({ request }: APIContext) {
   const codigo = createHash('sha256').update(`${tour.id}|${fecha}|${n}|${ahora}|${Math.random()}`).digest('hex').slice(0, 8).toUpperCase();
   const reserva = { codigo, fecha, personas: n, lector, ahora, mediaUrl: MEDIA_URL };
 
-  const pagos = pagosConfigurados(process.env);
+  const pagos = await pagosConfigurados(process.env);
   if (!pagos) {
     // Demo: no BTCPay configured, so the booking is confirmed without a payment and marked as demo.
     return Response.json(construirReserva(tour, reserva), sinCache);
@@ -97,7 +99,8 @@ export async function POST({ request }: APIContext) {
       },
       sinCache,
     );
-  } catch {
+  } catch (e) {
+    if (btcpayEnPausa(e)) return error(PAUSA_BTCPAY, 503);
     return error('No se pudo crear la factura. Probá de nuevo.', 502);
   }
 }

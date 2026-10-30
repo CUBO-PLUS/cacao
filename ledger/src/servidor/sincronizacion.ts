@@ -189,7 +189,7 @@ export async function sincronizarSiHaceFalta(opciones: OpcionesSincronizacion = 
       const ultima = ultimo.termino !== null && ultimo.error === null ? new Date(ultimo.termino) : anterior;
       return sinCorrer(ultima, ultimo.error === null ? null : MENSAJE_PUBLICO_ERROR, ultimo.error, false);
     }
-    const btc = opciones.btcpay === undefined ? btcpayDeEntorno() : opciones.btcpay;
+    const btc = opciones.btcpay === undefined ? await btcpayDeEntorno() : opciones.btcpay;
     if (btc === null) {
       return sinCorrer(anterior, MENSAJE_PUBLICO_ERROR, "Falta la configuración de BTCPay en el servidor.", false);
     }

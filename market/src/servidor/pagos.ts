@@ -3,7 +3,7 @@ import 'server-only';
 import type { EstadoPago, ProveedorCobro } from '@/app/ordenes/[id]/pagar/tipos';
 import { usdCentavosASats } from '@/lib/dinero';
 import type { EstadoOrden } from '@/lib/estados';
-import { configDesdeEntorno, enlaceBilleteraDePrueba } from '@/lib/pagos/btcpay-api';
+import { enlaceBilleteraDePrueba } from '@/lib/pagos/btcpay-api';
 import { proveedorPara } from '@/lib/pagos';
 import type { Cobro } from '@/lib/pagos';
 import { cotizacionUsdBtc } from '@/lib/precio/fuente';
@@ -12,6 +12,7 @@ import { registrarEvento, sesionDePago, sesionDeVisita } from './eventos';
 import { barrer } from './mantenimiento';
 import { desdeError, exito, fallo, type Resultado } from './resultado';
 import { clienteServicio } from './supabase';
+import { configBtcpay, esPausaBtcpay, MENSAJE_PAUSA } from './url-btcpay';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const esUuid = (id: string) => UUID.test(id);
@@ -101,16 +102,26 @@ export async function confirmarPagoEnBD(
   return null;
 }
 
-// BTCPay settings come from the environment here, not in the lib. Null when BTCPay is not configured.
-function proveedorDe(negocio: NegocioLeido) {
+// BTCPay settings come from the server here, not in the lib: the address from Supabase, the key from the
+// environment. Null when BTCPay is not configured.
+async function proveedorDe(negocio: NegocioLeido) {
   return proveedorPara(
     {
       tipoProveedorPago: negocio.tipo_proveedor_pago,
       lightningAddress: negocio.lightning_address,
       btcpayTiendaId: negocio.btcpay_tienda_id,
     },
-    { btcpay: configDesdeEntorno(process.env) },
+    { btcpay: await configBtcpay() },
   );
+}
+
+// BTCPay unreachable or failing on its side: the buyer is asked to come back later. Other errors keep their sentence.
+function desdeErrorDeCobro(error: unknown): Resultado<never> {
+  if (esPausaBtcpay(error)) {
+    console.error('BTCPay al crear el cobro:', error instanceof Error ? error.message : error);
+    return fallo('NO_DISPONIBLE', MENSAJE_PAUSA);
+  }
+  return desdeError(error);
 }
 
 /**
@@ -163,7 +174,7 @@ async function asegurarCobroDeTrabajo(servicio: Servicio, orden: FilaOrdenCobro)
   const negocio = await leerNegocio(servicio, orden.negocio_id);
   let cobro: Cobro;
   try {
-    cobro = await proveedorDe(negocio).crearCobro({
+    cobro = await (await proveedorDe(negocio)).crearCobro({
       sats,
       memo: `CacaoMarket trabajo ${orden.numero}`,
       expiraEnSeg: SEGUNDOS_COBRO,
@@ -171,7 +182,7 @@ async function asegurarCobroDeTrabajo(servicio: Servicio, orden: FilaOrdenCobro)
     });
   } catch (error) {
     // The job stays 'hecha': the client can ask for a new request once the provider works.
-    return desdeError(error);
+    return desdeErrorDeCobro(error);
   }
 
   const { error } = await servicio.rpc('registrar_cobro_servicio', {
@@ -216,7 +227,7 @@ export async function asegurarCobro(ordenId: string): Promise<Resultado<null>> {
     const negocio = await leerNegocio(servicio, orden.negocio_id);
     let cobro: Cobro;
     try {
-      cobro = await proveedorDe(negocio).crearCobro({
+      cobro = await (await proveedorDe(negocio)).crearCobro({
         sats: orden.total_sats,
         memo: `CacaoMarket orden ${orden.numero}`,
         expiraEnSeg: SEGUNDOS_COBRO,
@@ -224,7 +235,7 @@ export async function asegurarCobro(ordenId: string): Promise<Resultado<null>> {
       });
     } catch (error) {
       // The order stays creada; it expires by itself and the stock comes back.
-      return desdeError(error);
+      return desdeErrorDeCobro(error);
     }
 
     const { error } = await servicio.rpc('registrar_cobro', {
@@ -256,7 +267,7 @@ async function consultarPago(
   cobro: { referencia_externa: string | null; verificar_url: string | null; expira_en: string },
 ): Promise<boolean> {
   try {
-    const estado = await proveedorDe(negocio).consultarCobro({
+    const estado = await (await proveedorDe(negocio)).consultarCobro({
       referencia: cobro.referencia_externa,
       verificarUrl: cobro.verificar_url,
       expiraEn: new Date(cobro.expira_en),
@@ -335,8 +346,8 @@ export async function estadoDePago(ordenId: string, usuarioId: string): Promise<
  * The regtest test-wallet link for a BTCPay invoice, or null. Only for demo invoices (lnbcrt...) and
  * only when BTCPay is configured. Read on the server so the URL never depends on client code.
  */
-export function enlaceBilleteraDePruebaDe(bolt11: string | null): string | null {
-  const config = configDesdeEntorno(process.env);
+export async function enlaceBilleteraDePruebaDe(bolt11: string | null): Promise<string | null> {
+  const config = await configBtcpay();
   if (!config || !bolt11) return null;
   return enlaceBilleteraDePrueba(config, bolt11);
 }

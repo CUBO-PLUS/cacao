@@ -5,10 +5,11 @@ import 'server-only';
 // only here: the database records the outcome (pay_iniciar_cobro, pay_terminar_cobro), and the browser
 // never decides that a payment happened. A payment counts only when BTCPay says Complete.
 
-import { configDesdeEntorno, type ConfigBtcpay } from './btcpay';
+import type { ConfigBtcpay } from './btcpay';
 import { consultarPago, pagarFactura, type ResultadoPago } from './btcpay-pagos';
 import { desdeError, exito, fallo, type Resultado } from './resultado';
 import { clienteServicio } from './supabase';
+import { configBtcpay, esPausaBtcpay, MENSAJE_PAUSA } from './url-btcpay';
 
 export type EstadoCobroEnvio = 'pagando' | 'pagado' | 'fallido';
 
@@ -132,14 +133,14 @@ export function enlaceDeCobro(cobro: { token: string | null } | null): string | 
 }
 
 /** The regtest test wallet, with an invoice for these sats already asked for. Null without BTCPay. */
-export function enlaceFacturaDePrueba(sats: number): string | null {
-  const config = configDesdeEntorno(process.env);
+export async function enlaceFacturaDePrueba(sats: number): Promise<string | null> {
+  const config = await configBtcpay();
   if (!config || !Number.isSafeInteger(sats) || sats <= 0) return null;
   return `${config.url}/billetera/recibir?sats=${sats}`;
 }
 
-function configDePago(): { config: ConfigBtcpay; tienda: string } | null {
-  const config = configDesdeEntorno(process.env);
+async function configDePago(): Promise<{ config: ConfigBtcpay; tienda: string } | null> {
+  const config = await configBtcpay();
   const tienda = (process.env.BTCPAY_STORE_ID ?? '').trim();
   if (!config || !TIENDA.test(tienda)) return null;
   return { config, tienda };
@@ -279,7 +280,7 @@ export async function cobrarEnvio(token: string, facturaCruda: string): Promise<
     }
     const hash = hashDeFactura(factura);
     if (!hash) return fallo('DATOS_INVALIDOS', 'La factura no tiene el hash del pago. Pedí otra factura.');
-    const pago = configDePago();
+    const pago = await configDePago();
     if (!pago) return fallo('NO_DISPONIBLE', SIN_BTCPAY);
 
     // The hash is stored before BTCPay is asked, so a crash after this point can still be reconciled.
@@ -298,6 +299,8 @@ export async function cobrarEnvio(token: string, facturaCruda: string): Promise<
       // BTCPay did not answer clearly. The payment may have left, so the transfer stays "pagando" and
       // the page asks again later instead of letting the recipient pay a second invoice.
       console.error('BTCPay al cobrar:', e instanceof Error ? e.message : e);
+      // BTCPay down or failing: the payer is asked to come back later, and the state is kept.
+      if (esPausaBtcpay(e)) return fallo('NO_DISPONIBLE', MENSAJE_PAUSA);
       return exito({ estado: 'pendiente', motivo: null });
     }
     return cerrarCobro(token, resultado);
@@ -318,7 +321,7 @@ export async function estadoDeCobro(token: string): Promise<Resultado<{ cobroEst
     if (!fila || fila.entrega !== 'lightning') return fallo('NO_ENCONTRADA', MENSAJE_NO_ENCONTRADO);
     if (fila.cobro_estado !== 'pagando') return exito({ cobroEstado: fila.cobro_estado });
 
-    const pago = configDePago();
+    const pago = await configDePago();
     const intento = await intentoDeCobro(token);
     const hash = intento ? hashDelIntento(intento) : null;
     if (!pago || !intento || !hash) return exito({ cobroEstado: 'pagando' });
@@ -368,7 +371,7 @@ export async function marcarCobroFallido(token: string, motivo: string): Promise
 
     const hash = hashDelIntento(intento);
     if (hash) {
-      const pago = configDePago();
+      const pago = await configDePago();
       if (!pago) {
         return fallo('NO_DISPONIBLE', 'BTCPay no está configurado: no podemos revisar el pago antes de marcarlo como fallido.');
       }

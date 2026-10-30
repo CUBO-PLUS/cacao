@@ -1,0 +1,7 @@
+# Caddy: automatic HTTPS for the domain in DOMINIO (set in /opt/cacao-btcpay/.env), then the front door (puerta).
+# Caddy passes the Host header through unchanged and adds X-Forwarded-For/Proto/Host. WebSocket upgrades
+# (the BTCPay checkout) work with reverse_proxy without extra settings.
+{$DOMINIO} {
+	encode zstd gzip
+	reverse_proxy puerta:8088
+}

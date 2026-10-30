@@ -27,7 +27,7 @@ export async function POST(context: APIContext) {
     return Response.json({ ignorado: true }, { headers: sinGuardar });
   }
 
-  const config = configBtcpay();
+  const config = await configBtcpay();
   if (!config || !hayBase()) {
     // Not ready to record anything: BTCPay retries later.
     return Response.json({ error: 'Los pagos no están disponibles en este momento.' }, { status: 503, headers: sinGuardar });

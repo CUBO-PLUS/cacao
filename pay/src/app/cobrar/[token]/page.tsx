@@ -78,7 +78,7 @@ export default async function PaginaCobrar(props: { params: Promise<{ token: str
             {datos.cobroMotivo ?? 'No se pudo pagar la factura. Pedí otra factura.'}
           </p>
         )}
-        <FormularioCobro token={token} enlaceFacturaDePrueba={enlaceFacturaDePrueba(datos.sats)} />
+        <FormularioCobro token={token} enlaceFacturaDePrueba={await enlaceFacturaDePrueba(datos.sats)} />
       </div>
     );
   }

@@ -1,8 +1,9 @@
 import 'server-only';
 
-import { configDesdeEntorno, ErrorBtcpay, firmaValida, leerAviso, leerFactura } from '@/lib/pagos/btcpay-api';
+import { ErrorBtcpay, firmaValida, leerAviso, leerFactura } from '@/lib/pagos/btcpay-api';
 import { confirmarPagoEnBD } from '@/servidor/pagos';
 import { clienteServicio } from '@/servidor/supabase';
+import { configBtcpay } from '@/servidor/url-btcpay';
 
 // BTCPay calls this for each store event. The signature only proves that BTCPay sent the body, and even
 // a signed body is treated as "look again": the invoice is read back from BTCPay before anything is paid.
@@ -25,7 +26,7 @@ export async function POST(peticion: Request): Promise<Response> {
   // Only a settled invoice matters. Other events (new, expired, invalid, late) need no action here.
   if (aviso.tipo !== 'InvoiceSettled') return new Response(null, { status: 200 });
 
-  const config = configDesdeEntorno(process.env);
+  const config = await configBtcpay();
   if (config === null) {
     console.error('btcpay webhook: falta BTCPAY_URL o BTCPAY_API_KEY');
     return new Response(null, { status: 503 });

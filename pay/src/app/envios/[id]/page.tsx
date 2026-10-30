@@ -53,6 +53,8 @@ export default async function PaginaEnvio(props: PageProps<'/envios/[id]'>) {
   const enCamino = envio.estado === 'procesando';
   const tributario = desgloseTributarioEnvio(envio);
   const cobro = envio.entrega === 'lightning' ? await cobroDeEnvio(envio.id) : null;
+  const pagoLightning =
+    envio.rol === 'remitente' && envio.entrega === 'lightning' && envio.estado === 'creada' && (await pagoLightningActivo());
   // The sender shares the claim link once the transfer is paid and until the recipient collects it. Before the
   // payment the link would only lead to a "waiting" page.
   const enlaceCobro =
@@ -90,9 +92,7 @@ export default async function PaginaEnvio(props: PageProps<'/envios/[id]'>) {
       <AccionesEnvio
         envioId={envio.id}
         acciones={acciones}
-        pagoLightning={
-          envio.rol === 'remitente' && envio.entrega === 'lightning' && envio.estado === 'creada' && pagoLightningActivo()
-        }
+        pagoLightning={pagoLightning}
       />
       {enCamino && <SeguimientoEnCamino envioId={envio.id} />}
 

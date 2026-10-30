@@ -175,7 +175,12 @@ describe('cobrarEnvio', () => {
 
     const r = await cobrarEnvio(TOKEN, FACTURA);
 
-    expect(r).toEqual({ ok: true, dato: { estado: 'pendiente', motivo: null } });
+    // The payer is asked to come back later; the database keeps the claim as "pagando" (only one rpc call).
+    expect(r).toEqual({
+      ok: false,
+      codigo: 'NO_DISPONIBLE',
+      mensaje: 'Los pagos están en pausa por unos minutos. Probá de nuevo en un rato.',
+    });
     expect(rpc).toHaveBeenCalledTimes(1);
   });
 });

@@ -15,16 +15,10 @@ import {
 import { cotizacionUsdBtc } from '@/lib/precio/fuente';
 import { satsParaFactura, type PagoLightning } from '@/lib/lightning';
 
-import {
-  configDesdeEntorno,
-  crearFactura,
-  enlaceBilleteraDePrueba,
-  ErrorBtcpay,
-  leerFactura,
-  type ConfigBtcpay,
-} from './btcpay';
+import { crearFactura, enlaceBilleteraDePrueba, ErrorBtcpay, leerFactura, type ConfigBtcpay } from './btcpay';
 import { registrarEvento } from './eventos';
 import { desdeError, exito, fallo, type Resultado } from './resultado';
+import { configBtcpay, esPausaBtcpay, MENSAJE_PAUSA } from './url-btcpay';
 import { clienteServicio } from './supabase';
 import { cotizarEnServidor, tarifas, tasaEurUsd, VIGENCIA_MS } from './tasas';
 
@@ -516,16 +510,16 @@ async function puedeCambiar(usuarioId: string, fila: { remitente_id: string }): 
 
 // BTCPay is used only when the server has its address, its key and the store of Cacao Pay.
 // Without it, the sender's "Enviar ahora" works as it did before.
-function configuracionBtcpay(): { config: ConfigBtcpay; tienda: string } | null {
-  const config = configDesdeEntorno(process.env);
+async function configuracionBtcpay(): Promise<{ config: ConfigBtcpay; tienda: string } | null> {
+  const config = await configBtcpay();
   const tienda = (process.env.BTCPAY_STORE_ID ?? '').trim();
   if (!config || !/^[A-Za-z0-9]{10,64}$/.test(tienda)) return null;
   return { config, tienda };
 }
 
 /** True when the sender pays with Lightning: BTCPay is set up on this server. */
-export function pagoLightningActivo(): boolean {
-  return configuracionBtcpay() !== null;
+export async function pagoLightningActivo(): Promise<boolean> {
+  return (await configuracionBtcpay()) !== null;
 }
 
 function aPagoLightning(
@@ -563,7 +557,7 @@ async function cargarPago(envioId: string): Promise<FilaPago | null> {
 export async function pagarEnvio(usuarioId: string, envioId: string): Promise<Resultado<PagoLightning>> {
   try {
     if (!esUuid(usuarioId) || !esUuid(envioId)) return fallo('NO_ENCONTRADA', MENSAJE_NO_ENCONTRADA);
-    const btc = configuracionBtcpay();
+    const btc = await configuracionBtcpay();
     if (!btc) return fallo('NO_DISPONIBLE', 'El pago con Lightning no está activo en este servidor.');
 
     const fila = await cargarPago(envioId);
@@ -664,7 +658,7 @@ export async function pagarEnvio(usuarioId: string, envioId: string): Promise<Re
   } catch (error) {
     if (error instanceof ErrorBtcpay) {
       console.error('BTCPay al pagar envío:', error.message);
-      return fallo('BTCPAY', SIN_FACTURA);
+      return fallo('BTCPAY', esPausaBtcpay(error) ? MENSAJE_PAUSA : SIN_FACTURA);
     }
     return desdeError(error);
   }
@@ -679,7 +673,7 @@ export async function estadoDePagoEnvio(usuarioId: string, envioId: string): Pro
   if (!esUuid(usuarioId) || !esUuid(envioId)) return null;
   const fila = await cargarPago(envioId);
   if (!fila || fila.remitente_id !== usuarioId) return null;
-  const btc = configuracionBtcpay();
+  const btc = await configuracionBtcpay();
   if (!btc || fila.estado !== 'creada' || !fila.btcpay_factura_id || !fila.btcpay_tienda_id) return fila.estado;
 
   try {
@@ -715,7 +709,7 @@ export async function procesarEnvio(usuarioId: string, envioId: string): Promise
     const fila = await cargarCambio(envioId);
     if (!fila || !(await puedeCambiar(usuarioId, fila))) return fallo('NO_ENCONTRADA', MENSAJE_NO_ENCONTRADA);
     // With BTCPay on, the sender starts the transfer by paying its invoice, not by this button.
-    if (fila.remitente_id === usuarioId && pagoLightningActivo()) {
+    if (fila.remitente_id === usuarioId && (await pagoLightningActivo())) {
       return fallo('NO_PERMITIDO', 'Pagá el envío con Lightning para que salga.');
     }
     // A Lightning transfer starts when its invoice is paid (pay_confirmar_btcpay), never by hand.
@@ -752,7 +746,7 @@ async function leerFacturaSiExiste(config: ConfigBtcpay, tienda: string, factura
  * BTCPay does not know is not paid. Any other failure throws.
  */
 async function confirmarSiPagada(fila: { btcpay_factura_id: string | null; btcpay_tienda_id: string | null }): Promise<boolean> {
-  const btc = configuracionBtcpay();
+  const btc = await configuracionBtcpay();
   if (!btc || !fila.btcpay_factura_id || !fila.btcpay_tienda_id) return false;
   const factura = await leerFacturaSiExiste(btc.config, fila.btcpay_tienda_id, fila.btcpay_factura_id);
   if (!factura || factura.estado !== 'Settled') return false;

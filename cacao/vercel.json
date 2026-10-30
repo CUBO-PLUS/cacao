@@ -2,6 +2,7 @@
   "version": 2,
   "builds": [
     { "src": "index.html", "use": "@vercel/static" },
+    { "src": "legal.html", "use": "@vercel/static" },
     { "src": "estilo.css", "use": "@vercel/static" },
     { "src": "sitio.js", "use": "@vercel/static" },
     { "src": "favicon.svg", "use": "@vercel/static" },

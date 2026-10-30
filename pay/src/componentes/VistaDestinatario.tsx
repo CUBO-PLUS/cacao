@@ -53,9 +53,9 @@ export function VistaDestinatario({ saludo, envio, extra }: Props) {
           Estado del envío
         </h2>
         <p>
-          <EtiquetaEstado estado={envio.estado} grande />
+          <EtiquetaEstado estado={envio.estado} entrega={envio.entrega} grande />
         </p>
-        <p className={estilos.texto}>{descripcionDeEstado(envio.estado, 'destinatario')}</p>
+        <p className={estilos.texto}>{descripcionDeEstado(envio.estado, 'destinatario', envio.entrega)}</p>
         {tiempo && <p className={estilos.tiempo}>{tiempo}</p>}
       </section>
 

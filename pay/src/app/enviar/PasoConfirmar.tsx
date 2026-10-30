@@ -41,11 +41,16 @@ export function PasoConfirmar({
   // One key per form: a double tap sends the same key, and the database answers with one transfer.
   const [clave] = useState(() => idAleatorio());
   const [estado, accion] = useActionState<EstadoCrearEnvio, FormData>(crearEnvioAccion, { error: null });
+  // A refused send brings the new quote, and it is what the form shows and sends from then on. The quote
+  // with the later expiry is the newer one, so an old refusal never replaces a re-quote made since.
+  const nueva = estado.cotizacion;
+  const vigente =
+    nueva && Date.parse(nueva.validaHasta) > Date.parse(cotizacion.validaHasta) ? nueva : cotizacion;
 
   const resumen = `Enviás ${formatoMonto(montoCentavos, monedaOrigen)}. ${nombre} recibe ${formatoMonto(
-    cotizacion.montoDestino,
-    cotizacion.monedaDestino,
-  )} ${VIA_RECIBE[entrega]}. ${plazoEnvio(cotizacion.minutosEstimados)}`;
+    vigente.montoDestino,
+    vigente.monedaDestino,
+  )} ${VIA_RECIBE[entrega]}. ${plazoEnvio(vigente.minutosEstimados)}`;
 
   return (
     <form action={accion} className={estilos.formulario}>
@@ -56,6 +61,8 @@ export function PasoConfirmar({
       <input type="hidden" name="destinatarioContacto" value={contacto} />
       <input type="hidden" name="nota" value={nota} />
       <input type="hidden" name="clave" value={clave} />
+      <input type="hidden" name="montoDestino" value={vigente.montoDestino} />
+      <input type="hidden" name="tasa" value={vigente.tasa} />
 
       <h2 ref={tituloRef} tabIndex={-1} className={estilos.titulo}>
         Revisá y confirmá
@@ -63,8 +70,8 @@ export function PasoConfirmar({
 
       <p className={estilos.resumen}>{resumen}</p>
 
-      <LineasDinero datos={cotizacion} usdBtc={usdBtc} />
-      <VigenciaCotizacion validaHasta={cotizacion.validaHasta} onVencer={onVencer} />
+      <LineasDinero datos={vigente} usdBtc={usdBtc} />
+      <VigenciaCotizacion validaHasta={vigente.validaHasta} onVencer={onVencer} />
 
       <dl className={estilos.datosFinales}>
         <div>

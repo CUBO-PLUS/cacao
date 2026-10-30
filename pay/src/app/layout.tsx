@@ -102,7 +102,8 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
               <div className="contenedor">{children}</div>
             </main>
             <p className="pie-demo">
-              Demo de Grupo Cacao · bitcoin de prueba (regtest), sin valor · tasas de demostración
+              Demo de Grupo Cacao · bitcoin de prueba (regtest), sin valor · tasas de demostración ·{' '}
+              <a href="https://cacao-grupo.vercel.app/legal.html">Términos y privacidad</a>
             </p>
           </div>
           <div className="zona-grupo">

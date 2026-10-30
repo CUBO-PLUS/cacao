@@ -65,6 +65,44 @@
   background: var(--arena);
 }
 
+.dolares {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.detalles {
+  font-size: 0.9375rem;
+}
+
+.detalles summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.detalles p {
+  margin-top: 8px;
+  overflow-wrap: anywhere;
+}
+
+.subtitulo {
+  font-size: 1.125rem;
+}
+
+.pasos {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pasosLista {
+  display: grid;
+  gap: 6px;
+  padding-left: 1.25rem;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  list-style: decimal;
+}
+
 .exito {
   padding: 10px 14px;
   border-radius: var(--radio-chico);

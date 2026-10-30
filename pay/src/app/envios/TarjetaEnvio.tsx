@@ -15,7 +15,7 @@ export function TarjetaEnvio({ envio }: { envio: Envio }) {
         <Link href={`/envios/${envio.id}`} className={`dato ${estilos.codigo}`}>
           {envio.codigo}
         </Link>
-        <ChipEstado estado={envio.estado} />
+        <ChipEstado estado={envio.estado} entrega={envio.entrega} />
       </div>
       <p>
         Para <strong>{envio.destinatarioNombre}</strong>

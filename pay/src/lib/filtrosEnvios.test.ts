@@ -66,11 +66,11 @@ describe('estadosDeFiltro y textoVacio', () => {
   it('cada filtro muestra sus estados', () => {
     expect(estadosDeFiltro('todos')).toBeNull();
     expect(estadosDeFiltro('porPagar')).toEqual(['creada']);
-    expect(estadosDeFiltro('cancelados')).toEqual(['cancelada', 'fallida']);
+    expect(estadosDeFiltro('cancelados')).toEqual(['cancelada', 'fallida', 'devuelta']);
   });
 
   it('el texto vacío depende del filtro, o de la búsqueda cuando hay una', () => {
-    expect(textoVacio('porPagar', '')).toBe('No tenés envíos por pagar.');
+    expect(textoVacio('porPagar', '')).toBe('No tenés envíos sin enviar.');
     expect(textoVacio('porPagar', 'Marta')).toBe('No encontramos envíos para "Marta".');
   });
 });

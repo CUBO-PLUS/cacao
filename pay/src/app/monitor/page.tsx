@@ -27,7 +27,7 @@ export default function PaginaResumen(props: PageProps<'/monitor'>) {
 }
 
 // The order of the rows is the order of a transfer's life.
-const ORDEN: EstadoEnvio[] = ['creada', 'procesando', 'completada', 'fallida', 'cancelada'];
+const ORDEN: EstadoEnvio[] = ['creada', 'procesando', 'completada', 'fallida', 'cancelada', 'devuelta'];
 
 async function Resumen({ busqueda }: { busqueda: PageProps<'/monitor'>['searchParams'] }) {
   await connection();

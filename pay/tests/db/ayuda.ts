@@ -2,7 +2,7 @@ import { createHmac } from 'node:crypto';
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-import type { Entrega } from '@/lib/cotizacion';
+import { cotizar, TARIFAS, TASA_EUR_USD, type Entrega } from '@/lib/cotizacion';
 import type { Resultado } from '@/servidor/resultado';
 import type { DatosNuevoEnvio } from '@/servidor/transferencias';
 import type { Database } from '@/tipos/db';
@@ -103,9 +103,25 @@ export function contactoSinCuenta(): string {
   return `+5038${String(Math.floor(Math.random() * 1e7)).padStart(7, '0')}`;
 }
 
-// The sender's form values for one transfer. Any field can be changed by the test.
+// The amount and the rate the sender sees on screen for these values. The fees and the EUR rate are the ones
+// the migrations seed (the constants of cotizacion.ts), and the BTC price is the fixed test price.
+function mostradoDe(datos: DatosNuevoEnvio): { montoDestino: number; tasa: number } {
+  const cotizado = cotizar({
+    monedaOrigen: datos.monedaOrigen,
+    montoOrigenCentavos: datos.montoOrigenCentavos,
+    entrega: datos.entrega,
+    tarifas: TARIFAS,
+    eurUsd: TASA_EUR_USD,
+    usdBtc: Number(process.env.PRECIO_FIJO_USD_BTC),
+    fuenteBtc: 'Precio fijo de prueba',
+  });
+  return 'error' in cotizado ? { montoDestino: 0, tasa: 0 } : { montoDestino: cotizado.montoDestino, tasa: cotizado.tasa };
+}
+
+// The sender's form values for one transfer. Any field can be changed by the test; the amount and the rate
+// the sender saw are filled in from the same quote the server makes, unless the test sets them.
 export function datosEnvio(remitente: Usuario, cambios: Partial<DatosNuevoEnvio> = {}): DatosNuevoEnvio {
-  return {
+  const datos: DatosNuevoEnvio = {
     destinatarioNombre: 'Mamá Marta',
     destinatarioContacto: contactoSinCuenta(),
     monedaOrigen: 'USD',
@@ -113,8 +129,11 @@ export function datosEnvio(remitente: Usuario, cambios: Partial<DatosNuevoEnvio>
     entrega: 'efectivo' as Entrega,
     nota: '',
     clave: `clave-${sufijo()}${sufijo()}`,
+    montoDestino: 0,
+    tasa: 0,
     ...cambios,
   };
+  return { ...datos, ...mostradoDe(datos), ...cambios };
 }
 
 // The value of a successful result. Fails the test when the result is an error.

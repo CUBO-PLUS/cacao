@@ -12,9 +12,12 @@ import estilos from './estilos.module.css';
  */
 export function FormularioCobro({
   token,
+  monto,
   enlaceFacturaDePrueba,
 }: {
   token: string;
+  /** The amount to put on the invoice, in words: "1,250 sats". */
+  monto: string;
   /** Test wallet link for whoever has no Lightning wallet, or null when BTCPay is not set up. */
   enlaceFacturaDePrueba: string | null;
 }) {
@@ -27,19 +30,35 @@ export function FormularioCobro({
     evento.preventDefault();
     setError(null);
     empezar(async () => {
-      const resultado = await cobrarAccion(token, factura);
-      if (!resultado.ok) {
-        setError(resultado.mensaje);
-        return;
+      try {
+        const resultado = await cobrarAccion(token, factura);
+        if (!resultado.ok) {
+          setError(resultado.mensaje);
+          return;
+        }
+        router.refresh();
+      } catch {
+        setError('No pudimos conectarnos. Revisá tu conexión y probá de nuevo.');
       }
-      router.refresh();
     });
   }
 
   return (
     <form className={estilos.formulario} onSubmit={cobrar}>
+      <section className={estilos.pasos} aria-labelledby="titulo-pasos-cobro">
+        <h2 id="titulo-pasos-cobro" className={estilos.subtitulo}>
+          Cómo conseguir la factura
+        </h2>
+        <ol className={estilos.pasosLista}>
+          <li>Abrí la app de tu billetera de bitcoin, la que sirve para Lightning.</li>
+          <li>Elegí la opción para recibir y escribí exactamente {monto}.</li>
+          <li>Copiá la factura. Es un texto largo que empieza con &quot;lnbc&quot;.</li>
+          <li>Pegala aquí abajo y tocá Cobrar.</li>
+        </ol>
+      </section>
+
       <label htmlFor="factura-cobro" className="campo-etiqueta">
-        Factura Lightning
+        Pegá tu factura
       </label>
       <textarea
         id="factura-cobro"
@@ -54,7 +73,7 @@ export function FormularioCobro({
         placeholder="lnbc…"
       />
       <p id="ayuda-factura" className={estilos.ayuda}>
-        Pegá una factura por el monto exacto que te mandaron. Cuando se pague, el envío queda entregado.
+        La factura tiene que ser por {monto}. Cuando se pague, el envío queda entregado.
       </p>
 
       {enlaceFacturaDePrueba && (
@@ -67,7 +86,7 @@ export function FormularioCobro({
         </p>
       )}
       <p className={estilos.regtest}>
-        <strong>Bitcoin de prueba (regtest): no tiene valor.</strong>
+        <strong>Es bitcoin de prueba: no tiene valor real.</strong>
       </p>
 
       {error && (

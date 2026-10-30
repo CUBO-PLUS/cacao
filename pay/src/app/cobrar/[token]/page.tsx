@@ -4,6 +4,8 @@ import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import type { ReactNode } from 'react';
 
+import { precioBtcOpcional } from '@/componentes/DolaresAproximados';
+import { dolaresDeSats } from '@/componentes/textosEnvio';
 import { formatoSats } from '@/lib/dinero';
 import { datosDeCobro, enlaceFacturaDePrueba } from '@/servidor/cobro';
 
@@ -16,7 +18,8 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-// The token decides the page, so it is read before anything streams. An unknown token gets a real 404.
+// The token decides the page. An unknown token gets its 404 from the proxy, before anything streams (src/proxy.ts);
+// this check covers a token that goes away while the page is read.
 export const instant = false;
 
 // Public: the token in the link is the only key. Shows the amount, the sender's first name and the
@@ -28,6 +31,7 @@ export default async function PaginaCobrar(props: { params: Promise<{ token: str
   if (!datos) notFound();
 
   const cifra = formatoSats(datos.sats);
+  const dolares = dolaresDeSats(datos.sats, await precioBtcOpcional());
   const de = datos.remitenteNombre ? `De ${datos.remitenteNombre}. ` : '';
 
   let contenido: ReactNode;
@@ -37,6 +41,10 @@ export default async function PaginaCobrar(props: { params: Promise<{ token: str
     contenido = <p className={estilos.texto}>Este envío se canceló. No te va a llegar dinero.</p>;
   } else if (datos.estado === 'fallida') {
     contenido = <p className={estilos.texto}>Este envío no se pudo entregar. Consultá con quien te lo mandó.</p>;
+  } else if (datos.estado === 'devuelta') {
+    contenido = (
+      <p className={estilos.texto}>Este envío se devolvió a quien lo mandó porque no se cobró a tiempo.</p>
+    );
   } else if (datos.cobroEstado === 'pagado') {
     contenido = (
       <div className={estilos.bloque}>
@@ -44,9 +52,12 @@ export default async function PaginaCobrar(props: { params: Promise<{ token: str
           Listo. Recibiste {cifra}.
         </p>
         {datos.cobroHash && (
-          <p className={estilos.texto}>
-            Pago <span className="dato">{datos.cobroHash.slice(0, 8)}…{datos.cobroHash.slice(-6)}</span>
-          </p>
+          <details className={estilos.detalles}>
+            <summary>Detalles técnicos</summary>
+            <p>
+              Hash del pago: <span className="dato">{datos.cobroHash}</span>
+            </p>
+          </details>
         )}
         <Link href={`/t/${datos.codigo}`} className="boton boton--secundario">
           Ver el envío
@@ -69,6 +80,15 @@ export default async function PaginaCobrar(props: { params: Promise<{ token: str
         <SeguimientoCobro token={token} />
       </div>
     );
+  } else if (datos.vencido) {
+    // The window is 7 days from the payment. After it, no invoice is taken; the sender gets the money back.
+    contenido = (
+      <div className={estilos.bloque}>
+        <p role="alert" className={estilos.error}>
+          Este enlace de cobro venció: el plazo para cobrar es de 7 días. Quien te mandó el dinero puede recuperarlo.
+        </p>
+      </div>
+    );
   } else {
     // Ready to collect: nothing is pending, or the last invoice failed (its reason is shown again).
     contenido = (
@@ -78,7 +98,7 @@ export default async function PaginaCobrar(props: { params: Promise<{ token: str
             {datos.cobroMotivo ?? 'No se pudo pagar la factura. Pedí otra factura.'}
           </p>
         )}
-        <FormularioCobro token={token} enlaceFacturaDePrueba={await enlaceFacturaDePrueba(datos.sats)} />
+        <FormularioCobro token={token} monto={cifra} enlaceFacturaDePrueba={await enlaceFacturaDePrueba(datos.sats)} />
       </div>
     );
   }
@@ -90,6 +110,7 @@ export default async function PaginaCobrar(props: { params: Promise<{ token: str
           Código <span className="dato">{datos.codigo}</span>
         </p>
         <h1>Te mandaron {cifra}</h1>
+        {dolares && <p className={estilos.dolares}>Unos {dolares} en dólares.</p>}
         <p className={estilos.texto}>
           {de}Cobralo por Lightning con una factura de tu billetera.
         </p>

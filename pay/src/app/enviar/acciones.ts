@@ -20,7 +20,8 @@ export type CotizacionEnvio = Cotizacion & { validaHasta: string };
 
 export type ResultadoCotizacion = { cotizacion: CotizacionEnvio; usdBtc: number | null };
 
-export type EstadoCrearEnvio = { error: string | null };
+/** The refusal sentence, and the new quote when the price changed (the form shows it again). */
+export type EstadoCrearEnvio = { error: string | null; cotizacion?: CotizacionEnvio };
 
 /** The quote for the amount and the way of delivery, with the BTC price when it is needed. */
 export async function cotizarAccion(entrada: {
@@ -81,8 +82,9 @@ function texto(datos: FormData, campo: string): string {
 }
 
 /**
- * Creates the transfer as "Sin enviar" and opens its page. The server quotes the amount again, so
- * the numbers the browser sends are checked, not trusted. The key makes a double tap one transfer.
+ * Creates the transfer as "Sin enviar" and opens its page. The server quotes the amount again and refuses
+ * the creation when the amount or the rate on screen no longer match, so the numbers the browser sends are
+ * checked, not trusted. The key makes a double tap one transfer.
  */
 export async function crearEnvioAccion(
   _previo: EstadoCrearEnvio,
@@ -98,7 +100,9 @@ export async function crearEnvioAccion(
     entrega: texto(datos, 'entrega') as Entrega,
     nota: texto(datos, 'nota'),
     clave: texto(datos, 'clave'),
+    montoDestino: Number(texto(datos, 'montoDestino')),
+    tasa: Number(texto(datos, 'tasa')),
   });
-  if (!resultado.ok) return { error: resultado.mensaje };
+  if (!resultado.ok) return { error: resultado.mensaje, cotizacion: resultado.cotizacion };
   redirect(`/envios/${resultado.dato.id}`);
 }

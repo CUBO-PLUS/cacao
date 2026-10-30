@@ -6,6 +6,7 @@ import { connection } from 'next/server';
 import { ActualizarEnvio } from '@/componentes/ActualizarEnvio';
 import { esEstadoFinal, primerNombre, saludoDestinatario } from '@/componentes/textosEnvio';
 import { VistaDestinatario } from '@/componentes/VistaDestinatario';
+import { tokenDeCobroDelDestinatario } from '@/servidor/cobro';
 import { envioPara } from '@/servidor/transferencias';
 import { exigirSesion } from '@/servidor/sesion';
 
@@ -30,6 +31,8 @@ export default async function PaginaRecibido(props: PageProps<'/recibidos/[id]'>
   if (envio.rol !== 'destinatario') notFound();
 
   const nota = envio.nota.trim();
+  // The claim link is read for this recipient alone, per request: the page is never cached.
+  const token = await tokenDeCobroDelDestinatario(envio.id, sesion.usuario.id);
 
   return (
     <div className={estilos.pagina}>
@@ -63,6 +66,13 @@ export default async function PaginaRecibido(props: PageProps<'/recibidos/[id]'>
                 </div>
               )}
             </dl>
+            {token && (
+              <p>
+                <Link href={`/cobrar/${token}`} prefetch={false} className="boton">
+                  Cobrar
+                </Link>
+              </p>
+            )}
           </section>
         }
       />

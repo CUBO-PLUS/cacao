@@ -203,6 +203,24 @@ export type Database = {
           },
         ]
       }
+      config_publica: {
+        Row: {
+          actualizado_en: string
+          clave: string
+          valor: string
+        }
+        Insert: {
+          actualizado_en?: string
+          clave: string
+          valor: string
+        }
+        Update: {
+          actualizado_en?: string
+          clave?: string
+          valor?: string
+        }
+        Relationships: []
+      }
       cotizaciones: {
         Row: {
           cliente_id: string
@@ -426,6 +444,176 @@ export type Database = {
         }
         Relationships: []
       }
+      ledger_candados: {
+        Row: {
+          dueno: string
+          hasta: string
+          nombre: string
+        }
+        Insert: {
+          dueno: string
+          hasta: string
+          nombre: string
+        }
+        Update: {
+          dueno?: string
+          hasta?: string
+          nombre?: string
+        }
+        Relationships: []
+      }
+      ledger_correlativos: {
+        Row: {
+          serie: string
+          ultimo: number
+        }
+        Insert: {
+          serie: string
+          ultimo: number
+        }
+        Update: {
+          serie?: string
+          ultimo?: number
+        }
+        Relationships: []
+      }
+      ledger_dtes: {
+        Row: {
+          ambiente: string
+          codigo_generacion: string
+          correlativo: number | null
+          creado_en: string
+          documento: Json
+          estado: string
+          motivo: string | null
+          numero_control: string
+          sello: string | null
+          ticket_id: string
+          tipo_dte: string
+        }
+        Insert: {
+          ambiente: string
+          codigo_generacion: string
+          correlativo?: number | null
+          creado_en?: string
+          documento: Json
+          estado: string
+          motivo?: string | null
+          numero_control: string
+          sello?: string | null
+          ticket_id: string
+          tipo_dte: string
+        }
+        Update: {
+          ambiente?: string
+          codigo_generacion?: string
+          correlativo?: number | null
+          creado_en?: string
+          documento?: Json
+          estado?: string
+          motivo?: string | null
+          numero_control?: string
+          sello?: string | null
+          ticket_id?: string
+          tipo_dte?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ledger_dtes_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "ledger_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ledger_sincronizaciones: {
+        Row: {
+          emitidos: number | null
+          empezo: string
+          error: string | null
+          id: number
+          nuevas: number | null
+          omitidas: number | null
+          origen: string
+          rechazados: number | null
+          repetidas: number | null
+          termino: string | null
+        }
+        Insert: {
+          emitidos?: number | null
+          empezo?: string
+          error?: string | null
+          id?: number
+          nuevas?: number | null
+          omitidas?: number | null
+          origen?: string
+          rechazados?: number | null
+          repetidas?: number | null
+          termino?: string | null
+        }
+        Update: {
+          emitidos?: number | null
+          empezo?: string
+          error?: string | null
+          id?: number
+          nuevas?: number | null
+          omitidas?: number | null
+          origen?: string
+          rechazados?: number | null
+          repetidas?: number | null
+          termino?: string | null
+        }
+        Relationships: []
+      }
+      ledger_tickets: {
+        Row: {
+          buscar: string
+          cliente: string
+          creado_en: string
+          datos: Json
+          estado: string
+          id: string
+          origen_numero: string | null
+          origen_plataforma: string | null
+          pagado_en: string | null
+          payment_hash: string | null
+          producto: string | null
+          sats: number | null
+          total_centavos: number
+        }
+        Insert: {
+          buscar?: string
+          cliente: string
+          creado_en: string
+          datos: Json
+          estado: string
+          id: string
+          origen_numero?: string | null
+          origen_plataforma?: string | null
+          pagado_en?: string | null
+          payment_hash?: string | null
+          producto?: string | null
+          sats?: number | null
+          total_centavos: number
+        }
+        Update: {
+          buscar?: string
+          cliente?: string
+          creado_en?: string
+          datos?: Json
+          estado?: string
+          id?: string
+          origen_numero?: string | null
+          origen_plataforma?: string | null
+          pagado_en?: string | null
+          payment_hash?: string | null
+          producto?: string | null
+          sats?: number | null
+          total_centavos?: number
+        }
+        Relationships: []
+      }
       lineas_orden: {
         Row: {
           cantidad: number
@@ -540,6 +728,8 @@ export type Database = {
       }
       media_cobros: {
         Row: {
+          btcpay_factura_id: string | null
+          btcpay_tienda_id: string | null
           cerrada_en: string | null
           cotizacion_usd_btc: number
           creado_en: string
@@ -552,10 +742,13 @@ export type Database = {
           pagada_en: string | null
           precio_sats: number
           precio_usd_centavos: number
+          proveedor: string
           slug: string
           titulo: string
         }
         Insert: {
+          btcpay_factura_id?: string | null
+          btcpay_tienda_id?: string | null
           cerrada_en?: string | null
           cotizacion_usd_btc: number
           creado_en?: string
@@ -568,10 +761,13 @@ export type Database = {
           pagada_en?: string | null
           precio_sats: number
           precio_usd_centavos: number
+          proveedor?: string
           slug: string
           titulo: string
         }
         Update: {
+          btcpay_factura_id?: string | null
+          btcpay_tienda_id?: string | null
           cerrada_en?: string | null
           cotizacion_usd_btc?: number
           creado_en?: string
@@ -584,6 +780,7 @@ export type Database = {
           pagada_en?: string | null
           precio_sats?: number
           precio_usd_centavos?: number
+          proveedor?: string
           slug?: string
           titulo?: string
         }
@@ -714,6 +911,7 @@ export type Database = {
       negocios: {
         Row: {
           abierto: boolean
+          btcpay_tienda_id: string | null
           creado_en: string
           credencial_pago_cifrada: string | null
           descripcion: string
@@ -727,6 +925,7 @@ export type Database = {
         }
         Insert: {
           abierto?: boolean
+          btcpay_tienda_id?: string | null
           creado_en?: string
           credencial_pago_cifrada?: string | null
           descripcion?: string
@@ -740,6 +939,7 @@ export type Database = {
         }
         Update: {
           abierto?: boolean
+          btcpay_tienda_id?: string | null
           creado_en?: string
           credencial_pago_cifrada?: string | null
           descripcion?: string
@@ -983,23 +1183,31 @@ export type Database = {
           cancelada_en: string | null
           clave_idempotencia: string
           cobrada_en: string | null
-          cobro_estado: "pagando" | "pagado" | "fallido" | null
-          cobro_intentos: number
-          cobro_intentos_desde: string | null
-          cobro_intento_en: string | null
-          pago_tardio_en: string | null
-          cotizada_en: string
+          cobro_estado: string | null
           cobro_factura: string | null
           cobro_hash: string | null
+          cobro_intento_en: string | null
+          cobro_intentos: number
+          cobro_intentos_desde: string | null
           cobro_motivo: string | null
           cobro_token: string | null
+          cobro_vence_en: string | null
           codigo: string
           comision_centavos: number
           completada_en: string | null
+          cotizada_en: string
           creada_en: string
           destinatario_contacto: string
           destinatario_id: string | null
           destinatario_nombre: string
+          devolucion_estado: string | null
+          devolucion_factura: string | null
+          devolucion_hash: string | null
+          devolucion_intento_en: string | null
+          devolucion_intentos: number
+          devolucion_intentos_desde: string | null
+          devolucion_motivo: string | null
+          devuelta_en: string | null
           entrega: Database["public"]["Enums"]["pay_entrega"]
           estado: Database["public"]["Enums"]["pay_estado"]
           factura: string | null
@@ -1016,6 +1224,7 @@ export type Database = {
           neto_centavos: number
           nota: string
           pagada_en: string | null
+          pago_tardio_en: string | null
           procesando_en: string | null
           remitente_id: string
           tasa: number
@@ -1027,23 +1236,31 @@ export type Database = {
           cancelada_en?: string | null
           clave_idempotencia: string
           cobrada_en?: string | null
-          cobro_estado?: "pagando" | "pagado" | "fallido" | null
-          cobro_intentos?: number
-          cobro_intentos_desde?: string | null
-          cobro_intento_en?: string | null
-          pago_tardio_en?: string | null
-          cotizada_en?: string
+          cobro_estado?: string | null
           cobro_factura?: string | null
           cobro_hash?: string | null
+          cobro_intento_en?: string | null
+          cobro_intentos?: number
+          cobro_intentos_desde?: string | null
           cobro_motivo?: string | null
           cobro_token?: string | null
+          cobro_vence_en?: string | null
           codigo: string
           comision_centavos: number
           completada_en?: string | null
+          cotizada_en?: string
           creada_en?: string
           destinatario_contacto: string
           destinatario_id?: string | null
           destinatario_nombre: string
+          devolucion_estado?: string | null
+          devolucion_factura?: string | null
+          devolucion_hash?: string | null
+          devolucion_intento_en?: string | null
+          devolucion_intentos?: number
+          devolucion_intentos_desde?: string | null
+          devolucion_motivo?: string | null
+          devuelta_en?: string | null
           entrega: Database["public"]["Enums"]["pay_entrega"]
           estado?: Database["public"]["Enums"]["pay_estado"]
           factura?: string | null
@@ -1060,6 +1277,7 @@ export type Database = {
           neto_centavos: number
           nota?: string
           pagada_en?: string | null
+          pago_tardio_en?: string | null
           procesando_en?: string | null
           remitente_id: string
           tasa: number
@@ -1071,23 +1289,31 @@ export type Database = {
           cancelada_en?: string | null
           clave_idempotencia?: string
           cobrada_en?: string | null
-          cobro_estado?: "pagando" | "pagado" | "fallido" | null
-          cobro_intentos?: number
-          cobro_intentos_desde?: string | null
-          cobro_intento_en?: string | null
-          pago_tardio_en?: string | null
-          cotizada_en?: string
+          cobro_estado?: string | null
           cobro_factura?: string | null
           cobro_hash?: string | null
+          cobro_intento_en?: string | null
+          cobro_intentos?: number
+          cobro_intentos_desde?: string | null
           cobro_motivo?: string | null
           cobro_token?: string | null
+          cobro_vence_en?: string | null
           codigo?: string
           comision_centavos?: number
           completada_en?: string | null
+          cotizada_en?: string
           creada_en?: string
           destinatario_contacto?: string
           destinatario_id?: string | null
           destinatario_nombre?: string
+          devolucion_estado?: string | null
+          devolucion_factura?: string | null
+          devolucion_hash?: string | null
+          devolucion_intento_en?: string | null
+          devolucion_intentos?: number
+          devolucion_intentos_desde?: string | null
+          devolucion_motivo?: string | null
+          devuelta_en?: string | null
           entrega?: Database["public"]["Enums"]["pay_entrega"]
           estado?: Database["public"]["Enums"]["pay_estado"]
           factura?: string | null
@@ -1104,6 +1330,7 @@ export type Database = {
           neto_centavos?: number
           nota?: string
           pagada_en?: string | null
+          pago_tardio_en?: string | null
           procesando_en?: string | null
           remitente_id?: string
           tasa?: number
@@ -1366,13 +1593,32 @@ export type Database = {
           btcpay_tienda_id: string | null
           cancelada_en: string | null
           clave_idempotencia: string
+          cobrada_en: string | null
+          cobro_estado: string | null
+          cobro_factura: string | null
+          cobro_hash: string | null
+          cobro_intento_en: string | null
+          cobro_intentos: number
+          cobro_intentos_desde: string | null
+          cobro_motivo: string | null
+          cobro_token: string | null
+          cobro_vence_en: string | null
           codigo: string
           comision_centavos: number
           completada_en: string | null
+          cotizada_en: string
           creada_en: string
           destinatario_contacto: string
           destinatario_id: string | null
           destinatario_nombre: string
+          devolucion_estado: string | null
+          devolucion_factura: string | null
+          devolucion_hash: string | null
+          devolucion_intento_en: string | null
+          devolucion_intentos: number
+          devolucion_intentos_desde: string | null
+          devolucion_motivo: string | null
+          devuelta_en: string | null
           entrega: Database["public"]["Enums"]["pay_entrega"]
           estado: Database["public"]["Enums"]["pay_estado"]
           factura: string | null
@@ -1389,6 +1635,7 @@ export type Database = {
           neto_centavos: number
           nota: string
           pagada_en: string | null
+          pago_tardio_en: string | null
           procesando_en: string | null
           remitente_id: string
           tasa: number
@@ -1416,6 +1663,9 @@ export type Database = {
       }
       _pay_codigo: { Args: never; Returns: string }
       _pay_es_admin: { Args: { p_actor: string }; Returns: boolean }
+      _pay_nuevo_token: { Args: never; Returns: string }
+      _pay_telefono_digitos: { Args: { p_texto: string }; Returns: string }
+      _pay_ventana_cobro: { Args: never; Returns: string }
       _rol_en_orden: {
         Args: {
           p_actor: string
@@ -1569,6 +1819,7 @@ export type Database = {
         }
         Returns: {
           abierto: boolean
+          btcpay_tienda_id: string | null
           creado_en: string
           credencial_pago_cifrada: string | null
           descripcion: string
@@ -1604,6 +1855,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      asignar_tienda_btcpay: {
+        Args: { p_negocio: string; p_tienda: string }
+        Returns: undefined
+      }
       cambiar_estado_negocio: {
         Args: {
           p_actor: string
@@ -1612,6 +1867,7 @@ export type Database = {
         }
         Returns: {
           abierto: boolean
+          btcpay_tienda_id: string | null
           creado_en: string
           credencial_pago_cifrada: string | null
           descripcion: string
@@ -1892,6 +2148,7 @@ export type Database = {
       }
       es_admin: { Args: never; Returns: boolean }
       expirar_ordenes: { Args: never; Returns: number }
+      fijar_url_btcpay: { Args: { p_url: string }; Returns: string }
       guardar_producto: {
         Args: {
           p_activo: boolean
@@ -1960,6 +2217,51 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      ledger_guardar_ticket: {
+        Args: { p_ticket: Json }
+        Returns: {
+          buscar: string
+          cliente: string
+          creado_en: string
+          datos: Json
+          estado: string
+          id: string
+          origen_numero: string | null
+          origen_plataforma: string | null
+          pagado_en: string | null
+          payment_hash: string | null
+          producto: string | null
+          sats: number | null
+          total_centavos: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "ledger_tickets"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      ledger_reservar_dte: {
+        Args: {
+          p_codigo: string
+          p_serie: string
+          p_ticket: string
+          p_tipo: string
+        }
+        Returns: number
+      }
+      ledger_siguiente_correlativo: {
+        Args: { p_serie: string }
+        Returns: number
+      }
+      ledger_soltar_candado: {
+        Args: { p_dueno: string; p_nombre: string }
+        Returns: boolean
+      }
+      ledger_tomar_candado: {
+        Args: { p_dueno: string; p_nombre: string; p_segundos: number }
+        Returns: boolean
       }
       marcar_avisos_leidos: { Args: { p_usuario: string }; Returns: number }
       marcar_entregada: {
@@ -2090,16 +2392,11 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      media_crear_cobro: {
-        Args: {
-          p_cotizacion: number
-          p_lector: string
-          p_precio_sats: number
-          p_segundos?: number
-          p_slug: string
-          p_titulo: string
-        }
+      media_cobro_vigente: {
+        Args: { p_lector: string; p_slug: string }
         Returns: {
+          btcpay_factura_id: string | null
+          btcpay_tienda_id: string | null
           cerrada_en: string | null
           cotizacion_usd_btc: number
           creado_en: string
@@ -2112,6 +2409,108 @@ export type Database = {
           pagada_en: string | null
           precio_sats: number
           precio_usd_centavos: number
+          proveedor: string
+          slug: string
+          titulo: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "media_cobros"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      media_confirmar_btcpay: {
+        Args: { p_factura_id: string }
+        Returns: {
+          btcpay_factura_id: string | null
+          btcpay_tienda_id: string | null
+          cerrada_en: string | null
+          cotizacion_usd_btc: number
+          creado_en: string
+          estado: Database["public"]["Enums"]["media_estado_cobro"]
+          expira_en: string
+          factura: string
+          id: string
+          lector_id: string
+          motivo: string | null
+          pagada_en: string | null
+          precio_sats: number
+          precio_usd_centavos: number
+          proveedor: string
+          slug: string
+          titulo: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "media_cobros"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      media_crear_cobro: {
+        Args: {
+          p_cotizacion: number
+          p_lector: string
+          p_precio_sats: number
+          p_segundos?: number
+          p_slug: string
+          p_titulo: string
+        }
+        Returns: {
+          btcpay_factura_id: string | null
+          btcpay_tienda_id: string | null
+          cerrada_en: string | null
+          cotizacion_usd_btc: number
+          creado_en: string
+          estado: Database["public"]["Enums"]["media_estado_cobro"]
+          expira_en: string
+          factura: string
+          id: string
+          lector_id: string
+          motivo: string | null
+          pagada_en: string | null
+          precio_sats: number
+          precio_usd_centavos: number
+          proveedor: string
+          slug: string
+          titulo: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "media_cobros"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      media_crear_cobro_btcpay: {
+        Args: {
+          p_cotizacion: number
+          p_expira: string
+          p_factura: string
+          p_factura_id: string
+          p_lector: string
+          p_precio_sats: number
+          p_slug: string
+          p_tienda: string
+          p_titulo: string
+        }
+        Returns: {
+          btcpay_factura_id: string | null
+          btcpay_tienda_id: string | null
+          cerrada_en: string | null
+          cotizacion_usd_btc: number
+          creado_en: string
+          estado: Database["public"]["Enums"]["media_estado_cobro"]
+          expira_en: string
+          factura: string
+          id: string
+          lector_id: string
+          motivo: string | null
+          pagada_en: string | null
+          precio_sats: number
+          precio_usd_centavos: number
+          proveedor: string
           slug: string
           titulo: string
         }
@@ -2125,6 +2524,8 @@ export type Database = {
       media_fallar_cobro: {
         Args: { p_cobro: string; p_motivo: string }
         Returns: {
+          btcpay_factura_id: string | null
+          btcpay_tienda_id: string | null
           cerrada_en: string | null
           cotizacion_usd_btc: number
           creado_en: string
@@ -2137,6 +2538,7 @@ export type Database = {
           pagada_en: string | null
           precio_sats: number
           precio_usd_centavos: number
+          proveedor: string
           slug: string
           titulo: string
         }
@@ -2164,6 +2566,8 @@ export type Database = {
       media_pagar_cobro: {
         Args: { p_cobro: string }
         Returns: {
+          btcpay_factura_id: string | null
+          btcpay_tienda_id: string | null
           cerrada_en: string | null
           cotizacion_usd_btc: number
           creado_en: string
@@ -2176,6 +2580,7 @@ export type Database = {
           pagada_en: string | null
           precio_sats: number
           precio_usd_centavos: number
+          proveedor: string
           slug: string
           titulo: string
         }
@@ -2282,13 +2687,32 @@ export type Database = {
           btcpay_tienda_id: string | null
           cancelada_en: string | null
           clave_idempotencia: string
+          cobrada_en: string | null
+          cobro_estado: string | null
+          cobro_factura: string | null
+          cobro_hash: string | null
+          cobro_intento_en: string | null
+          cobro_intentos: number
+          cobro_intentos_desde: string | null
+          cobro_motivo: string | null
+          cobro_token: string | null
+          cobro_vence_en: string | null
           codigo: string
           comision_centavos: number
           completada_en: string | null
+          cotizada_en: string
           creada_en: string
           destinatario_contacto: string
           destinatario_id: string | null
           destinatario_nombre: string
+          devolucion_estado: string | null
+          devolucion_factura: string | null
+          devolucion_hash: string | null
+          devolucion_intento_en: string | null
+          devolucion_intentos: number
+          devolucion_intentos_desde: string | null
+          devolucion_motivo: string | null
+          devuelta_en: string | null
           entrega: Database["public"]["Enums"]["pay_entrega"]
           estado: Database["public"]["Enums"]["pay_estado"]
           factura: string | null
@@ -2305,6 +2729,7 @@ export type Database = {
           neto_centavos: number
           nota: string
           pagada_en: string | null
+          pago_tardio_en: string | null
           procesando_en: string | null
           remitente_id: string
           tasa: number
@@ -2324,13 +2749,32 @@ export type Database = {
           btcpay_tienda_id: string | null
           cancelada_en: string | null
           clave_idempotencia: string
+          cobrada_en: string | null
+          cobro_estado: string | null
+          cobro_factura: string | null
+          cobro_hash: string | null
+          cobro_intento_en: string | null
+          cobro_intentos: number
+          cobro_intentos_desde: string | null
+          cobro_motivo: string | null
+          cobro_token: string | null
+          cobro_vence_en: string | null
           codigo: string
           comision_centavos: number
           completada_en: string | null
+          cotizada_en: string
           creada_en: string
           destinatario_contacto: string
           destinatario_id: string | null
           destinatario_nombre: string
+          devolucion_estado: string | null
+          devolucion_factura: string | null
+          devolucion_hash: string | null
+          devolucion_intento_en: string | null
+          devolucion_intentos: number
+          devolucion_intentos_desde: string | null
+          devolucion_motivo: string | null
+          devuelta_en: string | null
           entrega: Database["public"]["Enums"]["pay_entrega"]
           estado: Database["public"]["Enums"]["pay_estado"]
           factura: string | null
@@ -2347,6 +2791,7 @@ export type Database = {
           neto_centavos: number
           nota: string
           pagada_en: string | null
+          pago_tardio_en: string | null
           procesando_en: string | null
           remitente_id: string
           tasa: number
@@ -2366,13 +2811,32 @@ export type Database = {
           btcpay_tienda_id: string | null
           cancelada_en: string | null
           clave_idempotencia: string
+          cobrada_en: string | null
+          cobro_estado: string | null
+          cobro_factura: string | null
+          cobro_hash: string | null
+          cobro_intento_en: string | null
+          cobro_intentos: number
+          cobro_intentos_desde: string | null
+          cobro_motivo: string | null
+          cobro_token: string | null
+          cobro_vence_en: string | null
           codigo: string
           comision_centavos: number
           completada_en: string | null
+          cotizada_en: string
           creada_en: string
           destinatario_contacto: string
           destinatario_id: string | null
           destinatario_nombre: string
+          devolucion_estado: string | null
+          devolucion_factura: string | null
+          devolucion_hash: string | null
+          devolucion_intento_en: string | null
+          devolucion_intentos: number
+          devolucion_intentos_desde: string | null
+          devolucion_motivo: string | null
+          devuelta_en: string | null
           entrega: Database["public"]["Enums"]["pay_entrega"]
           estado: Database["public"]["Enums"]["pay_estado"]
           factura: string | null
@@ -2389,6 +2853,7 @@ export type Database = {
           neto_centavos: number
           nota: string
           pagada_en: string | null
+          pago_tardio_en: string | null
           procesando_en: string | null
           remitente_id: string
           tasa: number
@@ -2422,13 +2887,32 @@ export type Database = {
           btcpay_tienda_id: string | null
           cancelada_en: string | null
           clave_idempotencia: string
+          cobrada_en: string | null
+          cobro_estado: string | null
+          cobro_factura: string | null
+          cobro_hash: string | null
+          cobro_intento_en: string | null
+          cobro_intentos: number
+          cobro_intentos_desde: string | null
+          cobro_motivo: string | null
+          cobro_token: string | null
+          cobro_vence_en: string | null
           codigo: string
           comision_centavos: number
           completada_en: string | null
+          cotizada_en: string
           creada_en: string
           destinatario_contacto: string
           destinatario_id: string | null
           destinatario_nombre: string
+          devolucion_estado: string | null
+          devolucion_factura: string | null
+          devolucion_hash: string | null
+          devolucion_intento_en: string | null
+          devolucion_intentos: number
+          devolucion_intentos_desde: string | null
+          devolucion_motivo: string | null
+          devuelta_en: string | null
           entrega: Database["public"]["Enums"]["pay_entrega"]
           estado: Database["public"]["Enums"]["pay_estado"]
           factura: string | null
@@ -2445,6 +2929,7 @@ export type Database = {
           neto_centavos: number
           nota: string
           pagada_en: string | null
+          pago_tardio_en: string | null
           procesando_en: string | null
           remitente_id: string
           tasa: number
@@ -2464,13 +2949,32 @@ export type Database = {
           btcpay_tienda_id: string | null
           cancelada_en: string | null
           clave_idempotencia: string
+          cobrada_en: string | null
+          cobro_estado: string | null
+          cobro_factura: string | null
+          cobro_hash: string | null
+          cobro_intento_en: string | null
+          cobro_intentos: number
+          cobro_intentos_desde: string | null
+          cobro_motivo: string | null
+          cobro_token: string | null
+          cobro_vence_en: string | null
           codigo: string
           comision_centavos: number
           completada_en: string | null
+          cotizada_en: string
           creada_en: string
           destinatario_contacto: string
           destinatario_id: string | null
           destinatario_nombre: string
+          devolucion_estado: string | null
+          devolucion_factura: string | null
+          devolucion_hash: string | null
+          devolucion_intento_en: string | null
+          devolucion_intentos: number
+          devolucion_intentos_desde: string | null
+          devolucion_motivo: string | null
+          devuelta_en: string | null
           entrega: Database["public"]["Enums"]["pay_entrega"]
           estado: Database["public"]["Enums"]["pay_estado"]
           factura: string | null
@@ -2487,6 +2991,7 @@ export type Database = {
           neto_centavos: number
           nota: string
           pagada_en: string | null
+          pago_tardio_en: string | null
           procesando_en: string | null
           remitente_id: string
           tasa: number
@@ -2500,30 +3005,43 @@ export type Database = {
         }
       }
       pay_iniciar_cobro: {
-        Args: { p_factura: string; p_hash: string; p_sats: number; p_token: string }
+        Args: {
+          p_factura: string
+          p_hash: string
+          p_sats: number
+          p_token: string
+        }
         Returns: {
           btcpay_factura_id: string | null
           btcpay_tienda_id: string | null
           cancelada_en: string | null
           clave_idempotencia: string
           cobrada_en: string | null
-          cobro_estado: "pagando" | "pagado" | "fallido" | null
-          cobro_intentos: number
-          cobro_intentos_desde: string | null
-          cobro_intento_en: string | null
-          pago_tardio_en: string | null
-          cotizada_en: string
+          cobro_estado: string | null
           cobro_factura: string | null
           cobro_hash: string | null
+          cobro_intento_en: string | null
+          cobro_intentos: number
+          cobro_intentos_desde: string | null
           cobro_motivo: string | null
           cobro_token: string | null
+          cobro_vence_en: string | null
           codigo: string
           comision_centavos: number
           completada_en: string | null
+          cotizada_en: string
           creada_en: string
           destinatario_contacto: string
           destinatario_id: string | null
           destinatario_nombre: string
+          devolucion_estado: string | null
+          devolucion_factura: string | null
+          devolucion_hash: string | null
+          devolucion_intento_en: string | null
+          devolucion_intentos: number
+          devolucion_intentos_desde: string | null
+          devolucion_motivo: string | null
+          devuelta_en: string | null
           entrega: Database["public"]["Enums"]["pay_entrega"]
           estado: Database["public"]["Enums"]["pay_estado"]
           factura: string | null
@@ -2540,6 +3058,7 @@ export type Database = {
           neto_centavos: number
           nota: string
           pagada_en: string | null
+          pago_tardio_en: string | null
           procesando_en: string | null
           remitente_id: string
           tasa: number
@@ -2552,31 +3071,45 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      pay_terminar_cobro: {
-        Args: { p_hash: string | null; p_motivo: string | null; p_ok: boolean; p_token: string }
+      pay_iniciar_devolucion: {
+        Args: {
+          p_actor: string
+          p_factura: string
+          p_hash: string
+          p_sats: number
+          p_transferencia: string
+        }
         Returns: {
           btcpay_factura_id: string | null
           btcpay_tienda_id: string | null
           cancelada_en: string | null
           clave_idempotencia: string
           cobrada_en: string | null
-          cobro_estado: "pagando" | "pagado" | "fallido" | null
-          cobro_intentos: number
-          cobro_intentos_desde: string | null
-          cobro_intento_en: string | null
-          pago_tardio_en: string | null
-          cotizada_en: string
+          cobro_estado: string | null
           cobro_factura: string | null
           cobro_hash: string | null
+          cobro_intento_en: string | null
+          cobro_intentos: number
+          cobro_intentos_desde: string | null
           cobro_motivo: string | null
           cobro_token: string | null
+          cobro_vence_en: string | null
           codigo: string
           comision_centavos: number
           completada_en: string | null
+          cotizada_en: string
           creada_en: string
           destinatario_contacto: string
           destinatario_id: string | null
           destinatario_nombre: string
+          devolucion_estado: string | null
+          devolucion_factura: string | null
+          devolucion_hash: string | null
+          devolucion_intento_en: string | null
+          devolucion_intentos: number
+          devolucion_intentos_desde: string | null
+          devolucion_motivo: string | null
+          devuelta_en: string | null
           entrega: Database["public"]["Enums"]["pay_entrega"]
           estado: Database["public"]["Enums"]["pay_estado"]
           factura: string | null
@@ -2593,6 +3126,7 @@ export type Database = {
           neto_centavos: number
           nota: string
           pagada_en: string | null
+          pago_tardio_en: string | null
           procesando_en: string | null
           remitente_id: string
           tasa: number
@@ -2612,13 +3146,32 @@ export type Database = {
           btcpay_tienda_id: string | null
           cancelada_en: string | null
           clave_idempotencia: string
+          cobrada_en: string | null
+          cobro_estado: string | null
+          cobro_factura: string | null
+          cobro_hash: string | null
+          cobro_intento_en: string | null
+          cobro_intentos: number
+          cobro_intentos_desde: string | null
+          cobro_motivo: string | null
+          cobro_token: string | null
+          cobro_vence_en: string | null
           codigo: string
           comision_centavos: number
           completada_en: string | null
+          cotizada_en: string
           creada_en: string
           destinatario_contacto: string
           destinatario_id: string | null
           destinatario_nombre: string
+          devolucion_estado: string | null
+          devolucion_factura: string | null
+          devolucion_hash: string | null
+          devolucion_intento_en: string | null
+          devolucion_intentos: number
+          devolucion_intentos_desde: string | null
+          devolucion_motivo: string | null
+          devuelta_en: string | null
           entrega: Database["public"]["Enums"]["pay_entrega"]
           estado: Database["public"]["Enums"]["pay_estado"]
           factura: string | null
@@ -2635,48 +3188,7 @@ export type Database = {
           neto_centavos: number
           nota: string
           pagada_en: string | null
-          procesando_en: string | null
-          remitente_id: string
-          tasa: number
-          tasa_fuente: string
-        }
-        SetofOptions: {
-          from: "*"
-          to: "pay_transferencias"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
-      pay_registrar_factura: {
-        Args: { p_actor: string; p_expira: string; p_factura: string; p_factura_id: string; p_sats: number; p_tienda: string; p_transferencia: string; p_usd_centavos: number }
-        Returns: {
-          btcpay_factura_id: string | null
-          btcpay_tienda_id: string | null
-          cancelada_en: string | null
-          clave_idempotencia: string
-          codigo: string
-          comision_centavos: number
-          completada_en: string | null
-          creada_en: string
-          destinatario_contacto: string
-          destinatario_id: string | null
-          destinatario_nombre: string
-          entrega: Database["public"]["Enums"]["pay_entrega"]
-          estado: Database["public"]["Enums"]["pay_estado"]
-          factura: string | null
-          factura_expira: string | null
-          factura_sats: number | null
-          factura_usd_centavos: number | null
-          fallida_en: string | null
-          id: string
-          moneda_destino: Database["public"]["Enums"]["pay_moneda"]
-          moneda_origen: Database["public"]["Enums"]["pay_moneda"]
-          monto_destino: number
-          monto_origen_centavos: number
-          motivo: string | null
-          neto_centavos: number
-          nota: string
-          pagada_en: string | null
+          pago_tardio_en: string | null
           procesando_en: string | null
           remitente_id: string
           tasa: number
@@ -2698,7 +3210,136 @@ export type Database = {
           p_tasa_fuente: string
           p_transferencia: string
         }
-        Returns: Database["public"]["Tables"]["pay_transferencias"]["Row"]
+        Returns: {
+          btcpay_factura_id: string | null
+          btcpay_tienda_id: string | null
+          cancelada_en: string | null
+          clave_idempotencia: string
+          cobrada_en: string | null
+          cobro_estado: string | null
+          cobro_factura: string | null
+          cobro_hash: string | null
+          cobro_intento_en: string | null
+          cobro_intentos: number
+          cobro_intentos_desde: string | null
+          cobro_motivo: string | null
+          cobro_token: string | null
+          cobro_vence_en: string | null
+          codigo: string
+          comision_centavos: number
+          completada_en: string | null
+          cotizada_en: string
+          creada_en: string
+          destinatario_contacto: string
+          destinatario_id: string | null
+          destinatario_nombre: string
+          devolucion_estado: string | null
+          devolucion_factura: string | null
+          devolucion_hash: string | null
+          devolucion_intento_en: string | null
+          devolucion_intentos: number
+          devolucion_intentos_desde: string | null
+          devolucion_motivo: string | null
+          devuelta_en: string | null
+          entrega: Database["public"]["Enums"]["pay_entrega"]
+          estado: Database["public"]["Enums"]["pay_estado"]
+          factura: string | null
+          factura_expira: string | null
+          factura_sats: number | null
+          factura_usd_centavos: number | null
+          fallida_en: string | null
+          id: string
+          moneda_destino: Database["public"]["Enums"]["pay_moneda"]
+          moneda_origen: Database["public"]["Enums"]["pay_moneda"]
+          monto_destino: number
+          monto_origen_centavos: number
+          motivo: string | null
+          neto_centavos: number
+          nota: string
+          pagada_en: string | null
+          pago_tardio_en: string | null
+          procesando_en: string | null
+          remitente_id: string
+          tasa: number
+          tasa_fuente: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "pay_transferencias"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      pay_registrar_factura: {
+        Args: {
+          p_actor: string
+          p_expira: string
+          p_factura: string
+          p_factura_id: string
+          p_sats: number
+          p_tienda: string
+          p_transferencia: string
+          p_usd_centavos: number
+        }
+        Returns: {
+          btcpay_factura_id: string | null
+          btcpay_tienda_id: string | null
+          cancelada_en: string | null
+          clave_idempotencia: string
+          cobrada_en: string | null
+          cobro_estado: string | null
+          cobro_factura: string | null
+          cobro_hash: string | null
+          cobro_intento_en: string | null
+          cobro_intentos: number
+          cobro_intentos_desde: string | null
+          cobro_motivo: string | null
+          cobro_token: string | null
+          cobro_vence_en: string | null
+          codigo: string
+          comision_centavos: number
+          completada_en: string | null
+          cotizada_en: string
+          creada_en: string
+          destinatario_contacto: string
+          destinatario_id: string | null
+          destinatario_nombre: string
+          devolucion_estado: string | null
+          devolucion_factura: string | null
+          devolucion_hash: string | null
+          devolucion_intento_en: string | null
+          devolucion_intentos: number
+          devolucion_intentos_desde: string | null
+          devolucion_motivo: string | null
+          devuelta_en: string | null
+          entrega: Database["public"]["Enums"]["pay_entrega"]
+          estado: Database["public"]["Enums"]["pay_estado"]
+          factura: string | null
+          factura_expira: string | null
+          factura_sats: number | null
+          factura_usd_centavos: number | null
+          fallida_en: string | null
+          id: string
+          moneda_destino: Database["public"]["Enums"]["pay_moneda"]
+          moneda_origen: Database["public"]["Enums"]["pay_moneda"]
+          monto_destino: number
+          monto_origen_centavos: number
+          motivo: string | null
+          neto_centavos: number
+          nota: string
+          pagada_en: string | null
+          pago_tardio_en: string | null
+          procesando_en: string | null
+          remitente_id: string
+          tasa: number
+          tasa_fuente: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "pay_transferencias"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       pay_resumen: {
         Args: { p_desde: string; p_hasta: string }
@@ -2709,10 +3350,141 @@ export type Database = {
           monto_origen_usd_centavos: number
         }[]
       }
-      pay_vincular_recibidos: {
-        Args: { p_usuario: string }
-        Returns: number
+      pay_terminar_cobro: {
+        Args: {
+          p_hash: string
+          p_motivo: string
+          p_ok: boolean
+          p_token: string
+        }
+        Returns: {
+          btcpay_factura_id: string | null
+          btcpay_tienda_id: string | null
+          cancelada_en: string | null
+          clave_idempotencia: string
+          cobrada_en: string | null
+          cobro_estado: string | null
+          cobro_factura: string | null
+          cobro_hash: string | null
+          cobro_intento_en: string | null
+          cobro_intentos: number
+          cobro_intentos_desde: string | null
+          cobro_motivo: string | null
+          cobro_token: string | null
+          cobro_vence_en: string | null
+          codigo: string
+          comision_centavos: number
+          completada_en: string | null
+          cotizada_en: string
+          creada_en: string
+          destinatario_contacto: string
+          destinatario_id: string | null
+          destinatario_nombre: string
+          devolucion_estado: string | null
+          devolucion_factura: string | null
+          devolucion_hash: string | null
+          devolucion_intento_en: string | null
+          devolucion_intentos: number
+          devolucion_intentos_desde: string | null
+          devolucion_motivo: string | null
+          devuelta_en: string | null
+          entrega: Database["public"]["Enums"]["pay_entrega"]
+          estado: Database["public"]["Enums"]["pay_estado"]
+          factura: string | null
+          factura_expira: string | null
+          factura_sats: number | null
+          factura_usd_centavos: number | null
+          fallida_en: string | null
+          id: string
+          moneda_destino: Database["public"]["Enums"]["pay_moneda"]
+          moneda_origen: Database["public"]["Enums"]["pay_moneda"]
+          monto_destino: number
+          monto_origen_centavos: number
+          motivo: string | null
+          neto_centavos: number
+          nota: string
+          pagada_en: string | null
+          pago_tardio_en: string | null
+          procesando_en: string | null
+          remitente_id: string
+          tasa: number
+          tasa_fuente: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "pay_transferencias"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
+      pay_terminar_devolucion: {
+        Args: {
+          p_hash: string
+          p_motivo: string
+          p_ok: boolean
+          p_transferencia: string
+        }
+        Returns: {
+          btcpay_factura_id: string | null
+          btcpay_tienda_id: string | null
+          cancelada_en: string | null
+          clave_idempotencia: string
+          cobrada_en: string | null
+          cobro_estado: string | null
+          cobro_factura: string | null
+          cobro_hash: string | null
+          cobro_intento_en: string | null
+          cobro_intentos: number
+          cobro_intentos_desde: string | null
+          cobro_motivo: string | null
+          cobro_token: string | null
+          cobro_vence_en: string | null
+          codigo: string
+          comision_centavos: number
+          completada_en: string | null
+          cotizada_en: string
+          creada_en: string
+          destinatario_contacto: string
+          destinatario_id: string | null
+          destinatario_nombre: string
+          devolucion_estado: string | null
+          devolucion_factura: string | null
+          devolucion_hash: string | null
+          devolucion_intento_en: string | null
+          devolucion_intentos: number
+          devolucion_intentos_desde: string | null
+          devolucion_motivo: string | null
+          devuelta_en: string | null
+          entrega: Database["public"]["Enums"]["pay_entrega"]
+          estado: Database["public"]["Enums"]["pay_estado"]
+          factura: string | null
+          factura_expira: string | null
+          factura_sats: number | null
+          factura_usd_centavos: number | null
+          fallida_en: string | null
+          id: string
+          moneda_destino: Database["public"]["Enums"]["pay_moneda"]
+          moneda_origen: Database["public"]["Enums"]["pay_moneda"]
+          monto_destino: number
+          monto_origen_centavos: number
+          motivo: string | null
+          neto_centavos: number
+          nota: string
+          pagada_en: string | null
+          pago_tardio_en: string | null
+          procesando_en: string | null
+          remitente_id: string
+          tasa: number
+          tasa_fuente: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "pay_transferencias"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      pay_vincular_recibidos: { Args: { p_usuario: string }; Returns: number }
       publicar_necesidad: {
         Args: {
           p_categoria: number
@@ -2949,6 +3721,7 @@ export type Database = {
         }
         Returns: {
           abierto: boolean
+          btcpay_tienda_id: string | null
           creado_en: string
           credencial_pago_cifrada: string | null
           descripcion: string
@@ -2967,6 +3740,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      url_btcpay: { Args: never; Returns: string }
       usuario_actual: { Args: never; Returns: string }
       vencer_necesidades: { Args: never; Returns: number }
       vincular_clerk: {
@@ -3013,6 +3787,7 @@ export type Database = {
         | "completada"
         | "fallida"
         | "cancelada"
+        | "devuelta"
       pay_moneda: "USD" | "EUR" | "SATS"
       resultado_disputa:
         | "reembolso_total"
@@ -3022,7 +3797,7 @@ export type Database = {
         | "no_corresponde_pagar"
       tipo_orden: "productos" | "servicio"
       tipo_precio: "fijo" | "cotizar"
-      tipo_proveedor: "manual" | "falso" | "nwc" | "blink"
+      tipo_proveedor: "manual" | "falso" | "nwc" | "blink" | "btcpay"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3188,6 +3963,7 @@ export const Constants = {
         "completada",
         "fallida",
         "cancelada",
+        "devuelta",
       ],
       pay_moneda: ["USD", "EUR", "SATS"],
       resultado_disputa: [
@@ -3199,7 +3975,7 @@ export const Constants = {
       ],
       tipo_orden: ["productos", "servicio"],
       tipo_precio: ["fijo", "cotizar"],
-      tipo_proveedor: ["manual", "falso", "nwc", "blink"],
+      tipo_proveedor: ["manual", "falso", "nwc", "blink", "btcpay"],
     },
   },
 } as const

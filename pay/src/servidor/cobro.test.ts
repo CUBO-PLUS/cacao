@@ -5,20 +5,38 @@ const rpc = vi.hoisted(() => vi.fn());
 const desde = vi.hoisted(() => vi.fn());
 vi.mock('./supabase', () => ({ clienteServicio: () => ({ rpc, from: desde }) }));
 
-import { cobrarEnvio, estadoDeCobro, hashDeFactura, marcarCobroFallido, satsDeFactura } from './cobro';
+import {
+  cobrarEnvio,
+  datosDeCobro,
+  existeCobro,
+  estadoDeCobro,
+  hashDeFactura,
+  leerFacturaDePago,
+  marcarCobroFallido,
+  satsDeFactura,
+  tokenDeCobroDelDestinatario,
+  vencimientoDeFactura,
+} from './cobro';
 
 const ALFABETO = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
 
+// Unix seconds now: an invoice made now is valid for its hour.
+const ahoraSeg = () => Math.floor(Date.now() / 1000);
+
 // A BOLT11 invoice with a real-looking structure: prefix and amount, then data with a 'p' tag holding the
-// hash. The checksum is not verified by the code under test, so it is just six characters.
-function armar(prefijo: string, hashHex = 'ab'.repeat(32)): string {
-  const valores: number[] = [0, 0, 0, 0, 0, 0, 0]; // timestamp
+// hash. The timestamp is the invoice's creation time (now by default), so it is not expired. The checksum is
+// not verified by the code under test, so it is just six characters. The 104 values of the signature come
+// before it, as in a real invoice, with `vigencia` in an 'x' tag when given.
+function armar(prefijo: string, hashHex = 'ab'.repeat(32), emitida = ahoraSeg(), vigencia?: number): string {
+  const valores: number[] = [];
+  for (let i = 6; i >= 0; i--) valores.push(Math.floor(emitida / 32 ** i) % 32); // timestamp, 7 values
   valores.push(1, 1, 20); // tag 'p', length 52
   let bits = '';
   for (const byte of Buffer.from(hashHex, 'hex')) bits += byte.toString(2).padStart(8, '0');
   bits = bits.padEnd(260, '0');
   for (let i = 0; i < 260; i += 5) valores.push(parseInt(bits.slice(i, i + 5), 2));
-  return `${prefijo}1${valores.map((v) => ALFABETO[v]).join('')}aaaaaa`;
+  if (vigencia !== undefined) valores.push(6, 0, 4, Math.floor(vigencia / 32768) % 32, Math.floor(vigencia / 1024) % 32, Math.floor(vigencia / 32) % 32, vigencia % 32);
+  return `${prefijo}1${valores.map((v) => ALFABETO[v]).join('')}${ALFABETO[0].repeat(104)}aaaaaa`;
 }
 
 const TOKEN = 'a'.repeat(43);
@@ -53,6 +71,29 @@ describe('satsDeFactura', () => {
   it('refuses text that is not a Lightning invoice', () => {
     expect(satsDeFactura('bitcoin:bc1qexample')).toBeNull();
     expect(satsDeFactura('')).toBeNull();
+  });
+});
+
+describe('vencimientoDeFactura and leerFacturaDePago', () => {
+  it('gives the invoice timestamp plus its hour of validity', () => {
+    const emitida = 1_800_000_000;
+    expect(vencimientoDeFactura(armar('lnbcrt50u', HASH, emitida))).toBe(emitida + 3600);
+  });
+
+  it('reads the expiry tag, and stops before the signature', () => {
+    const emitida = 1_800_000_000;
+    expect(vencimientoDeFactura(armar('lnbcrt50u', HASH, emitida, 86_400))).toBe(emitida + 86_400);
+    expect(leerFacturaDePago(armar('lnbcrt50u', HASH, ahoraSeg() - 7200, 86_400)).ok).toBe(true);
+  });
+
+  it('accepts an invoice that is still valid', () => {
+    const r = leerFacturaDePago(armar('lnbcrt50u', HASH));
+    expect(r).toEqual({ ok: true, dato: { factura: armar('lnbcrt50u', HASH), sats: 5000, hash: HASH } });
+  });
+
+  it('refuses an expired invoice', () => {
+    const r = leerFacturaDePago(armar('lnbcrt50u', HASH, ahoraSeg() - 7200));
+    expect(r).toEqual({ ok: false, codigo: 'DATOS_INVALIDOS', mensaje: 'Esa factura ya venció. Pedí otra factura a tu billetera.' });
   });
 });
 
@@ -103,6 +144,23 @@ describe('cobrarEnvio', () => {
     const r = await cobrarEnvio(TOKEN, 'lnbcrt50u1qqqqqq');
     expect(r.ok).toBe(false);
     expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it('refuses an expired invoice, without touching the database', async () => {
+    const r = await cobrarEnvio(TOKEN, armar('lnbcrt50u', HASH, ahoraSeg() - 7200));
+    expect(r.ok).toBe(false);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it('returns the window sentence when the database refuses a claim after the window', async () => {
+    rpc.mockResolvedValueOnce({ data: null, error: { message: 'COBRO_VENCIDO: El enlace de cobro venció. Quien te mandó el dinero puede recuperarlo.' } });
+    const r = await cobrarEnvio(TOKEN, FACTURA);
+    expect(r).toEqual({
+      ok: false,
+      codigo: 'COBRO_VENCIDO',
+      mensaje: 'El enlace de cobro venció. Quien te mandó el dinero puede recuperarlo.',
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('reports BTCPay as not set up before it marks the transfer', async () => {
@@ -329,5 +387,98 @@ describe('estadoDeCobro and marcarCobroFallido check the payment in BTCPay first
     fetchMock.mockResolvedValueOnce(respuesta(404, {}));
     const vencido = await marcarCobroFallido(TOKEN, 'Lo marcamos a mano');
     expect(vencido).toEqual({ ok: true, dato: { estado: 'fallido', motivo: 'Lo marcamos a mano' } });
+  });
+});
+
+describe('tokenDeCobroDelDestinatario: the claim link reaches only the recipient, while the claim is open', () => {
+  const ENVIO = '22222222-2222-4222-8222-222222222222';
+  const RECIPIENTE = '44444444-4444-4444-8444-444444444444';
+  const abierto = {
+    cobro_token: TOKEN,
+    cobro_estado: null,
+    entrega: 'lightning',
+    estado: 'procesando',
+    destinatario_id: RECIPIENTE,
+  };
+
+  beforeEach(() => desde.mockReset());
+
+  it('gives the token to the recipient of a paid Lightning transfer that is not yet collected', async () => {
+    desde.mockImplementation(() => filaDeCobro(abierto));
+    expect(await tokenDeCobroDelDestinatario(ENVIO, RECIPIENTE)).toBe(TOKEN);
+  });
+
+  it('gives nothing to anyone else, even when the transfer is claimable', async () => {
+    desde.mockImplementation(() => filaDeCobro(abierto));
+    expect(await tokenDeCobroDelDestinatario(ENVIO, '55555555-5555-4555-8555-555555555555')).toBeNull();
+  });
+
+  it('gives nothing once the claim is paid or being paid, and gives it again after a failed claim', async () => {
+    desde.mockImplementation(() => filaDeCobro({ ...abierto, cobro_estado: 'pagado' }));
+    expect(await tokenDeCobroDelDestinatario(ENVIO, RECIPIENTE)).toBeNull();
+    desde.mockImplementation(() => filaDeCobro({ ...abierto, cobro_estado: 'pagando' }));
+    expect(await tokenDeCobroDelDestinatario(ENVIO, RECIPIENTE)).toBeNull();
+    desde.mockImplementation(() => filaDeCobro({ ...abierto, cobro_estado: 'fallido' }));
+    expect(await tokenDeCobroDelDestinatario(ENVIO, RECIPIENTE)).toBe(TOKEN);
+  });
+
+  it('gives nothing for a transfer that is not Lightning or not yet paid', async () => {
+    desde.mockImplementation(() => filaDeCobro({ ...abierto, entrega: 'cuenta' }));
+    expect(await tokenDeCobroDelDestinatario(ENVIO, RECIPIENTE)).toBeNull();
+    desde.mockImplementation(() => filaDeCobro({ ...abierto, estado: 'creada' }));
+    expect(await tokenDeCobroDelDestinatario(ENVIO, RECIPIENTE)).toBeNull();
+  });
+
+  it('gives nothing once the claim window has closed', async () => {
+    desde.mockImplementation(() => filaDeCobro({ ...abierto, cobro_vence_en: haceMs(60_000) }));
+    expect(await tokenDeCobroDelDestinatario(ENVIO, RECIPIENTE)).toBeNull();
+    desde.mockImplementation(() => filaDeCobro({ ...abierto, cobro_vence_en: haceMs(-60_000) }));
+    expect(await tokenDeCobroDelDestinatario(ENVIO, RECIPIENTE)).toBe(TOKEN);
+  });
+});
+
+describe('datosDeCobro: the claim page knows when the window has closed', () => {
+  const datos = {
+    codigo: 'CP-2345-ABCD',
+    estado: 'procesando',
+    entrega: 'lightning',
+    monto_destino: 5000,
+    cobro_estado: null,
+    cobro_motivo: null,
+    cobro_hash: null,
+    cobrada_en: null,
+    cobro_vence_en: null,
+    remitente: { nombre: 'Marta Lopez' },
+  };
+
+  beforeEach(() => desde.mockReset());
+
+  it('reports the window closed once its end has passed', async () => {
+    desde.mockImplementation(() => filaDeCobro({ ...datos, cobro_vence_en: haceMs(60_000) }));
+    const r = await datosDeCobro(TOKEN);
+    expect(r?.vencido).toBe(true);
+    expect(r?.remitenteNombre).toBe('Marta');
+  });
+
+  it('reports the window open before its end', async () => {
+    desde.mockImplementation(() => filaDeCobro({ ...datos, cobro_vence_en: haceMs(-60_000) }));
+    expect((await datosDeCobro(TOKEN))?.vencido).toBe(false);
+  });
+});
+
+describe('existeCobro', () => {
+  beforeEach(() => desde.mockReset());
+
+  it('says yes for a Lightning transfer with this token, and asks nothing for a malformed one', async () => {
+    desde.mockImplementation(() => filaDeCobro({ id: 'x' }));
+    expect(await existeCobro(TOKEN)).toBe(true);
+    desde.mockClear();
+    expect(await existeCobro('corto')).toBe(false);
+    expect(desde).not.toHaveBeenCalled();
+  });
+
+  it('says no for a token nobody has', async () => {
+    desde.mockImplementation(() => filaDeCobro(null as unknown as Record<string, unknown>));
+    expect(await existeCobro(TOKEN)).toBe(false);
   });
 });

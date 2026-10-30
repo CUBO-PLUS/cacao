@@ -4,8 +4,10 @@ import { refresh } from 'next/cache';
 
 import type { PagoLightning } from '@/lib/lightning';
 import type { EstadoEnvio } from '@/lib/transferencias';
+import { devolverEnvio, estadoDeDevolucion, type ResultadoDevolver } from '@/servidor/devolucion';
 import { exigirSesion } from '@/servidor/sesion';
 import type { Resultado } from '@/servidor/resultado';
+import type { EstadoDevolucion } from '@/servidor/cobro';
 import {
   cancelarEnvio,
   envioPara,
@@ -70,4 +72,20 @@ export async function pagarEnvioAccion(envioId: string): Promise<Resultado<PagoL
 export async function estadoDePagoAccion(envioId: string): Promise<EstadoEnvio | null> {
   const sesion = await exigirSesion(`/envios/${envioId}`);
   return estadoDePagoEnvio(sesion.usuario.id, envioId);
+}
+
+/** The sender takes the money back with an invoice for the sats paid. Refreshes the page either way. */
+export async function devolverEnvioAccion(envioId: string, factura: string): Promise<Resultado<ResultadoDevolver>> {
+  const sesion = await exigirSesion(`/envios/${envioId}`);
+  const resultado = await devolverEnvio(sesion.usuario.id, envioId, factura);
+  refresh();
+  return resultado;
+}
+
+/** The state of a refund that is being paid. Refreshes the page when BTCPay has answered. */
+export async function estadoDeDevolucionAccion(envioId: string): Promise<Resultado<{ devolucion: EstadoDevolucion | null }>> {
+  const sesion = await exigirSesion(`/envios/${envioId}`);
+  const resultado = await estadoDeDevolucion(sesion.usuario.id, envioId);
+  if (resultado.ok && resultado.dato.devolucion !== 'pagando') refresh();
+  return resultado;
 }

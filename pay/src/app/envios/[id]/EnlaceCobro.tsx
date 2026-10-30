@@ -8,11 +8,21 @@ import estilos from './EnlaceCobro.module.css';
  * The sender's link for the recipient to collect the transfer in Lightning. Copy it, or send it by
  * WhatsApp. The link is only the way in: the claim itself is paid by the server.
  */
-export function EnlaceCobro({ enlace, sats }: { enlace: string; sats: string }) {
+export function EnlaceCobro({
+  enlace,
+  sats,
+  dolares,
+}: {
+  enlace: string;
+  sats: string;
+  /** The approximate dollar value of the sats, or null when the price is not available. */
+  dolares: string | null;
+}) {
   const [copiado, setCopiado] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const mensaje = `Te mandé ${sats} por Cacao Pay. Cobralos acá: ${enlace}`;
+  const cuanto = dolares ? `${sats} (unos ${dolares})` : sats;
+  const mensaje = `Te mandé ${cuanto} por Cacao Pay. Cobralos acá: ${enlace}`;
   const whatsapp = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
 
   async function copiar() {

@@ -7,8 +7,9 @@ import { CodigoQr } from '@/componentes/CodigoQr';
 import { fechaEnvio, fraseDeLaSuma } from '@/componentes/formatoEnvio';
 import { LineasDinero } from '@/componentes/LineasDinero';
 import { Logo } from '@/componentes/Logo';
-import { primerNombre } from '@/componentes/textosEnvio';
-import { formatoUsd } from '@/lib/dinero';
+import { precioBtcOpcional } from '@/componentes/DolaresAproximados';
+import { dolaresDeSats, primerNombre } from '@/componentes/textosEnvio';
+import { formatoSats, formatoUsd } from '@/lib/dinero';
 import { formatoMonto } from '@/lib/cotizacion';
 import { enlaceRastreo, enlaceWhatsapp, mensajeRastreo } from '@/lib/compartir';
 import { desgloseTributarioEnvio } from '@/lib/hacienda';
@@ -27,6 +28,7 @@ import { CopiarCodigo } from './CopiarCodigo';
 import { EnlaceCobro } from './EnlaceCobro';
 import estilos from './estilos.module.css';
 import { LineaTiempo } from './LineaTiempo';
+import { RecuperarDinero } from './RecuperarDinero';
 import { SeguimientoEnCamino } from './SeguimientoEnCamino';
 
 // Blocking, so a transfer that is not the visitor's gets a real 404 before anything streams.
@@ -57,10 +59,22 @@ export default async function PaginaEnvio(props: PageProps<'/envios/[id]'>) {
     envio.rol === 'remitente' && envio.entrega === 'lightning' && envio.estado === 'creada' && (await pagoLightningActivo());
   // The sender shares the claim link once the transfer is paid and until the recipient collects it. Before the
   // payment the link would only lead to a "waiting" page.
+  // Once the claim window has closed the link would only lead to "expired": the sender gets the money back instead.
   const enlaceCobro =
-    envio.rol === 'remitente' && envio.entrega === 'lightning' && envio.estado === 'procesando'
+    envio.rol === 'remitente' && envio.entrega === 'lightning' && envio.estado === 'procesando' && !envio.cobroVencido
       ? enlaceDeCobro(cobro)
       : null;
+  // The sender takes the money back after the claim window, while nobody holds the transfer for a claim.
+  const devolucion = cobro?.devolucion ?? null;
+  const puedeRecuperar =
+    envio.rol === 'remitente' &&
+    envio.entrega === 'lightning' &&
+    envio.estado === 'procesando' &&
+    envio.cobroVencido &&
+    envio.satsPagados !== null &&
+    cobro?.estado !== 'pagando';
+  // The dollar value shown next to the sats in the claim share text, read only when the link is shown.
+  const dolaresEnlace = enlaceCobro ? dolaresDeSats(envio.montoDestino, await precioBtcOpcional()) : null;
   const rastreo = enlaceRastreo(envio.codigo);
   const whatsapp = enlaceWhatsapp(mensajeRastreo(envio.codigo, rastreo));
   const completada = envio.estado === 'completada';
@@ -72,9 +86,9 @@ export default async function PaginaEnvio(props: PageProps<'/envios/[id]'>) {
           Envío <span className="dato">{envio.codigo}</span>
         </h1>
         <div>
-          <ChipEstado estado={envio.estado} />
+          <ChipEstado estado={envio.estado} entrega={envio.entrega} />
         </div>
-        <p>{descripcionDeEstado(envio.estado, 'remitente')}</p>
+        <p>{descripcionDeEstado(envio.estado, 'remitente', envio.entrega)}</p>
         <CopiarCodigo codigo={envio.codigo} />
         <div className={estilos.compartir}>
           <p>Pasale este código a quien recibe: puede seguirlo en cacaopay sin cuenta.</p>
@@ -87,7 +101,22 @@ export default async function PaginaEnvio(props: PageProps<'/envios/[id]'>) {
         </div>
       </header>
 
-      {enlaceCobro && <EnlaceCobro enlace={enlaceCobro} sats={formatoMonto(envio.montoDestino, envio.monedaDestino)} />}
+      {enlaceCobro && (
+        <EnlaceCobro
+          enlace={enlaceCobro}
+          sats={formatoMonto(envio.montoDestino, envio.monedaDestino)}
+          dolares={dolaresEnlace}
+        />
+      )}
+
+      {puedeRecuperar && envio.satsPagados !== null && (
+        <RecuperarDinero
+          envioId={envio.id}
+          sats={formatoSats(envio.satsPagados)}
+          enCurso={devolucion === 'pagando'}
+          motivo={devolucion === 'fallido' ? (cobro?.devolucionMotivo ?? null) : null}
+        />
+      )}
 
       <AccionesEnvio
         envioId={envio.id}

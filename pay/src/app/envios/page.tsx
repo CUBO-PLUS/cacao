@@ -81,7 +81,7 @@ async function Lista({ busqueda }: { busqueda: PageProps<'/envios'>['searchParam
 
       {porConfirmar.length > 0 && (
         <section className={estilos.bloque} aria-labelledby="titulo-por-confirmar">
-          <h2 id="titulo-por-confirmar">Te falta confirmar</h2>
+          <h2 id="titulo-por-confirmar">Sin enviar</h2>
           <ul className={estilos.tarjetas}>
             {porConfirmar.map((envio) => (
               <li key={envio.id}>

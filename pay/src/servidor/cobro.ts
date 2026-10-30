@@ -13,10 +13,13 @@ import { configBtcpay, esPausaBtcpay, MENSAJE_PAUSA } from './url-btcpay';
 
 export type EstadoCobroEnvio = 'pagando' | 'pagado' | 'fallido';
 
+/** The refund of a transfer the sender takes back: the same states as a claim. */
+export type EstadoDevolucion = 'pagando' | 'pagado' | 'fallido';
+
 /** What the claim page may show: the first name of the sender, the amount and the outcome. Nothing else. */
 export type DatosCobro = {
   codigo: string;
-  estado: 'creada' | 'procesando' | 'completada' | 'fallida' | 'cancelada';
+  estado: 'creada' | 'procesando' | 'completada' | 'fallida' | 'cancelada' | 'devuelta';
   sats: number;
   /** The sender's first name only. */
   remitenteNombre: string;
@@ -24,6 +27,8 @@ export type DatosCobro = {
   cobroMotivo: string | null;
   cobroHash: string | null;
   cobradaEn: string | null;
+  /** True once the claim window has closed: the link no longer takes an invoice. */
+  vencido: boolean;
 };
 
 /** The claim state of a transfer, for the sender and the administrator. The token is never shown to the public. */
@@ -32,6 +37,9 @@ export type CobroEnvio = {
   estado: EstadoCobroEnvio | null;
   motivo: string | null;
   hash: string | null;
+  /** The refund of the transfer, when the sender took the money back. */
+  devolucion: EstadoDevolucion | null;
+  devolucionMotivo: string | null;
 };
 
 export type ResultadoCobrar = {
@@ -41,19 +49,21 @@ export type ResultadoCobrar = {
 };
 
 const TOKEN = /^[A-Za-z0-9_-]{43}$/;
+// The database takes a null for the optional parameters, but the generated types say string.
+const NULO = null as unknown as string;
 const FACTURA = /^ln(bc|tb|bcrt)[0-9a-z]+$/;
 const MENSAJE_NO_ENCONTRADO = 'No encontramos ese envío.';
-const SIN_BTCPAY = 'El pago con Lightning no está activo en este servidor.';
+const SIN_BTCPAY = 'El cobro por Lightning no está disponible ahora. Probá más tarde.';
 const TIENDA = /^[A-Za-z0-9]{10,64}$/;
 const MENSAJE_EN_CURSO = 'El pago anterior todavía está en curso en BTCPay; revisalo de nuevo en unos minutos.';
-const MOTIVO_SIN_PAGO = 'BTCPay no encontró el pago de esta factura. Pedí otra factura y probá de nuevo.';
+export const MOTIVO_SIN_PAGO = 'No encontramos el pago de esta factura. Pedí otra factura a tu billetera y probá de nuevo.';
 
 // A payment BTCPay has never seen is given this long before it counts as failed: the request that started it
 // may still be on its way.
-const ESPERA_SIN_PAGO_MS = 10 * 60 * 1000;
+export const ESPERA_SIN_PAGO_MS = 10 * 60 * 1000;
 
 const COLUMNAS_COBRO =
-  'codigo, estado, entrega, monto_destino, cobro_estado, cobro_motivo, cobro_hash, cobrada_en, remitente:usuarios!pay_transferencias_remitente_id_fkey(nombre)';
+  'codigo, estado, entrega, monto_destino, cobro_estado, cobro_motivo, cobro_hash, cobrada_en, cobro_vence_en, remitente:usuarios!pay_transferencias_remitente_id_fkey(nombre)';
 
 // Amounts of a BOLT11 multiplier, as a fraction of one BTC in sats: 1 BTC = 1e8 sats.
 // m = 1e-3 BTC, u = 1e-6 BTC, n = 1e-9 BTC, p = 1e-12 BTC.
@@ -85,21 +95,31 @@ export function satsDeFactura(bolt11: string): number | null {
   return Number(sats);
 }
 
+const VALORES_DE_FIRMA = 104;
+
+// The 5-bit values of a BOLT11 invoice's tagged data: timestamp and tags, with the checksum and the 104 values
+// of the signature left out. Null when it is not bech32.
+function valoresDeFactura(bolt11: string): number[] | null {
+  const s = bolt11.trim().toLowerCase();
+  // The bech32 separator is the last "1"; the last six characters are the checksum.
+  const separador = s.lastIndexOf('1');
+  if (separador < 0 || s.length - separador - 1 < 6 + VALORES_DE_FIRMA + 7) return null;
+  const valores: number[] = [];
+  for (const c of s.slice(separador + 1, s.length - 6 - VALORES_DE_FIRMA)) {
+    const v = BECH32.indexOf(c);
+    if (v < 0) return null;
+    valores.push(v);
+  }
+  return valores;
+}
+
 /**
  * Payment hash of a BOLT11 invoice: the 'p' tagged field, as hex. Null when it is not there. Needed to look
  * up a payment whose answer was lost. The signature is not checked here.
  */
 export function hashDeFactura(bolt11: string): string | null {
-  const s = bolt11.trim().toLowerCase();
-  // The bech32 separator is the last "1"; the last six characters are the checksum.
-  const separador = s.lastIndexOf('1');
-  if (separador < 0 || s.length - separador - 1 < 6 + 7) return null;
-  const valores: number[] = [];
-  for (const c of s.slice(separador + 1, s.length - 6)) {
-    const v = BECH32.indexOf(c);
-    if (v < 0) return null;
-    valores.push(v);
-  }
+  const valores = valoresDeFactura(bolt11);
+  if (!valores) return null;
   // Seven values of timestamp come first, then tagged fields: type (1), length (2), data.
   let i = 7;
   while (i + 3 <= valores.length) {
@@ -118,6 +138,50 @@ export function hashDeFactura(bolt11: string): string | null {
     i += largo;
   }
   return null;
+}
+
+/**
+ * Unix time, in seconds, after which a BOLT11 invoice can no longer be paid: its timestamp plus its expiry
+ * tag (one hour when the invoice has none). Null when the invoice does not carry a readable timestamp.
+ */
+export function vencimientoDeFactura(bolt11: string): number | null {
+  const valores = valoresDeFactura(bolt11);
+  if (!valores || valores.length < 7) return null;
+  const emision = valores.slice(0, 7).reduce((acumulado, v) => acumulado * 32 + v, 0);
+  let vigencia = 3600;
+  let i = 7;
+  while (i + 3 <= valores.length) {
+    const tipo = valores[i];
+    const largo = valores[i + 1] * 32 + valores[i + 2];
+    i += 3;
+    if (i + largo > valores.length) return null;
+    // Tag 'x' (6) is the expiry, in seconds, written in 5-bit groups.
+    if (tipo === 6) vigencia = valores.slice(i, i + largo).reduce((acumulado, v) => acumulado * 32 + v, 0);
+    i += largo;
+  }
+  return emision + vigencia;
+}
+
+/**
+ * Checks what a payer pastes: a Lightning invoice, for a whole number of sats, that has a payment hash and has
+ * not expired. Nothing is sent anywhere. The database then checks the amount against the transfer.
+ */
+export function leerFacturaDePago(facturaCruda: string): Resultado<{ factura: string; sats: number; hash: string }> {
+  const factura = facturaCruda.trim().toLowerCase();
+  if (factura.length > 2000 || !FACTURA.test(factura)) {
+    return fallo('DATOS_INVALIDOS', 'Esa no parece una factura Lightning. Copiala completa: empieza con "lnbc".');
+  }
+  const sats = satsDeFactura(factura);
+  if (sats === null) {
+    return fallo('DATOS_INVALIDOS', 'La factura tiene que ser por una cantidad exacta de sats, sin decimales. Pedí otra factura a tu billetera.');
+  }
+  const hash = hashDeFactura(factura);
+  if (!hash) return fallo('DATOS_INVALIDOS', 'Esa factura no sirve para cobrar. Pedí otra factura a tu billetera.');
+  const vence = vencimientoDeFactura(factura);
+  if (vence === null || vence * 1000 <= Date.now()) {
+    return fallo('DATOS_INVALIDOS', 'Esa factura ya venció. Pedí otra factura a tu billetera.');
+  }
+  return exito({ factura, sats, hash });
 }
 
 // Where the claim links point. The product's public address, else the one used for the demo.
@@ -139,7 +203,8 @@ export async function enlaceFacturaDePrueba(sats: number): Promise<string | null
   return `${config.url}/billetera/recibir?sats=${sats}`;
 }
 
-async function configDePago(): Promise<{ config: ConfigBtcpay; tienda: string } | null> {
+/** The BTCPay address, key and store that pay out. Null when any of them is missing or malformed. */
+export async function configDePago(): Promise<{ config: ConfigBtcpay; tienda: string } | null> {
   const config = await configBtcpay();
   const tienda = (process.env.BTCPAY_STORE_ID ?? '').trim();
   if (!config || !TIENDA.test(tienda)) return null;
@@ -155,6 +220,7 @@ type FilaCobro = {
   cobro_motivo: string | null;
   cobro_hash: string | null;
   cobrada_en: string | null;
+  cobro_vence_en: string | null;
   remitente: { nombre: string } | null;
 };
 
@@ -220,7 +286,52 @@ export async function datosDeCobro(token: string): Promise<DatosCobro | null> {
     cobroMotivo: fila.cobro_motivo,
     cobroHash: fila.cobro_hash,
     cobradaEn: fila.cobrada_en,
+    vencido: fila.cobro_vence_en !== null && Date.now() >= Date.parse(fila.cobro_vence_en),
   };
+}
+
+/**
+ * True when a Lightning transfer has this claim token. Only the existence is read: the proxy uses it to answer
+ * 404 for an unknown link before the page streams.
+ */
+export async function existeCobro(token: string): Promise<boolean> {
+  if (!TOKEN.test(token)) return false;
+  const { data, error } = await clienteServicio()
+    .from('pay_transferencias')
+    .select('id')
+    .eq('cobro_token', token)
+    .eq('entrega', 'lightning')
+    .maybeSingle();
+  if (error) throw new Error(`No pudimos leer el cobro: ${error.message}`);
+  return data !== null;
+}
+
+/**
+ * The claim token of a transfer, for its recipient only: a Lightning transfer that is paid and not yet
+ * collected (or whose last claim failed). Null for anyone else, so the token never reaches another account.
+ * The caller reads the transfer as its recipient first.
+ */
+export async function tokenDeCobroDelDestinatario(envioId: string, usuarioId: string): Promise<string | null> {
+  const { data, error } = await clienteServicio()
+    .from('pay_transferencias')
+    .select('cobro_token, cobro_estado, cobro_vence_en, entrega, estado, destinatario_id')
+    .eq('id', envioId)
+    .maybeSingle();
+  if (error) throw new Error(`No pudimos leer el cobro: ${error.message}`);
+  const fila = data as unknown as {
+    cobro_token: string | null;
+    cobro_estado: EstadoCobroEnvio | null;
+    cobro_vence_en: string | null;
+    entrega: 'efectivo' | 'cuenta' | 'lightning';
+    estado: DatosCobro['estado'];
+    destinatario_id: string | null;
+  } | null;
+  if (!fila || fila.destinatario_id !== usuarioId) return null;
+  if (fila.entrega !== 'lightning' || fila.estado !== 'procesando') return null;
+  if (fila.cobro_estado === 'pagado' || fila.cobro_estado === 'pagando') return null;
+  if (fila.cobro_vence_en !== null && Date.now() >= Date.parse(fila.cobro_vence_en)) return null;
+  if (!fila.cobro_token || !TOKEN.test(fila.cobro_token)) return null;
+  return fila.cobro_token;
 }
 
 /**
@@ -230,7 +341,7 @@ export async function datosDeCobro(token: string): Promise<DatosCobro | null> {
 export async function cobroDeEnvio(envioId: string): Promise<CobroEnvio | null> {
   const { data, error } = await clienteServicio()
     .from('pay_transferencias')
-    .select('cobro_token, cobro_estado, cobro_motivo, cobro_hash, entrega')
+    .select('cobro_token, cobro_estado, cobro_motivo, cobro_hash, devolucion_estado, devolucion_motivo, entrega')
     .eq('id', envioId)
     .maybeSingle();
   if (error) throw new Error(`No pudimos leer el cobro: ${error.message}`);
@@ -239,6 +350,8 @@ export async function cobroDeEnvio(envioId: string): Promise<CobroEnvio | null> 
     cobro_estado: EstadoCobroEnvio | null;
     cobro_motivo: string | null;
     cobro_hash: string | null;
+    devolucion_estado: EstadoDevolucion | null;
+    devolucion_motivo: string | null;
   } | null;
   if (!fila) return null;
   return {
@@ -246,6 +359,8 @@ export async function cobroDeEnvio(envioId: string): Promise<CobroEnvio | null> 
     estado: fila.cobro_estado,
     motivo: fila.cobro_motivo,
     hash: fila.cobro_hash,
+    devolucion: fila.devolucion_estado,
+    devolucionMotivo: fila.devolucion_motivo,
   };
 }
 
@@ -255,8 +370,8 @@ async function cerrarCobro(token: string, resultado: ResultadoPago): Promise<Res
   const { error } = await clienteServicio().rpc('pay_terminar_cobro', {
     p_token: token,
     p_ok: resultado.estado === 'pagado',
-    p_hash: resultado.hash,
-    p_motivo: resultado.motivo,
+    p_hash: resultado.hash ?? NULO,
+    p_motivo: resultado.motivo ?? NULO,
   });
   if (error) return desdeError(error);
   return exito({ estado: resultado.estado, motivo: resultado.motivo });
@@ -270,16 +385,9 @@ async function cerrarCobro(token: string, resultado: ResultadoPago): Promise<Res
 export async function cobrarEnvio(token: string, facturaCruda: string): Promise<Resultado<ResultadoCobrar>> {
   try {
     if (!TOKEN.test(token)) return fallo('NO_ENCONTRADA', MENSAJE_NO_ENCONTRADO);
-    const factura = facturaCruda.trim().toLowerCase();
-    if (factura.length > 2000 || !FACTURA.test(factura)) {
-      return fallo('DATOS_INVALIDOS', 'Pegá una factura Lightning (empieza con lnbc, lntb o lnbcrt).');
-    }
-    const sats = satsDeFactura(factura);
-    if (sats === null) {
-      return fallo('DATOS_INVALIDOS', 'La factura tiene que ser por un monto fijo, en sats enteros.');
-    }
-    const hash = hashDeFactura(factura);
-    if (!hash) return fallo('DATOS_INVALIDOS', 'La factura no tiene el hash del pago. Pedí otra factura.');
+    const leida = leerFacturaDePago(facturaCruda);
+    if (!leida.ok) return leida;
+    const { factura, sats, hash } = leida.dato;
     const pago = await configDePago();
     if (!pago) return fallo('NO_DISPONIBLE', SIN_BTCPAY);
 

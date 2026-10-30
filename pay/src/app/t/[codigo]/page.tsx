@@ -17,8 +17,8 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-// The code decides the page, so it is read before anything streams. An unknown code then gets a
-// real 404 status, not a page that says "not found" with a 200.
+// The code decides the page. An unknown code gets its 404 status from the proxy, before anything streams
+// (src/proxy.ts); this check covers a code that goes away while the page is read.
 export const instant = false;
 
 // Anyone with the code can read this page: the state, what arrives and how. Never the sender, the

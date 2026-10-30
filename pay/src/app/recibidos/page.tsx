@@ -109,7 +109,7 @@ function TarjetaRecibido({ envio, usdBtc }: { envio: Envio; usdBtc: number | nul
         </span>
       )}
       <span>
-        <EtiquetaEstado estado={envio.estado} />
+        <EtiquetaEstado estado={envio.estado} entrega={envio.entrega} />
       </span>
       <time className={estilos.fecha} dateTime={envio.creadaEn}>
         {fechaSv(envio.creadaEn)}

@@ -42,3 +42,8 @@
   border-color: var(--chocolate);
   color: var(--pulpa);
 }
+
+.devuelta {
+  background: var(--arena);
+  color: var(--tostado);
+}

@@ -5,6 +5,7 @@ import {
   aUsdCentavos,
   descripcionDeEstado,
   enmascararContacto,
+  etiquetaDeEstado,
   ETIQUETA_ENTREGA,
   ETIQUETA_ESTADO,
   ETIQUETA_MONEDA,
@@ -37,7 +38,17 @@ describe('textos de estado', () => {
       completada: 'Entregado',
       fallida: 'No se pudo entregar',
       cancelada: 'Cancelado',
+      devuelta: 'Devuelto',
     });
+  });
+
+  it('la devolución dice en una frase que el dinero volvió, para quien envió y para quien recibe', () => {
+    expect(descripcionDeEstado('devuelta', 'remitente')).toBe(
+      'Nadie cobró el envío a tiempo, así que te devolvimos el dinero por Lightning.',
+    );
+    expect(descripcionDeEstado('devuelta', 'destinatario')).toBe(
+      'El envío se devolvió a quien lo mandó porque no se cobró a tiempo.',
+    );
   });
 
   it('la frase para quien envió dice lo que pasa, sin jerga', () => {
@@ -46,13 +57,22 @@ describe('textos de estado', () => {
     expect(descripcionDeEstado('completada', 'remitente')).toBe('Tu destinatario ya recibió el dinero.');
   });
 
+  it('un Lightning pagado que espera el cobro dice "Esperando que cobre", no "va en camino"', () => {
+    expect(etiquetaDeEstado('procesando', 'lightning')).toBe('Esperando que cobre');
+    expect(etiquetaDeEstado('procesando', 'efectivo')).toBe('En camino');
+    expect(descripcionDeEstado('procesando', 'remitente', 'lightning')).toBe('Esperando que cobre.');
+    expect(descripcionDeEstado('procesando', 'destinatario', 'lightning')).toBe('Esperando que cobre.');
+    expect(descripcionDeEstado('procesando', 'destinatario', 'cuenta')).toBe('El dinero va en camino.');
+    expect(etiquetaDeEstado('creada', 'lightning')).toBe('Sin enviar');
+  });
+
   it('la frase para quien recibe habla de ella, no de quien envió', () => {
     expect(descripcionDeEstado('completada', 'destinatario')).toBe('Ya recibiste el dinero.');
     expect(descripcionDeEstado('creada', 'destinatario')).toBe('Alguien te va a mandar dinero. Todavía no sale.');
   });
 
   it('cada estado tiene una frase para cada rol, sin signos de exclamación ni guiones largos', () => {
-    const estados: EstadoEnvio[] = ['creada', 'procesando', 'completada', 'fallida', 'cancelada'];
+    const estados: EstadoEnvio[] = ['creada', 'procesando', 'completada', 'fallida', 'cancelada', 'devuelta'];
     for (const estado of estados) {
       for (const rol of ['remitente', 'destinatario'] as const) {
         const frase = descripcionDeEstado(estado, rol);
@@ -102,6 +122,8 @@ describe('acciones por rol y estado', () => {
     expect(accionesPosibles('procesando', 'admin')).toEqual(['completar', 'fallar']);
     expect(accionesPosibles('fallida', 'admin')).toEqual([]);
     expect(accionesPosibles('cancelada', 'admin')).toEqual([]);
+    expect(accionesPosibles('devuelta', 'admin')).toEqual([]);
+    expect(accionesPosibles('devuelta', 'remitente', 'lightning')).toEqual([]);
   });
 
   it('el simulador agrega completar y fallar para quien envía, solo en la demo', () => {

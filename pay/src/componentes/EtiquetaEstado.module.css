@@ -45,3 +45,9 @@
   background: var(--chocolate);
   color: var(--pulpa);
 }
+
+.devuelta {
+  border-color: var(--tostado);
+  background: var(--arena);
+  color: var(--tostado);
+}

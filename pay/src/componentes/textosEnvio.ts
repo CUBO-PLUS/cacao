@@ -34,7 +34,7 @@ export function tiempoEstimado(minutos: number): string {
 
 /** True once the state can no longer change. */
 export function esEstadoFinal(estado: EstadoEnvio): boolean {
-  return estado === 'completada' || estado === 'fallida' || estado === 'cancelada';
+  return estado === 'completada' || estado === 'fallida' || estado === 'cancelada' || estado === 'devuelta';
 }
 
 /** The USD value of a sats amount at the given BTC price, as "$96.50", or null without a price. */

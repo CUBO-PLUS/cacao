@@ -92,7 +92,7 @@ test('1. cotizador, tres pasos con Lightning, chips y Repetir envío', async ({ 
   await contexto.close();
 });
 
-test('2. pago con Lightning: En camino solo, DB procesando', async ({ browser }) => {
+test('2. pago con Lightning: Esperando que cobre, DB procesando', async ({ browser }) => {
   const contexto = await contextoDe(browser, 'remitente');
   const pagina = await contexto.newPage();
   await pagina.goto(`/envios/${envioId}`);
@@ -100,7 +100,7 @@ test('2. pago con Lightning: En camino solo, DB procesando', async ({ browser })
   const factura = await pagina.getByLabel('Factura Lightning').inputValue();
   expect(factura).toMatch(/^ln/);
   await pagarEnWallet(factura);
-  await expect(pagina.getByText('En camino', { exact: true }).first()).toBeVisible({ timeout: 60_000 });
+  await expect(pagina.getByText('Esperando que cobre', { exact: true }).first()).toBeVisible({ timeout: 60_000 });
   await contexto.close();
 
   const fila = await filaEnvioDb(envioId);
@@ -124,12 +124,12 @@ test('3. cobro: enlace solo tras pagar, factura exacta, cobro único', async ({ 
   await expect(cobro.getByRole('heading', { name: /Te mandaron/ })).toBeVisible();
 
   const otra = await facturaWallet(sats + 7);
-  await cobro.getByLabel('Factura Lightning').fill(otra.factura);
+  await cobro.getByLabel('Pegá tu factura').fill(otra.factura);
   await cobro.getByRole('button', { name: 'Cobrar', exact: true }).click();
   await expect(cobro.locator('p[role="alert"]')).toContainText('exactamente por');
 
   const exacta = await facturaWallet(sats);
-  await cobro.getByLabel('Factura Lightning').fill(exacta.factura);
+  await cobro.getByLabel('Pegá tu factura').fill(exacta.factura);
   await cobro.getByRole('button', { name: 'Cobrar', exact: true }).click();
   await expect(cobro.getByRole('status')).toContainText('Listo. Recibiste', { timeout: 90_000 });
 
@@ -186,7 +186,7 @@ test('5. cancelar: permitido antes de la factura, oculto con factura viva, recha
 
   const factura = await pagina.getByLabel('Factura Lightning').inputValue();
   await pagarEnWallet(factura);
-  await expect(pagina.getByText('En camino', { exact: true }).first()).toBeVisible({ timeout: 60_000 });
+  await expect(pagina.getByText('Esperando que cobre', { exact: true }).first()).toBeVisible({ timeout: 60_000 });
 
   // After payment the database refuses the cancellation too.
   const remitente = await servicio().from('usuarios').select('id').eq('telefono', CORREOS.remitente).single();
@@ -282,4 +282,42 @@ test('9. 375 px sin desborde horizontal en /enviar, /envios/[id] y /cobrar/[toke
   await expect(cobro.getByRole('heading', { name: /Te mandaron/ })).toBeVisible();
   expect(await seDesborda(cobro)).toBeFalsy();
   await visitante.close();
+});
+
+test('10. sin cobrar en 7 días: el enlace vence y quien envió recupera el dinero', async ({ browser }) => {
+  const contexto = await contextoDe(browser, 'remitente');
+  const pagina = await contexto.newPage();
+  const creado = await nuevoEnvioLightning(pagina, '20');
+  await pagina.goto(`/envios/${creado.id}`);
+  await pagina.getByRole('button', { name: 'Pagar con Lightning' }).click();
+  await pagarEnWallet(await pagina.getByLabel('Factura Lightning').inputValue());
+  await expect(pagina.getByText('Esperando que cobre', { exact: true }).first()).toBeVisible({ timeout: 60_000 });
+  const pagado = await filaEnvioDb(creado.id);
+  const satsPagados = Number(pagado.factura_sats);
+
+  // Seven days pass without a claim: the window closes, the claim link expires, the sender can take the money back.
+  const { error } = await servicio()
+    .from('pay_transferencias')
+    .update({ cobro_vence_en: new Date(Date.now() - 60_000).toISOString() })
+    .eq('id', creado.id);
+  expect(error).toBeNull();
+
+  const visitante = await browser.newContext(OPCIONES_CONTEXTO);
+  const cobro = await visitante.newPage();
+  await cobro.goto(`/cobrar/${pagado.cobro_token}`);
+  await expect(cobro.locator('p[role="alert"]')).toContainText('venció');
+  await expect(cobro.getByLabel('Pegá tu factura')).toHaveCount(0);
+  await visitante.close();
+
+  await pagina.reload();
+  await expect(pagina.getByRole('heading', { name: 'Recuperar mi dinero' })).toBeVisible();
+  const devolucion = await facturaWallet(satsPagados);
+  await pagina.getByLabel('Pegá tu factura').fill(devolucion.factura);
+  await pagina.getByRole('button', { name: 'Recuperar mi dinero' }).click();
+  await expect(pagina.getByText('Devuelto', { exact: true }).first()).toBeVisible({ timeout: 90_000 });
+
+  const devuelta = await filaEnvioDb(creado.id);
+  expect(devuelta.estado).toBe('devuelta');
+  expect(devuelta.devolucion_estado).toBe('pagado');
+  await contexto.close();
 });

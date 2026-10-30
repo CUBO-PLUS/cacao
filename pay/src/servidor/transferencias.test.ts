@@ -18,7 +18,9 @@ const { rpc, tablas, cotizacionUsdBtc, consultaDe } = vi.hoisted(() => {
 vi.mock('./supabase', () => ({ clienteServicio: () => ({ rpc, from: consultaDe }) }));
 vi.mock('@/lib/precio/fuente', () => ({ cotizacionUsdBtc }));
 
-import { cancelarEnvio, pagarEnvio, procesarEnvio, simularFallar } from './transferencias';
+import { formatoMonto, cotizar, TARIFAS, TASA_EUR_USD } from '@/lib/cotizacion';
+
+import { cancelarEnvio, crearEnvio, pagarEnvio, procesarEnvio, simularFallar, type DatosNuevoEnvio } from './transferencias';
 
 const USUARIO = '11111111-1111-4111-8111-111111111111';
 const ADMIN = '33333333-3333-4333-8333-333333333333';
@@ -283,5 +285,87 @@ describe('textoDeBusqueda', () => {
     expect(textoDeBusqueda('Rosa,remitente_id.neq.x')).toBe('Rosa remitente_id.neq.x');
     expect(textoDeBusqueda('a(b)*c')).toBe('a b  c');
     expect(textoDeBusqueda('Rosa Mejía')).toBe('Rosa Mejía');
+  });
+});
+
+// The amount and rate the sender saw on screen: the quote at the BTC price given, with the seeded fees.
+function mostrado(precioBtc: number, cambios: Partial<DatosNuevoEnvio> = {}): DatosNuevoEnvio {
+  const datos: DatosNuevoEnvio = {
+    destinatarioNombre: 'Ana Prueba',
+    destinatarioContacto: '+503 7000 0002',
+    monedaOrigen: 'USD',
+    montoOrigenCentavos: 10_000,
+    entrega: 'lightning',
+    nota: '',
+    clave: 'clave-de-prueba-1',
+    montoDestino: 0,
+    tasa: 0,
+    ...cambios,
+  };
+  const cotizado = cotizar({
+    monedaOrigen: datos.monedaOrigen,
+    montoOrigenCentavos: datos.montoOrigenCentavos,
+    entrega: datos.entrega,
+    tarifas: TARIFAS,
+    eurUsd: TASA_EUR_USD,
+    usdBtc: precioBtc,
+    fuenteBtc: 'Precio de prueba',
+  });
+  if (!('error' in cotizado)) {
+    datos.montoDestino = cotizado.montoDestino;
+    datos.tasa = cotizado.tasa;
+  }
+  return { ...datos, ...cambios };
+}
+
+describe('crearEnvio', () => {
+  it('crea el envío cuando el monto y la tasa coinciden con lo que vio la persona', async () => {
+    rpc.mockResolvedValueOnce({ data: { id: ENVIO, codigo: 'CP-2345-ABCD' }, error: null });
+
+    const r = await crearEnvio(USUARIO, mostrado(USD_BTC));
+
+    expect(r).toEqual({ ok: true, dato: { id: ENVIO, codigo: 'CP-2345-ABCD' } });
+    expect(llamadas('pay_crear_transferencia')).toHaveLength(1);
+  });
+
+  it('si el precio de bitcoin se movió, no crea nada y dice cuánto recibe ahora', async () => {
+    cotizacionUsdBtc.mockResolvedValue(90_000);
+
+    const r = await crearEnvio(USUARIO, mostrado(USD_BTC));
+
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.codigo).toBe('PRECIO_CAMBIO');
+    const nuevo = mostrado(90_000);
+    expect(r.mensaje).toBe(`El precio cambió: ahora recibe ${formatoMonto(nuevo.montoDestino, 'SATS')}. Confirmá de nuevo.`);
+    expect(r.cotizacion?.montoDestino).toBe(nuevo.montoDestino);
+    expect(r.cotizacion?.tasa).toBe(nuevo.tasa);
+    expect(llamadas('pay_crear_transferencia')).toHaveLength(0);
+  });
+
+  it('no acepta una tasa distinta aunque el monto coincida', async () => {
+    const r = await crearEnvio(USUARIO, mostrado(USD_BTC, { tasa: 1234.5 }));
+
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.codigo).toBe('PRECIO_CAMBIO');
+    expect(llamadas('pay_crear_transferencia')).toHaveLength(0);
+  });
+
+  it('refuses a missing amount, and creates nothing', async () => {
+    const r = await crearEnvio(USUARIO, { ...mostrado(USD_BTC), montoDestino: NaN });
+
+    expect(r.ok).toBe(false);
+    expect(llamadas('pay_crear_transferencia')).toHaveLength(0);
+  });
+
+  it('con la misma clave devuelve el envío que ya existe, aunque el precio se haya movido', async () => {
+    tablas.pay_transferencias = { id: ENVIO, codigo: 'CP-2345-ABCD' };
+    cotizacionUsdBtc.mockResolvedValue(90_000);
+
+    const r = await crearEnvio(USUARIO, mostrado(USD_BTC));
+
+    expect(r).toEqual({ ok: true, dato: { id: ENVIO, codigo: 'CP-2345-ABCD' } });
+    expect(llamadas('pay_crear_transferencia')).toHaveLength(0);
   });
 });

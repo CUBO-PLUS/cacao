@@ -4,9 +4,12 @@ import type { Entrega, Moneda } from './cotizacion';
 // what each role may do, and the formats of codes and contacts. Pure, so it runs in Client
 // Components too. The database checks the same rules again.
 
-export type EstadoEnvio = 'creada' | 'procesando' | 'completada' | 'fallida' | 'cancelada';
+export type EstadoEnvio = 'creada' | 'procesando' | 'completada' | 'fallida' | 'cancelada' | 'devuelta';
 export type RolEnvio = 'remitente' | 'destinatario' | 'admin';
 export type AccionEnvio = 'cancelar' | 'procesar' | 'completar' | 'fallar';
+
+// Lightning transfers that are paid and wait for the recipient's claim.
+const ESPERA_COBRO = 'Esperando que cobre';
 
 export const ETIQUETA_ESTADO: Record<EstadoEnvio, string> = {
   creada: 'Sin enviar',
@@ -14,6 +17,7 @@ export const ETIQUETA_ESTADO: Record<EstadoEnvio, string> = {
   completada: 'Entregado',
   fallida: 'No se pudo entregar',
   cancelada: 'Cancelado',
+  devuelta: 'Devuelto',
 };
 
 const DESCRIPCION_ESTADO: Record<EstadoEnvio, Record<'remitente' | 'destinatario', string>> = {
@@ -37,10 +41,28 @@ const DESCRIPCION_ESTADO: Record<EstadoEnvio, Record<'remitente' | 'destinatario
     remitente: 'Cancelaste el envío antes de que saliera.',
     destinatario: 'Quien envió el dinero lo canceló. No te va a llegar.',
   },
+  devuelta: {
+    remitente: 'Nadie cobró el envío a tiempo, así que te devolvimos el dinero por Lightning.',
+    destinatario: 'El envío se devolvió a quien lo mandó porque no se cobró a tiempo.',
+  },
 };
 
+/**
+ * The state as the person reads it. A paid Lightning transfer is "procesando" only until its recipient
+ * collects it, so it waits for them; every other transfer keeps the plain label.
+ */
+export function etiquetaDeEstado(estado: EstadoEnvio, entrega?: Entrega): string {
+  if (estado === 'procesando' && entrega === 'lightning') return ESPERA_COBRO;
+  return ETIQUETA_ESTADO[estado];
+}
+
 /** One sentence for the state, written for the person who is looking at it. */
-export function descripcionDeEstado(estado: EstadoEnvio, rol: 'remitente' | 'destinatario'): string {
+export function descripcionDeEstado(
+  estado: EstadoEnvio,
+  rol: 'remitente' | 'destinatario',
+  entrega?: Entrega,
+): string {
+  if (estado === 'procesando' && entrega === 'lightning') return `${ESPERA_COBRO}.`;
   return DESCRIPCION_ESTADO[estado][rol];
 }
 

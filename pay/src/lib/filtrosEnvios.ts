@@ -8,10 +8,10 @@ export type FiltroEstado = (typeof FILTROS_ESTADO)[number];
 
 export const ETIQUETA_FILTRO: Record<FiltroEstado, string> = {
   todos: 'Todos',
-  porPagar: 'Por pagar',
+  porPagar: 'Sin enviar',
   enCamino: 'En camino',
   entregados: 'Entregados',
-  cancelados: 'Cancelados o fallidos',
+  cancelados: 'Cancelados, fallidos o devueltos',
 };
 
 const ESTADOS_DE_FILTRO: Record<FiltroEstado, EstadoEnvio[] | null> = {
@@ -19,15 +19,15 @@ const ESTADOS_DE_FILTRO: Record<FiltroEstado, EstadoEnvio[] | null> = {
   porPagar: ['creada'],
   enCamino: ['procesando'],
   entregados: ['completada'],
-  cancelados: ['cancelada', 'fallida'],
+  cancelados: ['cancelada', 'fallida', 'devuelta'],
 };
 
 const TEXTO_VACIO: Record<FiltroEstado, string> = {
   todos: 'Todavía no enviaste dinero.',
-  porPagar: 'No tenés envíos por pagar.',
+  porPagar: 'No tenés envíos sin enviar.',
   enCamino: 'No hay envíos en camino ahora.',
   entregados: 'Todavía no hay envíos entregados.',
-  cancelados: 'No hay envíos cancelados ni fallidos.',
+  cancelados: 'No hay envíos cancelados, fallidos ni devueltos.',
 };
 
 const LARGO_BUSQUEDA = 60;

@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { TARIFAS, type Entrega, type Tarifa } from '@/lib/cotizacion';
+import { formatoMonto, TARIFAS, type Cotizacion, type Entrega, type Tarifa } from '@/lib/cotizacion';
 import {
   aUsdCentavos,
   enmascararContacto,
@@ -68,6 +68,14 @@ export type Envio = {
   facturaViva: boolean;
   /** When a payment arrived after the transfer was cancelled or failed: it must be returned. Null otherwise. */
   pagoTardioEn: string | null;
+  /** When the money went back to the sender, because nobody claimed it in time. Null otherwise. */
+  devueltaEn: string | null;
+  /** When the claim window of a paid Lightning transfer ends. Null for a transfer that is not paid. */
+  cobroVenceEn: string | null;
+  /** True once the claim window has closed: the recipient can no longer claim, the sender can take the money back. */
+  cobroVencido: boolean;
+  /** The sats the sender paid in Lightning: the amount a refund returns. Null when nothing was paid. */
+  satsPagados: number | null;
 };
 
 export type PasoHistorial = { estado: EstadoEnvio; detalle: string; cuando: string };
@@ -106,14 +114,26 @@ export type DatosNuevoEnvio = {
   nota: string;
   /** Made once per form, so a double tap creates one transfer. Up to 100 characters. */
   clave: string;
+  /** The amount the sender saw as received, in sats or cents. Checked against the quote made here. */
+  montoDestino: number;
+  /** The rate the sender saw. Checked against the quote made here. */
+  tasa: number;
 };
+
+/**
+ * A creation either makes the transfer or refuses it. A refused price change carries the new quote, so the
+ * form can show it again before the sender confirms.
+ */
+export type ResultadoCrearEnvio =
+  | { ok: true; dato: { id: string; codigo: string } }
+  | { ok: false; codigo: string; mensaje: string; cotizacion?: Cotizacion & { validaHasta: string } };
 
 /** The state a mutation leaves the transfer in. */
 export type CambioEnvio = { id: string; estado: EstadoEnvio };
 
 // The columns a list or a detail needs. The sender's first name comes from the usuarios table.
 export const COLUMNAS_ENVIO =
-  'id, codigo, remitente_id, destinatario_nombre, destinatario_contacto, destinatario_id, moneda_origen, monto_origen_centavos, comision_centavos, neto_centavos, tasa, tasa_fuente, moneda_destino, monto_destino, entrega, estado, nota, creada_en, procesando_en, completada_en, fallida_en, cancelada_en, motivo, pagada_en, factura_expira, pago_tardio_en, remitente:usuarios!pay_transferencias_remitente_id_fkey(nombre)';
+  'id, codigo, remitente_id, destinatario_nombre, destinatario_contacto, destinatario_id, moneda_origen, monto_origen_centavos, comision_centavos, neto_centavos, tasa, tasa_fuente, moneda_destino, monto_destino, entrega, estado, nota, creada_en, procesando_en, completada_en, fallida_en, cancelada_en, motivo, pagada_en, factura_expira, pago_tardio_en, devuelta_en, cobro_vence_en, factura_sats, remitente:usuarios!pay_transferencias_remitente_id_fkey(nombre)';
 
 // Only what the public view may show. Nothing else is selected, so nothing can leak by mistake.
 const COLUMNAS_RASTREO =
@@ -171,6 +191,9 @@ export type FilaEnvio = {
   pagada_en: string | null;
   factura_expira: string | null;
   pago_tardio_en: string | null;
+  devuelta_en: string | null;
+  cobro_vence_en: string | null;
+  factura_sats: number | null;
   remitente: { nombre: string } | null;
 };
 
@@ -217,6 +240,10 @@ export function aEnvio(fila: FilaEnvio, tarifasLeidas: Record<Entrega, Tarifa>):
     facturaExpira: fila.factura_expira,
     facturaViva: fila.factura_expira !== null && Date.parse(fila.factura_expira) > Date.now(),
     pagoTardioEn: fila.pago_tardio_en ?? null,
+    devueltaEn: fila.devuelta_en ?? null,
+    cobroVenceEn: fila.cobro_vence_en ?? null,
+    cobroVencido: fila.cobro_vence_en !== null && Date.now() >= Date.parse(fila.cobro_vence_en),
+    satsPagados: fila.factura_sats === null ? null : Number(fila.factura_sats),
   };
 }
 
@@ -391,6 +418,21 @@ export async function envioPara(
 }
 
 /**
+ * True when a transfer has this code. Only the existence is read: the proxy uses it to answer 404 for an
+ * unknown code before the page streams.
+ */
+export async function existeCodigo(codigo: string): Promise<boolean> {
+  if (!esCodigo(codigo)) return false;
+  const { data, error } = await clienteServicio()
+    .from('pay_transferencias')
+    .select('id')
+    .eq('codigo', normalizarCodigo(codigo))
+    .maybeSingle();
+  if (error) throw new Error(`No pudimos rastrear el envío: ${error.message}`);
+  return data !== null;
+}
+
+/**
  * The public tracking view. Anyone with the code gets the state, the timeline, what the recipient
  * receives and how. A malformed or unknown code gets null.
  */
@@ -435,14 +477,26 @@ function sesionDelEnvio(envioId: string): string {
   return `envio-${envioId}`;
 }
 
+// The transfer this form made before, found by its key. Null while the key is new.
+async function envioDeClave(usuarioId: string, clave: string): Promise<{ id: string; codigo: string } | null> {
+  const { data, error } = await clienteServicio()
+    .from('pay_transferencias')
+    .select('id, codigo')
+    .eq('remitente_id', usuarioId)
+    .eq('clave_idempotencia', clave)
+    .maybeSingle();
+  if (error) throw new Error(`No pudimos leer la transferencia: ${error.message}`);
+  return data ?? null;
+}
+
 /**
  * Creates a transfer. The amounts are quoted here, from the database rates, and the database checks
- * them again. A repeated clave returns the transfer it made the first time.
+ * them again. The amount and the rate the sender confirmed must match this quote exactly: no tolerance,
+ * because both sides compute the same whole numbers from the same price, and a Lightning price that moved
+ * is shown again rather than sent silently. A repeated clave returns the transfer it made the first time,
+ * even when the price has moved since.
  */
-export async function crearEnvio(
-  usuarioId: string,
-  datos: DatosNuevoEnvio,
-): Promise<Resultado<{ id: string; codigo: string }>> {
+export async function crearEnvio(usuarioId: string, datos: DatosNuevoEnvio): Promise<ResultadoCrearEnvio> {
   try {
     if (!esUuid(usuarioId)) return fallo('NO_ENCONTRADA', 'No encontramos tu cuenta.');
 
@@ -473,6 +527,17 @@ export async function crearEnvio(
     });
     if (!cotizado.ok) return cotizado;
     const c = cotizado.dato;
+
+    if (c.montoDestino !== datos.montoDestino || c.tasa !== datos.tasa) {
+      const previo = await envioDeClave(usuarioId, datos.clave);
+      if (previo) return exito(previo);
+      return {
+        ok: false,
+        codigo: 'PRECIO_CAMBIO',
+        mensaje: `El precio cambió: ahora recibe ${formatoMonto(c.montoDestino, c.monedaDestino)}. Confirmá de nuevo.`,
+        cotizacion: c,
+      };
+    }
 
     const { data, error } = await clienteServicio().rpc('pay_crear_transferencia', {
       p_remitente: usuarioId,

@@ -26,6 +26,7 @@ function cuandoLlego(envio: EnvioDetalle, estado: EstadoEnvio): string | null {
     completada: envio.completadaEn,
     fallida: envio.fallidaEn,
     cancelada: envio.canceladaEn,
+    devuelta: envio.devueltaEn,
   };
   return columna[estado];
 }
@@ -37,8 +38,15 @@ const VISUALES: Record<'creada' | 'procesando' | 'completada', Visual[]> = {
   completada: ['hecho', 'hecho', 'hecho'],
 };
 
+// The last step of a transfer that ended without arriving.
+const TITULO_FIN: Partial<Record<EstadoEnvio, string>> = {
+  fallida: 'No se pudo entregar',
+  cancelada: 'Cancelado',
+  devuelta: 'Devuelto a quien lo envió',
+};
+
 function pasosDelEnvio(envio: EnvioDetalle): Item[] {
-  if (envio.estado === 'fallida' || envio.estado === 'cancelada') {
+  if (envio.estado === 'fallida' || envio.estado === 'cancelada' || envio.estado === 'devuelta') {
     // The steps it reached, then the end, with the reason.
     const alcanzados: Item[] = PASOS.filter((p) => cuandoLlego(envio, p.estado) !== null).map((p) => ({
       titulo: p.titulo,
@@ -47,7 +55,7 @@ function pasosDelEnvio(envio: EnvioDetalle): Item[] {
       detalle: null,
     }));
     const fin: Item = {
-      titulo: envio.estado === 'fallida' ? 'No se pudo entregar' : 'Cancelado',
+      titulo: TITULO_FIN[envio.estado] ?? 'Final',
       visual: 'final',
       cuando: cuandoLlego(envio, envio.estado),
       detalle: envio.estado === 'fallida' && envio.motivo ? `Motivo: ${envio.motivo}` : null,

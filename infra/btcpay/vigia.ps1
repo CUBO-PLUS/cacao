@@ -7,7 +7,6 @@
 $ErrorActionPreference = 'Continue'
 $carpeta = $PSScriptRoot
 $raiz = Split-Path -Parent (Split-Path -Parent $carpeta)
-$compose = Join-Path $carpeta 'docker-compose.yml'
 $local = Join-Path $carpeta 'local'
 $registro = Join-Path $local 'vigia.log'
 $cas = Join-Path $local 'cas.pem'
@@ -94,8 +93,9 @@ try {
     throw $motivo
   }
 
-  # (b) The stack. Compose reads infra/btcpay/.env by itself; up -d changes nothing when it is already running.
-  cmd /c "docker compose -f `"$compose`" up -d >nul 2>&1"
+  # (b) The stack, from its own folder: COMPOSE_FILE in infra/btcpay/.env is relative to it, and -f would skip it,
+  # recreating BTCPay without local/avast.yml. up -d changes nothing when it is already running.
+  cmd /c "cd /d `"$carpeta`" && docker compose up -d >nul 2>&1"
   $stackOk = ($LASTEXITCODE -eq 0)
   if (-not $stackOk) {
     $motivo = 'docker compose up fallo'

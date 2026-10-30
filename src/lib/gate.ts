@@ -49,7 +49,9 @@ export function tokenDe(slug: string, ahora: number = Date.now()): string | null
 export function aceptarPase(slug: string, token: string): boolean {
   try {
     const datos = token.split('.')[0].replace(/-/g, '+').replace(/_/g, '/');
-    const pase = JSON.parse(decodeURIComponent(escape(atob(datos)))) as { slugs?: string[]; exp?: number };
+    const bytes = Uint8Array.from(atob(datos), (c) => c.charCodeAt(0));
+    // fatal: bytes that are not valid UTF-8 throw, and the pass is refused.
+    const pase = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)) as { slugs?: string[]; exp?: number };
     if (!pase.slugs?.includes(slug) || typeof pase.exp !== 'number') return false;
     guardar(slug, { token, expira: pase.exp });
     return true;

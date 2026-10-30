@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { expect, test, type APIRequestContext, type Browser, type Page } from '@playwright/test';
+import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
 
 // Cacao Media with real Lightning invoices from BTCPay Server (regtest). Run with the local stack:
 //   - Supabase running, and the dev server on 4321 started with PUBLIC_DEMO=0 (demo buttons off).
@@ -261,7 +261,7 @@ test.describe('admin panel', () => {
     expect((await page.goto('/admin/transacciones/'))?.status()).toBe(404);
   });
 
-  test('an admin sees the panel, and the transactions list includes the paid invoice', async ({ page, browser, request }) => {
+  test('an admin sees the panel, and the transactions list includes the paid invoice', async ({ page, browser }) => {
     // A paid invoice for the list, made by a reader in her own browser.
     const lectora = await browser.newContext({ baseURL: 'http://localhost:4321' });
     try {

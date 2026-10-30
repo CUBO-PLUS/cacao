@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { coincideBusqueda, patronAmplio } from '@/lib/buscar';
 import { cotizacionUsdBtc } from '@/lib/precio/fuente';
 
 import { clienteSesion } from './supabase';
@@ -23,6 +24,9 @@ export type ProductoCatalogo = {
   negocioId: string;
   negocioNombre: string;
   abierto: boolean;
+  /** The shop's average rating, null when the shop has no reviews. */
+  negocioPromedio: number | null;
+  negocioResenas: number;
 };
 
 export type ProductoDetalle = ProductoCatalogo & { descripcion: string };
@@ -61,6 +65,9 @@ type FilaProducto = {
   negocios: { id: string; nombre: string; abierto: boolean } | null;
 };
 
+type Cliente = Awaited<ReturnType<typeof clienteSesion>>;
+type Reputacion = { promedio: number | null; cantidad: number };
+
 function aProducto(fila: FilaProducto): ProductoCatalogo | null {
   if (!fila.negocios) return null;
   return {
@@ -75,12 +82,33 @@ function aProducto(fila: FilaProducto): ProductoCatalogo | null {
     negocioId: fila.negocios.id,
     negocioNombre: fila.negocios.nombre,
     abierto: fila.negocios.abierto,
+    negocioPromedio: null,
+    negocioResenas: 0,
   };
 }
 
 // Characters that have a meaning in PostgREST filters or in LIKE patterns are dropped.
 function textoBuscado(texto: string | undefined): string {
   return (texto ?? '').replace(/[%_*,()\\]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
+}
+
+// One query for every shop in the list, never one per card. Reviews are averaged here.
+async function reputacionDeNegocios(db: Cliente, ids: string[]): Promise<Map<string, Reputacion>> {
+  const mapa = new Map<string, Reputacion>();
+  if (ids.length === 0) return mapa;
+
+  const { data, error } = await db.from('resenas').select('negocio_id, puntuacion').in('negocio_id', ids);
+  if (error) throw new Error(`No pudimos leer las reseñas: ${error.message}`);
+
+  const sumas = new Map<string, { suma: number; cantidad: number }>();
+  for (const r of data ?? []) {
+    const previo = sumas.get(r.negocio_id) ?? { suma: 0, cantidad: 0 };
+    sumas.set(r.negocio_id, { suma: previo.suma + r.puntuacion, cantidad: previo.cantidad + 1 });
+  }
+  for (const [id, { suma, cantidad }] of sumas) {
+    mapa.set(id, { promedio: Math.round((suma / cantidad) * 10) / 10, cantidad });
+  }
+  return mapa;
 }
 
 export async function categorias(): Promise<Categoria[]> {
@@ -101,22 +129,50 @@ export async function productosDelCatalogo(
   if (filtro.negocioId !== undefined && !esUuid(filtro.negocioId)) return [];
 
   const db = await clienteSesion();
+  const texto = textoBuscado(filtro.texto);
+
+  // A search also reads the description, so the text can be checked in code (accents do not count).
   let consulta = db
     .from('productos')
-    .select(COLUMNAS_PRODUCTO)
+    .select(texto ? `${COLUMNAS_PRODUCTO}, descripcion` : COLUMNAS_PRODUCTO)
     .eq('activo', true)
     .eq('negocios.estado', 'aprobado');
 
-  const texto = textoBuscado(filtro.texto);
-  if (texto) consulta = consulta.ilike('nombre', `%${texto}%`);
+  if (texto) {
+    // The database cannot ignore accents, so it gets a looser pattern and the exact check runs below.
+    // Products of a shop whose name matches are included too.
+    const patron = patronAmplio(texto);
+    const { data: tiendas, error: errorTiendas } = await db
+      .from('negocios')
+      .select('id')
+      .eq('estado', 'aprobado')
+      .ilike('nombre', patron);
+    if (errorTiendas) throw new Error(`No pudimos leer el catálogo: ${errorTiendas.message}`);
+
+    const idsTiendas = (tiendas ?? []).map((t) => t.id);
+    const condiciones = [`nombre.ilike.${patron}`, `descripcion.ilike.${patron}`];
+    if (idsTiendas.length > 0) condiciones.push(`negocio_id.in.(${idsTiendas.join(',')})`);
+    consulta = consulta.or(condiciones.join(','));
+  }
   if (filtro.categoriaId !== undefined) consulta = consulta.eq('categoria_id', filtro.categoriaId);
   if (filtro.negocioId) consulta = consulta.eq('negocio_id', filtro.negocioId);
 
   const { data, error } = await consulta.order('creado_en', { ascending: false }).limit(120);
   if (error) throw new Error(`No pudimos leer el catálogo: ${error.message}`);
 
-  const filas = (data ?? []) as unknown as FilaProducto[];
-  return filas.map(aProducto).filter((p): p is ProductoCatalogo => p !== null);
+  const filas = (data ?? []) as unknown as (FilaProducto & { descripcion?: string })[];
+  const exactas = texto
+    ? filas.filter((f) =>
+        coincideBusqueda(texto, [f.nombre, f.descripcion ?? '', f.negocios?.nombre ?? '']),
+      )
+    : filas;
+
+  const productos = exactas.map(aProducto).filter((p): p is ProductoCatalogo => p !== null);
+  const reputaciones = await reputacionDeNegocios(db, [...new Set(productos.map((p) => p.negocioId))]);
+  return productos.map((p) => {
+    const rep = reputaciones.get(p.negocioId);
+    return { ...p, negocioPromedio: rep?.promedio ?? null, negocioResenas: rep?.cantidad ?? 0 };
+  });
 }
 
 export async function productoPorId(id: string): Promise<ProductoDetalle | null> {
@@ -135,7 +191,14 @@ export async function productoPorId(id: string): Promise<ProductoDetalle | null>
 
   const fila = data as unknown as FilaProducto & { descripcion: string };
   const base = aProducto(fila);
-  return base ? { ...base, descripcion: fila.descripcion } : null;
+  if (!base) return null;
+  const rep = (await reputacionDeNegocios(db, [base.negocioId])).get(base.negocioId);
+  return {
+    ...base,
+    descripcion: fila.descripcion,
+    negocioPromedio: rep?.promedio ?? null,
+    negocioResenas: rep?.cantidad ?? 0,
+  };
 }
 
 export async function negocioPorId(id: string): Promise<NegocioDetalle | null> {

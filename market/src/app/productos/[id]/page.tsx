@@ -5,6 +5,7 @@ import { Suspense } from 'react';
 
 import { AgregarAlCarrito } from '@/componentes/AgregarAlCarrito';
 import { EtiquetaPrecio } from '@/componentes/EtiquetaPrecio';
+import { Estrellas } from '@/componentes/Estrellas';
 import { FotoProducto } from '@/componentes/FotoProducto';
 import { RegistrarEvento } from '@/componentes/RegistrarEvento';
 import { usdCentavosASats } from '@/lib/dinero';
@@ -73,6 +74,9 @@ async function DetalleProducto({ producto }: { producto: ProductoDetalle }) {
             </>
           )}
         </p>
+        {producto.negocioPromedio !== null && producto.negocioResenas > 0 && (
+          <Estrellas valor={producto.negocioPromedio} cantidad={producto.negocioResenas} />
+        )}
 
         <EtiquetaPrecio usdCentavos={producto.precioUsdCentavos} sats={sats} tamano="grande" />
 

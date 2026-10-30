@@ -104,6 +104,11 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
             <main id="contenido" tabIndex={-1} className="principal">
               <div className="contenedor">{children}</div>
             </main>
+            <footer className="pie">
+              <div className="contenedor">
+                <a href="https://cacao-grupo.vercel.app/legal.html">Términos y privacidad</a>
+              </div>
+            </footer>
           </div>
           <p className="marca-gigante" aria-hidden="true">
             <b>cacao</b>market

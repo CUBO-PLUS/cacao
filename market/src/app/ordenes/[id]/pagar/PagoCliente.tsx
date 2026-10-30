@@ -231,6 +231,17 @@ export function PagoCliente({
     return () => clearTimeout(id);
   }, [pagado, ordenId, router]);
 
+  // What the buyer can still do when the server cannot be reached, from what this screen already shows.
+  function textoSinConexion(): string {
+    if (vencida) {
+      return 'No pudimos conectar. El tiempo para pagar ya se acabó: no pagués esta factura. Usá los botones de abajo.';
+    }
+    if (cobroVigente) {
+      return 'No pudimos conectar, pero la factura todavía sirve mientras la cuenta no llegue a cero. Podés pagarla ahora o probá de nuevo.';
+    }
+    return 'No pudimos conectar. Todavía no hay una factura que pagar. Probá de nuevo.';
+  }
+
   async function copiar(valor: string, campo: HTMLInputElement | HTMLTextAreaElement | null) {
     try {
       await navigator.clipboard.writeText(valor);
@@ -257,7 +268,7 @@ export function PagoCliente({
       if (r.ok) aplicar(r.dato);
       else setProblema(r.mensaje);
     } catch {
-      setProblema('No pudimos conectar. Probá de nuevo.');
+      setProblema(textoSinConexion());
     } finally {
       setOcupado(false);
     }
@@ -270,7 +281,7 @@ export function PagoCliente({
       if (r.ok) await refrescar();
       else setProblema(r.mensaje);
     } catch {
-      setProblema('No pudimos conectar. Probá de nuevo.');
+      setProblema(textoSinConexion());
     } finally {
       setOcupado(false);
     }
@@ -334,6 +345,15 @@ export function PagoCliente({
         <div className={styles.acciones}>
           <Boton onClick={() => void reintentar()} disabled={ocupado}>
             Intentar de nuevo
+          </Boton>
+        </div>
+      )}
+
+      {/* The invoice still works: a failed check can be repeated without asking for a new one. */}
+      {problema && cobroVigente && (
+        <div className={styles.acciones}>
+          <Boton onClick={() => void refrescar()} disabled={ocupado}>
+            Revisar de nuevo
           </Boton>
         </div>
       )}

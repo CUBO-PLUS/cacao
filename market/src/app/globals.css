@@ -354,6 +354,13 @@ main:focus {
   padding-block: 24px calc(var(--barra-alto) + 40px + env(safe-area-inset-bottom));
 }
 
+/* Footer inside the sheet: the legal link, small and centred. */
+.pie {
+  padding-block: 0 20px;
+  font-size: 0.875rem;
+  text-align: center;
+}
+
 /* Buttons and chips */
 .boton {
   display: inline-flex;

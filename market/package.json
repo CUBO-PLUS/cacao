@@ -9,7 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "e2e": "playwright test",
-    "check": "tsc --noEmit"
+    "check": "next typegen && tsc --noEmit"
   },
   "dependencies": {
     "@clerk/localizations": "^4.23.0",

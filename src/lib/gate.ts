@@ -49,7 +49,10 @@ export function tokenDe(slug: string, ahora: number = Date.now()): string | null
 export function aceptarPase(slug: string, token: string): boolean {
   try {
     const datos = token.split('.')[0].replace(/-/g, '+').replace(/_/g, '/');
-    const pase = JSON.parse(decodeURIComponent(escape(atob(datos)))) as { slugs?: string[]; exp?: number };
+    const binario = atob(datos);
+    const bytes = Uint8Array.from(binario, (c) => c.charCodeAt(0));
+    const jsonStr = new TextDecoder().decode(bytes);
+    const pase = JSON.parse(jsonStr) as { slugs?: string[]; exp?: number };
     if (!pase.slugs?.includes(slug) || typeof pase.exp !== 'number') return false;
     guardar(slug, { token, expira: pase.exp });
     return true;

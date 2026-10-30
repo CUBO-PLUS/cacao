@@ -1,0 +1,4 @@
+// The addresses of the Cacao group that the footer links to. The other products keep the same constants in their own
+// src/lib/grupo.ts.
+export const URL_GRUPO = "https://cacao-grupo.vercel.app";
+export const URL_TERMINOS = "https://cacao-grupo.vercel.app/legal.html";

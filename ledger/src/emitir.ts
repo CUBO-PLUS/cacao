@@ -170,6 +170,25 @@ export async function emitirTicket(
   return { ticket: ticket.id, estado, reparado: false };
 }
 
+// The owner's "Reintentar emisión" on a refused ticket. The refused row goes back to reservado with the number it
+// holds, so nothing is numbered again; the ticket then goes through emitirTicket as a paid one. A second press, or a
+// press while another one runs, finds the row already reopened and changes nothing.
+export async function reintentarEmision(
+  almacen: AlmacenTickets,
+  dtes: AlmacenDtes,
+  ticket: Ticket,
+  opciones: OpcionesEmision,
+): Promise<ResultadoEmision> {
+  const sinCambios: ResultadoEmision = { ticket: ticket.id, estado: null, reparado: false };
+  if (ticket.estado !== "rechazado" || ticket.pago === null) return sinCambios;
+  const previo = await dtes.porTicket(ticket.id);
+  if (previo === null) return sinCambios;
+  if (previo.estado === "rechazado") {
+    if (!(await dtes.reabrir(ticket.id, previo.codigoGeneracion))) return sinCambios;
+  }
+  return emitirTicket(almacen, dtes, { ...ticket, estado: "pagado", dte: null, rechazo: null }, opciones);
+}
+
 export const LIMITE_EMISION_POR_SYNC = 50;
 
 export type ResumenEmision = { emitidos: number; rechazados: number; fallidos: number };

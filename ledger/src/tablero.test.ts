@@ -56,6 +56,19 @@ test("the day, week and month figures count paid sales in El Salvador days only"
   );
 });
 
+test("the month splits into the sales with an accepted document and the pending ones, and the two add up to the month", () => {
+  const total = totalDeTicket(crearTicket(entradaConsumidor(), AHORA, "TK-20261015-0000")).totalCentavos;
+  const emitido: Ticket = { ...pagado("TK-20261015-0001", "2026-10-15T15:00:00.000Z", "efectivo"), estado: "emitido" };
+  const pendiente = pagado("TK-20261010-0002", "2026-10-10T15:00:00.000Z", "lightning");
+  const rechazado: Ticket = { ...pagado("TK-20261003-0003", "2026-10-03T15:00:00.000Z", "efectivo"), estado: "rechazado" };
+  const otroMes = pagado("TK-20260930-0004", "2026-09-30T23:30:00.000Z", "efectivo");
+  const r = resumen([emitido, pendiente, rechazado, otroMes], AHORA);
+
+  assert.deepEqual(r.documentos.conDocumento, { tickets: 1, centavos: total, sats: 0 });
+  assert.deepEqual(r.documentos.pendientes, { tickets: 2, centavos: total * 2, sats: 1000 });
+  assert.equal(r.documentos.conDocumento.centavos + r.documentos.pendientes.centavos, r.mes.centavos);
+});
+
 test("porDia lists thirty El Salvador days ending today, oldest first, with zeros for quiet days", () => {
   const r = resumen([pagado("TK-20260916-0006", "2026-09-16T12:00:00.000Z", "efectivo"), pagado("TK-20261015-0001", "2026-10-15T15:00:00.000Z", "efectivo")], AHORA);
   assert.equal(r.porDia.length, 30);

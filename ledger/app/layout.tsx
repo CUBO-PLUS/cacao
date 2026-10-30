@@ -5,6 +5,7 @@ import { Bricolage_Grotesque, JetBrains_Mono } from "next/font/google";
 import Link from "next/link";
 import { Suspense } from "react";
 
+import { URL_GRUPO, URL_TERMINOS } from "../src/grupo.ts";
 import { sesionActual } from "../src/servidor/sesion.ts";
 
 import "./globals.css";
@@ -135,6 +136,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             </main>
             <footer className="pie">
               <p>Demo de Grupo Cacao. Sellos de Hacienda simulados; pagos en bitcoin de prueba.</p>
+              <p>
+                <a href={URL_GRUPO}>Grupo Cacao</a> · <a href={URL_TERMINOS}>Términos y privacidad</a>
+              </p>
             </footer>
           </div>
         </ClerkProvider>

@@ -490,7 +490,7 @@ ${dl([
     ["Reforma de la Ley Bitcoin (D.L. 199, enero 2025)", t("Decreto Legislativo 199 del 29 de enero de 2025, publicado el 30 de enero de 2025 y vigente desde el 30 de abril de 2025. Derogó los artículos 4, 8 y 9 de la Ley Bitcoin y reformó el artículo 7, que dejó de obligar a aceptar bitcoin.")],
     ["Registros en dólares", t("Los asientos se llevan en moneda de curso legal (Art. 139 CT). El dólar sigue como moneda de referencia (Art. 6 de la Ley Bitcoin, no reformado por el D.L. 199). Los DTE se emiten con identificación tipoMoneda = USD.")],
     ["Resolución 1003 del CVPCPA", t("Vigente desde el 7 de septiembre de 2021. Medir el bitcoin a costo de adquisición, con el tipo de cambio con referencia al dólar establecido por los mercados internacionales, indicado en la billetera que se utilice.")],
-    ["Cadena de atestación de CacaoLedger", t("Cada cobro Lightning validado por Blink genera un registro en atestaciones.jsonl con sats, usdCentavos, tasaUsdPorBtc, tasaFuente, paymentHash y el hash SHA-256 del registro anterior, además de estampar BTC-LN|<sats>sat|<tasa>|<hash12> en resumen.pagos[0].referencia del DTE.")],
+    ["Cadena de atestación de CacaoLedger", t("Cada cobro Lightning confirmado por BTCPay genera un registro en atestaciones.jsonl con sats, usdCentavos, tasaUsdPorBtc, tasaFuente, paymentHash y el hash SHA-256 del registro anterior, además de estampar BTC-LN|<sats>sat|<tasa>|<hash12> en resumen.pagos[0].referencia del DTE.")],
   ])}
 </section>
 
@@ -499,7 +499,7 @@ ${dl([
 ${dl([
     ["Reestructuración municipal (D.L. 762, mayo 2024; no verificado en esta revisión)", t("Redujo los 262 municipios a 44 municipios (agrupados como Norte, Centro, Sur, Este u Oeste de cada departamento) y convirtió los antiguos municipios en distritos. En los esquemas de la generación caso se exige la lista histórica de CAT-013 (por ejemplo 14 en San Salvador), mientras que el catálogo actualizado incorpora los nuevos códigos de municipio.")],
     ["Custodia de llaves (MTIST 2.0 §6.4)", t("La Normativa de Cumplimiento de los Documentos Tributarios Electrónicos y el Manual Técnico de Integración (MTIST 2.0) prohíben compartir certificados de firma con terceros no autorizados. En CacaoLedger la llave privada RSA-4096 permanece en el servidor del propio comercio.")],
-    ["Límite ante la CNAD (Ley de Emisión de Activos Digitales)", t("CacaoLedger es software contable y de facturación: no recibe, custodia ni transfiere satoshis ni dólares de terceros. El comercio conecta su propia cuenta de Blink con permiso de solo lectura y cobro (READ + RECEIVE, nunca WRITE), por lo que CacaoLedger no requiere registro como Proveedor de Servicios de Activos Digitales (PSAD) ante la CNAD.")],
+    ["Límite ante la CNAD (Ley de Emisión de Activos Digitales)", t("CacaoLedger es software contable y de facturación: no recibe, custodia ni transfiere satoshis ni dólares de terceros. El comercio conecta su propio servidor BTCPay con una llave de solo lectura de facturas, nunca de pagos, por lo que CacaoLedger no requiere registro como Proveedor de Servicios de Activos Digitales (PSAD) ante la CNAD.")],
   ])}
 </section>
 

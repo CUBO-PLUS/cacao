@@ -20,6 +20,8 @@ const NOMBRE_CANDADO = "sincronizar";
 
 // What every visitor reads when a run fails. The cause goes to the server log, and to the owner's tablero.
 export const MENSAJE_PUBLICO_ERROR = "No se pudo sincronizar con BTCPay. Probá más tarde.";
+// Written in the log row of a run that the serverless time limit stopped before it could complete the row.
+export const MENSAJE_INTERRUMPIDA = "Interrumpida por el límite de tiempo";
 
 export type EstadoSincronizacion = {
   // When the last successful run finished, or null when there is none.
@@ -111,6 +113,27 @@ async function cerrarRegistro(sb: ConfigSupabaseWeb, f: typeof fetch, id: number
   if (!r.ok) throw new ErrorLedger(`No se pudo cerrar el registro de sincronización (HTTP ${r.status}).`);
 }
 
+// Closes the rows of runs that stopped without finishing and started before the lease ran out. Only the holder of
+// the lease calls it, so the row of a run still going is never closed here. A failure is logged; the run goes on.
+export async function cerrarInterrumpidas(sb: ConfigSupabaseWeb, f: typeof fetch, ahora: Date): Promise<number> {
+  const corte = new Date(ahora.getTime() - SEGUNDOS_CANDADO * 1000).toISOString();
+  const q = new URLSearchParams({ termino: "is.null", empezo: `lt.${corte}` });
+  try {
+    const r = await f(`${sb.url}/rest/v1/ledger_sincronizaciones?${q}`, {
+      method: "PATCH",
+      headers: { ...cabeceras(sb), "content-type": "application/json", prefer: "return=representation" },
+      body: JSON.stringify({ termino: ahora.toISOString(), error: MENSAJE_INTERRUMPIDA }),
+      cache: "no-store",
+    });
+    if (!r.ok) throw new ErrorLedger(`No se pudo cerrar los registros interrumpidos (HTTP ${r.status}).`);
+    const cerrados = (await r.json()) as unknown[];
+    return cerrados.length;
+  } catch (e) {
+    console.error("Sincronización con BTCPay:", detalleDeError(e));
+    return 0;
+  }
+}
+
 // The finish time of the last successful run, or null.
 async function ultimaOk(sb: ConfigSupabaseWeb, f: typeof fetch): Promise<Date | null> {
   const fila = await filaDeRegistro(sb, f, true);
@@ -197,6 +220,8 @@ export async function sincronizarSiHaceFalta(opciones: OpcionesSincronizacion = 
     const dueno = randomUUID();
     const tomado = await tomarCandado({ url: sb.url, clave: sb.clave, fetch: f }, NOMBRE_CANDADO, dueno, SEGUNDOS_CANDADO);
     if (!tomado) return sinCorrer(anterior, null, null, true);
+
+    await cerrarInterrumpidas(sb, f, ahora);
 
     const soltar = () =>
       soltarCandado({ url: sb.url, clave: sb.clave, fetch: f }, NOMBRE_CANDADO, dueno).catch((e: unknown) => {

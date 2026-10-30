@@ -44,6 +44,8 @@ export type AlmacenDtes = {
   reservar(reserva: ReservaDte): Promise<number | null>;
   // Writes the document into the reserved row (matched by codigoGeneracion). False when the row is not reserved any more.
   completar(registro: RegistroDte): Promise<boolean>;
+  // Puts a refused row back to reservado, with the number it already holds. False when the row is not refused any more.
+  reabrir(ticketId: string, codigoGeneracion: string): Promise<boolean>;
 };
 
 export type ConfigDtesSupabase = { url: string; clave: string; fetch?: typeof fetch };
@@ -153,6 +155,26 @@ export function createAlmacenDtesSupabase(config: ConfigDtesSupabase): AlmacenDt
       // 409 is the unique index on numero_control: another row already holds that number.
       if (r.status === 409) throw new ErrorLedger(`El número de control ${registro.numeroControl} ya está en otro documento.`);
       if (!r.ok) throw new ErrorLedger(`No se pudo guardar el documento del ticket ${registro.ticketId} (HTTP ${r.status}).`);
+      const filas = (await r.json()) as unknown[];
+      return filas.length > 0;
+    },
+
+    async reabrir(ticketId: string, codigoGeneracion: string): Promise<boolean> {
+      if (!ID_TICKET.test(ticketId) || !CODIGO.test(codigoGeneracion)) {
+        throw new ErrorLedger("La reapertura del documento no tiene un ticket o un código válidos.");
+      }
+      // Only a refused row is changed: a second call, or a row another run already reopened, matches nothing.
+      const q = new URLSearchParams({ ticket_id: `eq.${ticketId}`, codigo_generacion: `eq.${codigoGeneracion}`, estado: "eq.rechazado" });
+      const r = await pedir(
+        `/ledger_dtes?${q}`,
+        {
+          method: "PATCH",
+          headers: { "content-type": "application/json", prefer: "return=representation" },
+          body: JSON.stringify({ estado: "reservado", sello: null, motivo: null, documento: {} }),
+        },
+        "reapertura",
+      );
+      if (!r.ok) throw new ErrorLedger(`No se pudo reabrir el documento del ticket ${ticketId} (HTTP ${r.status}).`);
       const filas = (await r.json()) as unknown[];
       return filas.length > 0;
     },

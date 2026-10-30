@@ -14,6 +14,7 @@ import { SinAcceso } from "../../_componentes/SinAcceso.tsx";
 import { SinDatos } from "../../_componentes/SinDatos.tsx";
 import { etiquetaProducto, fechaHoraSv, acortar } from "../../_componentes/formato.ts";
 import { ImprimirBoton } from "./ImprimirBoton.tsx";
+import { ReintentarEmision } from "./ReintentarEmision.tsx";
 import { URL_CONSULTA, VersionLegible } from "./VersionLegible.tsx";
 
 const FORMATO_ID = /^TK-\d{8}-[0-9A-F]{4}$/;
@@ -312,6 +313,7 @@ export default async function PaginaTicket({ params }: PageProps<"/tickets/[id]"
             </ul>
           </div>
         ) : null}
+        {ticket.estado === "rechazado" ? <ReintentarEmision ticketId={ticket.id} /> : null}
       </section>
     </>
   );

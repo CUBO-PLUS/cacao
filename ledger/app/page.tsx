@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { connection } from "next/server";
 
 import { formatoSats, formatoUsd } from "../src/dinero.ts";
@@ -5,6 +6,7 @@ import { almacenDeEntorno } from "../src/servidor/configuracion.ts";
 import { sesionActual } from "../src/servidor/sesion.ts";
 import { sincronizarSiHaceFalta } from "../src/servidor/sincronizacion.ts";
 import { todosEntre } from "../src/servidor/tiempo-sv.ts";
+import { fechaHoraSalvador } from "../src/tiempo.ts";
 import { resumen, type Cifras } from "../src/tablero.ts";
 import type { Ticket } from "../src/ticket.ts";
 import { SinDatos } from "./_componentes/SinDatos.tsx";
@@ -167,6 +169,12 @@ export default async function PaginaTablero() {
             <Cifra titulo="Esta semana" cifras={r.semana} />
             <Cifra titulo="Este mes" cifras={r.mes} />
           </div>
+          {dueno ? (
+            <p className="nota" style={{ marginTop: "0.5rem" }}>
+              De esto, {formatoUsd(r.documentos.conDocumento.centavos)} ya tienen documento; {formatoUsd(r.documentos.pendientes.centavos)}{" "}
+              están pendientes. <Link href={`/mes/${fechaHoraSalvador(ahora).fecEmi.slice(0, 7)}#titulo-no-incluidos`}>Ver cuáles</Link>
+            </p>
+          ) : null}
 
           <div className="cifras" style={{ marginTop: "1rem" }}>
             <section className="bloque" aria-labelledby="titulo-productos" style={{ margin: 0, gridColumn: "span 1" }}>

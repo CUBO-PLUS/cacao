@@ -19,6 +19,9 @@ export type Resumen = {
   porProducto: FilaProducto[];
   // The current month, by rail.
   porRiel: { lightning: Cifras; efectivo: Cifras };
+  // The current month, split like the books: the sales with an accepted document (emitido) and the rest (pagado or
+  // rechazado). The two add up to mes. Only the owner's tablero shows it.
+  documentos: { conDocumento: Cifras; pendientes: Cifras };
   // Thirty El Salvador days ending today, oldest first, with days without sales at 0.
   porDia: { dia: string; centavos: number }[];
 };
@@ -56,6 +59,7 @@ export function resumen(tickets: Ticket[], ahora: Date): Resumen {
     mes: vacio(),
     porProducto: [],
     porRiel: { lightning: vacio(), efectivo: vacio() },
+    documentos: { conDocumento: vacio(), pendientes: vacio() },
     porDia: [],
   };
   const porDia = new Map<string, number>();
@@ -73,6 +77,7 @@ export function resumen(tickets: Ticket[], ahora: Date): Resumen {
       sumar(acumulado, t);
       porProducto.set(clave, acumulado);
       sumar(t.pago.rail === "lightning" ? r.porRiel.lightning : r.porRiel.efectivo, t);
+      sumar(t.estado === "emitido" ? r.documentos.conDocumento : r.documentos.pendientes, t);
     }
     if (dia >= inicioDias && dia <= hoy) porDia.set(dia, (porDia.get(dia) ?? 0) + t.pago.montoCentavos);
   }

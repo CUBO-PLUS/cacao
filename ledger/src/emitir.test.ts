@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import type { AlmacenTickets, FiltrosTickets } from "./almacen/tipos.ts";
 import type { AlmacenDtes, RegistroDte, ReservaDte } from "./almacen/dtes.ts";
 import { AHORA, entradaConsumidor, entradaContribuyente, ticketPagadoEfectivo, ticketPagadoLightning } from "./ayudas-prueba.ts";
-import { emitirPagados, emitirTicket, generacionParaTicket } from "./emitir.ts";
+import { emitirPagados, emitirTicket, generacionParaTicket, reintentarEmision } from "./emitir.ts";
 import { ErrorLedger } from "./errores.ts";
 import { sincronizarBtcpay } from "./sincronizar.ts";
 import type { Ticket } from "./ticket.ts";
@@ -82,6 +82,12 @@ function dtesMemoria(): DtesMemoria {
       const previa = [...filas.values()].find((f) => f.codigoGeneracion === registro.codigoGeneracion);
       if (!previa || previa.estado !== "reservado") return false;
       filas.set(previa.ticketId, { ...registro, correlativo: previa.correlativo });
+      return true;
+    },
+    async reabrir(ticketId: string, codigo: string): Promise<boolean> {
+      const fila = filas.get(ticketId);
+      if (!fila || fila.estado !== "rechazado" || fila.codigoGeneracion !== codigo) return false;
+      filas.set(ticketId, { ...fila, estado: "reservado", sello: null, motivo: null, documento: {} });
       return true;
     },
   };
@@ -231,6 +237,65 @@ test("a reserved row left by a run that stopped is completed by the next run, wi
   assert.equal(dtes.reservas.length, 1, "the number was reserved once");
   assert.ok(dtes.filas.get(ticket.id)?.numeroControl.endsWith("-000000000000001"));
   assert.equal(dtes.filas.get(ticket.id)?.estado, "aceptado");
+});
+
+test("a refused ticket retried while still invalid keeps its number; once corrected, the retry is accepted on that same number", async () => {
+  const almacen = almacenMemoria();
+  const dtes = dtesMemoria();
+  const { ticket } = ticketPagadoEfectivo(entradaContribuyente());
+  await almacen.guardar({ ...ticket, receptor: null });
+  await emitirTicket(almacen, dtes, { ...ticket, receptor: null }, { ahora: AHORA });
+  const numero = dtes.filas.get(ticket.id)?.numeroControl;
+  const rechazado = (await almacen.porId(ticket.id)) as Ticket;
+  assert.equal(rechazado.estado, "rechazado");
+
+  const otra = await reintentarEmision(almacen, dtes, rechazado, { ahora: AHORA });
+  assert.equal(otra.estado, "rechazado");
+  assert.equal(dtes.filas.get(ticket.id)?.numeroControl, numero);
+  assert.equal(dtes.reservas.length, 1, "no second number was taken");
+
+  await almacen.guardar({ ...rechazado, receptor: ticket.receptor });
+  const corregido = (await almacen.porId(ticket.id)) as Ticket;
+  const r = await reintentarEmision(almacen, dtes, corregido, { ahora: AHORA });
+  assert.equal(r.estado, "aceptado");
+  assert.equal(dtes.filas.get(ticket.id)?.estado, "aceptado");
+  assert.equal(dtes.filas.get(ticket.id)?.numeroControl, numero);
+  assert.equal(dtes.reservas.length, 1, "still one number");
+  const emitido = await almacen.porId(ticket.id);
+  assert.equal(emitido?.estado, "emitido");
+  assert.equal(emitido?.dte?.numeroControl, numero);
+  assert.equal(emitido?.rechazo, null);
+});
+
+test("two presses of the retry at once reopen the refused row once: one document and one number", async () => {
+  const almacen = almacenMemoria();
+  const dtes = dtesMemoria();
+  const { ticket } = ticketPagadoEfectivo(entradaContribuyente());
+  await almacen.guardar({ ...ticket, receptor: null });
+  await emitirTicket(almacen, dtes, { ...ticket, receptor: null }, { ahora: AHORA });
+  await almacen.guardar({ ...((await almacen.porId(ticket.id)) as Ticket), receptor: ticket.receptor });
+  const corregido = (await almacen.porId(ticket.id)) as Ticket;
+
+  const [a, b] = await Promise.all([
+    reintentarEmision(almacen, dtes, corregido, { ahora: AHORA }),
+    reintentarEmision(almacen, dtes, corregido, { ahora: AHORA }),
+  ]);
+  assert.deepEqual([a.estado, b.estado].filter((e) => e !== null), ["aceptado"]);
+  assert.equal(dtes.reservas.length, 1, "one number was reserved");
+  assert.equal(Object.values(dtes.tomados).reduce((x, y) => x + y, 0), 1, "no number taken twice");
+  assert.equal(dtes.filas.get(ticket.id)?.estado, "aceptado");
+});
+
+test("the retry leaves alone a ticket that is not refused", async () => {
+  const almacen = almacenMemoria();
+  const dtes = dtesMemoria();
+  const { ticket } = ticketPagadoEfectivo(entradaConsumidor());
+  await almacen.guardar(ticket);
+
+  const r = await reintentarEmision(almacen, dtes, ticket, { ahora: AHORA });
+  assert.equal(r.estado, null);
+  assert.equal(dtes.reservas.length, 0);
+  assert.equal(dtes.filas.size, 0);
 });
 
 test("every web ticket goes on the 2026 schemas, also when LEDGER_ESQUEMAS asks for caso", async () => {

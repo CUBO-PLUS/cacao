@@ -360,6 +360,56 @@ test('a valid booking shows a code, is saved in this browser, appears on /reserv
   await expect(tickets).toHaveCount(0);
 });
 
+test('Cambiar fecha o personas stops the polling, and an invoice paid after leaving is saved once', async ({ page, request }) => {
+  const { tours } = await catalogo(request);
+  const t = tours[0];
+  const fecha = proximaFecha(t.salidas[0]);
+  const personas = Math.min(t.grupo.max, Math.max(t.grupo.min, 2));
+  const enlace = `/experiencias/${t.id}/?fecha=${fecha}&personas=${personas}`;
+  let sondeos = 0;
+  page.on('request', (r) => {
+    if (r.url().includes('/api/reservar/estado/')) sondeos++;
+  });
+
+  await page.goto(enlace);
+  await page.locator('[data-reservar]').click();
+  const pago = page.locator('[data-pago]');
+  await expect(pago).toBeVisible();
+  const factura = await pago.locator('[data-pago-factura]').inputValue();
+  // Leave only after a poll has run, so the stop is really tested.
+  const antes = sondeos;
+  await expect.poll(() => sondeos).toBeGreaterThan(antes);
+
+  await page.getByRole('button', { name: 'Cambiar fecha o personas' }).click();
+  await expect(page.locator('[data-form]')).toBeVisible();
+  await expect(pago).toBeHidden();
+  await expect(page.locator('[data-reservar]')).toBeEnabled();
+  await page.waitForTimeout(500);
+  const alVolver = sondeos;
+  // The poll runs every 3 seconds: two intervals with no request means it has stopped.
+  await page.waitForTimeout(7000);
+  expect(sondeos).toBe(alVolver);
+
+  // The visitor left, then the invoice was paid in the test wallet.
+  expect((await request.post(`${BTCPAY}/billetera/api/pagar`, { data: { factura } })).ok()).toBe(true);
+
+  const tickets = page.locator('[data-reservas] .ticket');
+  await page.goto('/reservas/');
+  await expect(tickets).toHaveCount(1);
+  await expect(tickets).toContainText(t.titulo);
+
+  await page.goto(enlace);
+  await expect(page.locator('[data-reserva]')).toBeVisible();
+
+  await page.goto('/reservas/');
+  await expect(tickets).toHaveCount(1);
+  await page.reload();
+  await expect(tickets).toHaveCount(1);
+  await expect(tickets).toContainText(t.titulo);
+  const guardadas = JSON.parse((await page.evaluate(() => localStorage.getItem('ct-reservas'))) ?? '[]') as { codigo: string }[];
+  expect(guardadas).toHaveLength(1);
+});
+
 test('POST /api/reservar/ refuses bad bookings with a 4xx and a JSON error, never a 5xx or a code', async ({ request }) => {
   const { tours } = await catalogo(request);
   const t = tours[0];

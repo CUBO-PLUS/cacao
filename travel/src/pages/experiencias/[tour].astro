@@ -87,6 +87,7 @@ const datos = [
           <p class="reserva__precio">
             <span>Desde</span>
             <strong data-precio-unidad>{sats(d.precio)}</strong>
+            <span data-usd-sats={d.precio} hidden></span>
             <span>por persona</span>
           </p>
           <label class="reserva__campo">
@@ -112,6 +113,7 @@ const datos = [
                 <dd data-total>{sats(d.precio * Math.max(grupo.min, 2))}</dd>
               </div>
             </dl>
+            <p class="reserva__usd" data-total-usd hidden></p>
             <details class="reserva__reparto">
               <summary>Cómo se reparte tu pago</summary>
               <dl>
@@ -136,6 +138,7 @@ const datos = [
           <button class="boton" type="button" data-pago-copiar>Copiar factura</button>
           <p class="reserva__pago-cuenta" data-pago-cuenta></p>
           <a class="reserva__pago-prueba" data-pago-prueba href="#" target="_blank" rel="noopener" hidden>Pagar con la billetera de prueba</a>
+          <button class="boton" type="button" data-pago-cambiar>Cambiar fecha o personas</button>
           <p class="reserva__nota">Bitcoin de prueba (regtest): no tiene valor.</p>
           <p class="reserva__error" data-pago-vencida role="alert" hidden>La factura venció. Volvé a intentar.</p>
           <button class="boton" type="button" data-pago-reintentar hidden>Volver a intentar</button>
@@ -343,6 +346,7 @@ const datos = [
   .reserva .boton:hover:not(:disabled) { background: var(--tostado); color: var(--pulpa); }
   .reserva .boton:disabled { opacity: 0.6; cursor: progress; }
   .reserva__nota { font-size: 0.8125rem; color: var(--tinta-suave); }
+  .reserva__usd { margin: -4px 0 0; text-align: right; font-family: var(--mono); font-size: 0.875rem; color: var(--tinta-suave); }
 
   .reserva__pago { display: grid; gap: 12px; padding: 22px 24px 24px; }
   .reserva__pago[hidden], .reserva__pago [hidden] { display: none; }
@@ -393,10 +397,18 @@ const datos = [
 
 <script>
   import { mananaEnElSalvador } from '../../lib/reparto';
+  import { enUsd, tasaUsdBtc } from '../../lib/usd';
+  import { dejarPendiente, guardarReserva, revisarPendientes } from '../../lib/pendientes';
+
+  // Left by "Cambiar fecha o personas": the visitor went back to the form before the invoice was paid.
+  class CambioDeDatos extends Error {}
 
   // Booking box: date and group size, with the total recomputed on every change.
   const caja = document.querySelector<HTMLElement>('[data-reserva]');
   if (caja) {
+    // Invoices left behind on earlier visits are checked once: a late payment is saved, never lost.
+    void revisarPendientes();
+
     const precio = Number(caja.dataset.precio);
     const salida = caja.querySelector<HTMLOutputElement>('[data-personas]')!;
     const total = caja.querySelector<HTMLElement>('[data-total]')!;
@@ -419,6 +431,18 @@ const datos = [
       const el = caja.querySelector<HTMLElement>(sel);
       if (el) el.textContent = texto;
     };
+    const totalUsd = caja.querySelector<HTMLElement>('[data-total-usd]')!;
+    let aPagarActual = 0;
+    let tasaUsd: number | null = null;
+    // Dollar value of the total. Hidden until the rate is known, so a missing rate shows the sats alone.
+    const pintarTotalUsd = () => {
+      totalUsd.hidden = tasaUsd === null;
+      if (tasaUsd !== null) totalUsd.textContent = enUsd(aPagarActual, tasaUsd);
+    };
+    void tasaUsdBtc().then((t) => {
+      tasaUsd = t;
+      pintarTotalUsd();
+    });
     let esLector = false;
     // Fallback title from a slug: "el-lago" becomes "El lago".
     const tituloDeSlug = (s: string) => s.replace(/-/g, ' ').replace(/^./, (c) => c.toUpperCase());
@@ -435,6 +459,8 @@ const datos = [
       const autor = conAutor ? Math.floor(aPagar * Number(caja.dataset.autor)) : 0;
       salida.value = String(personas);
       total.textContent = sats(aPagar);
+      aPagarActual = aPagar;
+      pintarTotalUsd();
       filaDescuento.hidden = descuento === 0;
       poner('[data-descuento-monto]', `−${sats(descuento)}`);
       poner('[data-r-operador]', sats(aPagar - plataforma - autor));
@@ -536,12 +562,15 @@ const datos = [
         const prueba = caja.querySelector<HTMLAnchorElement>('[data-pago-prueba]')!;
         const vencida = caja.querySelector<HTMLElement>('[data-pago-vencida]')!;
         const reintentar = caja.querySelector<HTMLButtonElement>('[data-pago-reintentar]')!;
+        const cambiar = caja.querySelector<HTMLButtonElement>('[data-pago-cambiar]')!;
         const vence = new Date(factura.expiraEn).getTime();
         let consultando = false;
         let terminado = false;
+        let pagada = false;
         let reloj = 0;
         let cronometro = 0;
 
+        // Stops both timers and the visibility listener. After this no poll starts again for this invoice.
         const parar = () => {
           terminado = true;
           clearInterval(reloj);
@@ -585,6 +614,7 @@ const datos = [
             if (j?.estado === 'vencida') return mostrarVencida();
             if (j?.estado === 'pendiente' || typeof j?.codigo !== 'string') return;
             parar();
+            pagada = true;
             resolver(j);
           } catch {
             // Offline for a moment: keep polling.
@@ -616,6 +646,12 @@ const datos = [
         }
         vencida.hidden = true;
         reintentar.hidden = true;
+        // Back to the form without paying this invoice. It is remembered, so a payment that still arrives is saved.
+        cambiar.onclick = () => {
+          parar();
+          if (!pagada) dejarPendiente(factura.id);
+          rechazar(new CambioDeDatos('Cambiá la fecha o las personas y volvé a reservar.'));
+        };
 
         form.hidden = true;
         panelPago.hidden = false;
@@ -661,10 +697,7 @@ const datos = [
         }));
 
         // No accounts: the confirmation lives in this browser. See /reservas/.
-        try {
-          const previas = JSON.parse(localStorage.getItem('ct-reservas') ?? '[]');
-          localStorage.setItem('ct-reservas', JSON.stringify([reserva, ...(Array.isArray(previas) ? previas : [])].slice(0, 30)));
-        } catch {}
+        guardarReserva(reserva);
 
         const lista = caja.querySelector<HTMLElement>('[data-confirmada]')!;
         poner('[data-sello]', reserva.pagada ? 'Pagada' : 'Reserva de muestra confirmada');
@@ -688,10 +721,10 @@ const datos = [
         lista.hidden = false;
         lista.focus();
       } catch (err) {
-        // Back to the form, so the error and the retry button are visible.
+        // Back to the form, so the error and the retry button are visible. Going back on purpose is not an error.
         ocultarPago();
         form.hidden = false;
-        mostrarError(err instanceof Error ? err.message : 'No se pudo reservar.');
+        mostrarError(err instanceof CambioDeDatos ? '' : err instanceof Error ? err.message : 'No se pudo reservar.');
         boton.disabled = false;
         boton.textContent = 'Reservar';
       }

@@ -52,6 +52,7 @@ const categorias = CATEGORIAS.filter((c) => puntos.some((p) => p.categoria === c
                 <span class="lista__meta">{p.lugar} · {p.duracion}</span>
                 <span class="lista__precio">{p.precio}</span>
               </button>
+              <a class="lista__ver" href={p.url}>Ver la experiencia</a>
             </li>
           ))}
         </ol>
@@ -169,6 +170,17 @@ const categorias = CATEGORIAS.filter((c) => puntos.some((p) => p.categoria === c
   .lista__titulo { font-weight: 800; font-size: 1.0625rem; line-height: 1.2; overflow-wrap: anywhere; }
   .lista__meta { font-size: 0.9375rem; color: var(--arena); overflow-wrap: anywhere; }
   .lista__precio { font-family: var(--mono); font-size: 0.875rem; color: var(--pulpa); }
+  .lista__ver {
+    justify-self: start;
+    display: inline-flex;
+    align-items: center;
+    min-height: 36px;
+    padding: 0 4px 0 14px;
+    font-weight: 700;
+    color: var(--tostado);
+    text-decoration: underline;
+  }
+  .lista__ver:hover { color: var(--mazorca); }
 
   @media (min-width: 960px) {
     .lista { max-height: min(70vh, 640px); overflow-y: auto; padding-right: 4px; }

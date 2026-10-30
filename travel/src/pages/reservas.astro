@@ -141,6 +141,8 @@ import { MEDIA_URL } from '../lib/tours';
 </style>
 
 <script>
+  import { revisarPendientes } from '../lib/pendientes';
+
   const CLAVE = 'ct-reservas';
 
   interface Reserva {
@@ -308,4 +310,13 @@ import { MEDIA_URL } from '../lib/tours';
   }
 
   pintar();
+
+  // Invoices left behind on an experience page that were paid since then are listed here too.
+  revisarPendientes()
+    .then((pagadas) => {
+      if (pagadas.length === 0) return;
+      crudas.splice(0, crudas.length, ...leer());
+      pintar();
+    })
+    .catch(() => {});
 </script>

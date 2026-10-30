@@ -38,6 +38,7 @@ const grupo = personas(d.grupo);
     <p class="boleto__precio">
       <span>Desde</span>
       <strong>{sats(d.precio)}</strong>
+      <span class="boleto__usd" data-usd-sats={d.precio} hidden></span>
       <span>por persona</span>
     </p>
     <a class="boleto__ver" href={url} tabindex="-1" aria-hidden="true">Ver experiencia</a>

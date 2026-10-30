@@ -79,6 +79,7 @@ const canonica = new URL(Astro.url.pathname, Astro.site);
           <a href="/api/tours.json">API</a>
           <a href={`${MEDIA_URL}/`}>Cacao Media</a>
           <a href="/creditos/">Créditos de fotos</a>
+          <a href="https://cacao-grupo.vercel.app/legal.html">Términos y privacidad</a>
         </nav>
       </div>
       <p class="dato pie__nota">Parte de Cacao Media · precios en sats · catálogo de muestra</p>
@@ -167,3 +168,10 @@ const canonica = new URL(Astro.url.pathname, Astro.site);
   .pie a:hover { color: var(--mazorca); }
   .pie__nota { color: var(--arena-oscura); }
 </style>
+
+<script>
+  import { pintarUsd } from '../lib/usd';
+
+  // Approximate dollar values next to the sats prices. Pages without a rate keep the sats alone.
+  void pintarUsd();
+</script>

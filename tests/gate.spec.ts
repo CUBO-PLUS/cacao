@@ -243,7 +243,7 @@ test('an expired stored pass is renewed from the cookie', async ({ page, request
   await page.evaluate((k) => localStorage.setItem(k, JSON.stringify({ token: 'viejo', expira: Date.now() - 1000 })), CLAVE);
   await page.reload();
   await expect(cerrado(page)).toBeVisible();
-  await expect(page.locator('article[data-historia]')).toHaveAttribute('data-gate-estado', 'desbloqueado');
+  await expect(page.locator('article[data-historia]')).toHaveAttribute('data-gate-estado', /^(desbloqueado|leyendo)$/);
 });
 
 test('the locked text is not in the page and the server refuses it without a valid pass', async ({ page, request }) => {

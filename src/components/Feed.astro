@@ -2,7 +2,6 @@
 import type { Historia } from '../lib/historias';
 import EntradaFeed from './EntradaFeed.astro';
 import PromoGate from './PromoGate.astro';
-import PromoBoletin from './PromoBoletin.astro';
 
 interface Props {
   historias: Historia[];
@@ -20,11 +19,6 @@ const { historias, promos = true } = Astro.props;
         {promos && i === 1 && (
           <div class="feed__promo">
             <PromoGate />
-          </div>
-        )}
-        {promos && i === 3 && (
-          <div class="feed__promo">
-            <PromoBoletin />
           </div>
         )}
       </>

@@ -27,8 +27,8 @@ Para retomar el trabajo en otra computadora (instalar, correr, probar, publicar 
 ## La idea
 
 - **Pago por historia, no suscripción.** Cada historia de pago cuesta 120 sats. Con tarjeta, un cobro tan chico no tiene sentido porque las comisiones superan el precio. Con bitcoin por Lightning, pagar una sola historia sí es práctico.
-- **Un circuito entre contenido y comercio.** Quien desbloqueó una historia vinculada a una experiencia obtiene 10% de descuento en esa experiencia. Quien reserva obtiene 30 días de acceso a las historias vinculadas a esa experiencia.
-- **Reparto en cada reserva.** El operador recibe 85%, Cacao Travel 10% y el autor de la historia 5%. Si la reserva no viene de ninguna historia, el reparto es 90% para el operador y 10% para Cacao Travel.
+- **Dos formas de ganar con el contenido.** Las historias vinculadas a una experiencia son gratis, porque la venta viene de la reserva en Cacao Travel. Las historias sin experiencia se cobran por Lightning.
+- **Reparto en cada reserva.** En una experiencia con historias vinculadas, el operador recibe 85%, Cacao Travel 10% y el autor 5%. Sin historias vinculadas, el reparto es 90% para el operador y 10% para Cacao Travel.
 
 ## Estado actual: demo
 
@@ -51,15 +51,11 @@ CACAO MEDIA                                       CACAO TRAVEL
 2. Parte cerrada de la historia
    GET /api/contenido/<slug>/  con token A
    -> texto cerrado, solo si el token es valido
-3. Pagina de historia
+3. Historia vinculada a una experiencia: gratis
    el navegador pide GET /api/tours.json ----->  catalogo publico
    <-------------------------------------------  experiencia relacionada
-4. Enlace a la experiencia con #lector=A ----->  POST /api/lector/
-                                                 -> 10 % de descuento
-                                                 5. POST /api/reservar/
-                                                 -> codigo + pase B (30 dias)
-6. Enlace a la historia con #pase=B <---------   confirmacion de la reserva
-   -> la historia se abre sin pagar
+4. Enlace a la experiencia ------------------->  POST /api/reservar/
+                                                 -> factura de la reserva
 ```
 
 **Tokens firmados.** Ambos proyectos usan el mismo formato, definido en `src/lib/firma.ts` (`travel/src/lib/firma.ts` es una copia idéntica). Un token tiene dos partes separadas por un punto: un payload en JSON codificado en base64url, con el tipo (`pago` o `reserva`), las historias que abre y la fecha de vencimiento; y una firma HMAC-SHA256 de ese payload. Cualquiera puede leer el payload, pero solo quien conoce el secreto de la variable de entorno `CACAO_SECRET` puede firmar, y cualquier cambio en el payload invalida la firma.
@@ -120,8 +116,7 @@ Las rutas de Cacao Media están en `src/pages/api/` y las de Cacao Travel en `tr
 | Cacao Media | GET | `/api/contenido/<slug>/` | Devuelve el texto cerrado de una historia con un token de `Authorization: Bearer` que la cubre, o con la cookie de un lector que la pagó. Si no, responde 401. |
 | Cacao Media | GET | `/rss.xml` | Feed RSS de todas las historias. |
 | Cacao Travel | GET | `/api/tours.json` | Catálogo público de experiencias: precio, lugar, salidas, grupo, historias vinculadas y reparto. CORS abierto. |
-| Cacao Travel | POST | `/api/lector/` | Indica si un token de lector da descuento en una experiencia. Cuerpo: `{ "token": "...", "tour": "<id>" }`. |
-| Cacao Travel | POST | `/api/reservar/` | Confirma una reserva. Cuerpo: `tour`, `fecha` (AAAA-MM-DD), `personas` y `lector` (opcional). Recalcula todo en el servidor y devuelve código, cotización, reparto, lecturas y pase. Demo: no cobra ni cuenta cupos. |
+| Cacao Travel | POST | `/api/reservar/` | Confirma una reserva. Cuerpo: `tour`, `fecha` (AAAA-MM-DD), y `personas`. Recalcula todo en el servidor y devuelve la factura de la reserva. |
 
 ## Estructura del repositorio
 
@@ -138,7 +133,7 @@ CacaoMedia/                       Cacao Media (raíz del repositorio)
     portada.mjs                   busca y baja fotos libres de Wikimedia Commons
   tests/
     gate.spec.ts                  pruebas del muro de pago y del widget de Travel
-    travel.spec.ts                pruebas de Cacao Travel: catálogo, reservas, descuento, mapa
+    travel.spec.ts                pruebas de Cacao Travel: catálogo, reservas, mapa
   public/
     robots.txt                    pide a los buscadores no indexar el sitio
     portadas/                     foto de portada de cada historia

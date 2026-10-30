@@ -1,15 +1,15 @@
 // Money rules of the marketplace, in satoshis. Used by the pages and by the booking API, so the
 // number a visitor sees is the number the server confirms.
 
-/** Readers who paid for a story about the place get this off the experience. */
-export const DESCUENTO_LECTOR = 0.1;
-
-/** How every booking is divided. The author's share only exists when a story sent the traveller. */
+/**
+ * How a booking is divided, decided by the experience: an experience with at least one linked Media story
+ * pays the author too. The author's share only exists when the experience has linked stories.
+ */
 export const PARTES = { operador: 0.85, plataforma: 0.1, autor: 0.05 } as const;
+export const PARTES_SIN_HISTORIA = { operador: 0.9, plataforma: 0.1, autor: 0 } as const;
 
 export interface Cotizacion {
   subtotal: number;
-  descuento: number;
   total: number;
 }
 
@@ -19,10 +19,9 @@ export interface Reparto {
   autor: number;
 }
 
-export function cotizar(precio: number, personas: number, lector: boolean): Cotizacion {
+export function cotizar(precio: number, personas: number): Cotizacion {
   const subtotal = precio * personas;
-  const descuento = lector ? Math.round(subtotal * DESCUENTO_LECTOR) : 0;
-  return { subtotal, descuento, total: subtotal - descuento };
+  return { subtotal, total: subtotal };
 }
 
 /** Whole satoshis that always add up to the total: the operator absorbs the rounding. */

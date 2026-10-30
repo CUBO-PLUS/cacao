@@ -1,6 +1,5 @@
-// The locked part of a story. Served to a valid token that covers this story (the reader's own
-// unlock), or to a browser whose cookie shows it paid. A Cacao Travel booking pass does not open the text
-// until its payment is verified, so only `pago` tokens count here.
+// The locked part of a story. Served to a valid `pago` token that covers this story (the reader's own
+// unlock), or to a browser whose cookie shows it paid.
 // The text is read from public.media_cerrado with the service role (see lib/servidor/cerrado.ts).
 import type { APIContext } from 'astro';
 import { verificar } from '../../../lib/firma';
@@ -36,9 +35,9 @@ export async function GET(context: APIContext) {
   }
 
   const token = (context.request.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '');
-  const pase = verificar(token);
-  if (pase && pase.tipo === 'pago' && pase.slugs.includes(slug)) {
-    return Response.json({ html, expira: pase.exp, tipo: pase.tipo }, { headers: PRIVADO });
+  const pago = verificar(token);
+  if (pago && pago.tipo === 'pago' && pago.slugs.includes(slug)) {
+    return Response.json({ html, expira: pago.exp, tipo: pago.tipo }, { headers: PRIVADO });
   }
 
   // No valid token: the cookie still proves the reader paid, so access outlives the stored token.

@@ -4,7 +4,6 @@ import { expect, request as pwRequest, test, type APIRequestContext, type Page }
 // invoice: the wallet pays it, and the page or the status endpoint says so.
 
 const BTCPAY = 'http://127.0.0.1:8088';
-const MEDIA = 'http://localhost:4321';
 const DIA = 24 * 60 * 60 * 1000;
 // Weekday codes in Date.getUTCDay() order: the codes the catalogue uses.
 const DIAS = ['dom', 'lun', 'mar', 'mie', 'jue', 'vie', 'sab'];
@@ -17,7 +16,6 @@ interface Tour {
   precio: number;
   salidas: string[];
   grupo: { min: number; max: number };
-  historias: string[];
 }
 
 /** A date at least two days ahead that falls on the weekday code. YYYY-MM-DD, read with UTC getters. */
@@ -60,40 +58,13 @@ async function pagarEnBilletera(factura: string): Promise<void> {
   }
 }
 
-/**
- * A Cacao Media reader token for a paid story, the way a reader gets one: Media issues a Lightning invoice
- * for the reader's cookie, the test wallet pays it, and the invoice then carries the token.
- */
-async function tokenDeLector(slugs: string[]): Promise<{ slug: string; token: string }> {
-  // Media keeps the reader in a cookie: one context carries it through the calls.
-  const media = await pwRequest.newContext({ baseURL: MEDIA });
-  try {
-    for (const slug of slugs) {
-      await media.get(`/historias/${slug}/`);
-      const creado = await media.post('/api/cobro/', { data: { slug } });
-      if (!creado.ok()) continue;
-      const cobro = (await creado.json()) as { id: string; estado: string; token?: string; factura?: string };
-      if (cobro.token) return { slug, token: cobro.token };
-      if (!cobro.factura) continue;
-      await pagarEnBilletera(cobro.factura);
-      const estado = await media.get(`/api/cobro/${cobro.id}/`);
-      const pagado = (await estado.json()) as { token?: string };
-      if (pagado.token) return { slug, token: pagado.token };
-    }
-  } finally {
-    await media.dispose();
-  }
-  throw new Error('no paid Media story could be bought to get a reader token');
-}
-
-/** Opens the booking box of an experience, optionally with a date, a group size and a reader token. */
-async function abrirReserva(page: Page, tour: string, extra: { fecha?: string; personas?: number; lector?: string } = {}): Promise<void> {
+/** Opens the booking box of an experience, optionally with a date and a group size. */
+async function abrirReserva(page: Page, tour: string, extra: { fecha?: string; personas?: number } = {}): Promise<void> {
   const params = new URLSearchParams();
   if (extra.fecha) params.set('fecha', extra.fecha);
   if (extra.personas) params.set('personas', String(extra.personas));
   const query = params.toString() ? `?${params}` : '';
-  const hash = extra.lector ? `#lector=${extra.lector}` : '';
-  await page.goto(`/experiencias/${tour}/${query}${hash}`);
+  await page.goto(`/experiencias/${tour}/${query}`);
   await expect(page.locator('[data-reserva]')).toBeVisible();
 }
 
@@ -208,7 +179,7 @@ test.describe('reserva con Lightning', () => {
     await expect(confirmada.locator('[data-sello]')).toHaveText('Pagada');
     const codigo = (await confirmada.locator('[data-codigo]').textContent())?.trim() ?? '';
     expect(codigo).toMatch(/^[0-9A-F]{8}$/);
-    await expect(confirmada.locator('[data-lecturas-lista] a').first()).toHaveAttribute('href', /#pase=/);
+    await expect(confirmada.locator('[data-lecturas-lista] a').first()).not.toHaveAttribute('href', /#pase=/);
 
     // The status endpoint says the same thing: the invoice is settled and the booking carries its code.
     const estado = await request.get(`/api/reservar/estado/?id=${json.factura.id}`);
@@ -224,31 +195,6 @@ test.describe('reserva con Lightning', () => {
     await expect(ticket.getByText('Pagada')).toBeVisible();
     await page.reload();
     await expect(page.locator('[data-reservas] .ticket', { hasText: codigo }).getByText('Pagada')).toBeVisible();
-  });
-
-  test('con el token de un lector el total baja 10% y la factura tiene ese monto', async ({ page, request }) => {
-    test.setTimeout(150_000);
-    const tour = await tourPorId(request, TOUR);
-    const { token } = await tokenDeLector(tour.historias);
-    const fecha = proximaFecha('mar');
-    const conDescuento = Math.round(PRECIO_TOUR * 2 * 0.1);
-    const esperado = PRECIO_TOUR * 2 - conDescuento;
-
-    await abrirReserva(page, TOUR, { fecha, personas: 2, lector: token });
-    await expect(page.locator('[data-reserva] [data-fila-descuento]')).toBeVisible({ timeout: 8_000 });
-    await expect(page.locator('[data-reserva] [data-total]')).toHaveText(sats(esperado));
-
-    const respuesta = page.waitForResponse((r) => r.url().endsWith('/api/reservar/') && r.request().method() === 'POST');
-    await page.locator('[data-reservar]').click();
-    const json = (await (await respuesta).json()) as { estado: string; factura: { bolt11: string; sats: number } };
-    expect(json.factura.sats).toBe(esperado);
-    await expect(page.locator('[data-pago] [data-pago-monto]')).toHaveText(sats(esperado));
-
-    await pagarEnBilletera(json.factura.bolt11);
-    const confirmada = page.locator('[data-confirmada]');
-    await expect(confirmada).toBeVisible({ timeout: 8_000 });
-    await expect(confirmada.locator('[data-sello]')).toHaveText('Pagada');
-    await expect(confirmada.locator('[data-resumen]')).toContainText(sats(esperado));
   });
 
   test('una factura vencida muestra el aviso y Volver a intentar deja reservar otra vez', async ({ page }) => {

@@ -1,8 +1,7 @@
 // Builds the booking that the booking API returns, and rebuilds it from a paid BTCPay invoice.
 // Both paths use construirReserva, so a paid booking has the same numbers as the one priced at checkout.
 // Server only. The only I/O here is reading the BTCPay address (./url-btcpay.ts); the routes fetch the catalogue and talk to BTCPay.
-import { DIA, firmar } from './firma';
-import { cotizar, repartir, DESCUENTO_LECTOR } from './reparto';
+import { cotizar, repartir } from './reparto';
 import { configDesdeEntorno, ErrorBtcpay, type ConfigBtcpay } from './btcpay';
 import { urlBtcpay } from './url-btcpay';
 
@@ -13,9 +12,6 @@ export const PAUSA_BTCPAY = 'Los pagos están en pausa por unos minutos. Probá 
 export function btcpayEnPausa(error: unknown): boolean {
   return error instanceof ErrorBtcpay && (error.estado === 0 || error.estado >= 500);
 }
-
-/** Reading that comes with a booking stays open this long. */
-const DIAS_DE_LECTURA = 30;
 
 /** How long a Lightning invoice stays payable. */
 export const MINUTOS_DE_PAGO = 15;
@@ -36,7 +32,6 @@ export interface DatosReserva {
   codigo: string;
   fecha: string;
   personas: number;
-  lector: boolean;
   /** Epoch milliseconds the booking is made. */
   ahora: number;
   /** Public address of Cacao Media, where the stories live. */
@@ -77,7 +72,7 @@ export function construirReserva(
 ): Record<string, unknown> {
   const d = tour.data;
   // A paid booking keeps the price it was paid at, even if the catalogue changed since.
-  const cotizacion = precioPagado ?? cotizar(d.precio, r.personas, r.lector);
+  const cotizacion = precioPagado ?? cotizar(d.precio, r.personas);
   const base = {
     codigo: r.codigo,
     demo: !r.facturaId,
@@ -86,13 +81,9 @@ export function construirReserva(
     fecha: r.fecha,
     personas: r.personas,
     ...cotizacion,
-    lector: r.lector,
     reparto: repartir(cotizacion.total, d.historias.length > 0),
-    // The booking opens the stories about the place on Cacao Media.
+    // The free stories about the place on Cacao Media.
     lecturas: d.historias.map((slug) => ({ slug, url: `${r.mediaUrl}/historias/${slug}/` })),
-    pase: d.historias.length
-      ? firmar({ tipo: 'reserva', slugs: d.historias, exp: r.ahora + DIAS_DE_LECTURA * DIA, codigo: r.codigo })
-      : null,
   };
   return r.facturaId ? { ...base, pagada: true, facturaId: r.facturaId } : base;
 }
@@ -100,12 +91,11 @@ export function construirReserva(
 /** The metadata written on the invoice when it is created. It is what the paid check rebuilds from. */
 export function metadatosDeFactura(
   tour: TourReserva,
-  r: { codigo: string; fecha: string; personas: number; lector: boolean; cotizacionUsdBtc: number; usdCentavos: number },
+  r: { codigo: string; fecha: string; personas: number; cotizacionUsdBtc: number; usdCentavos: number },
 ) {
-  const precio = cotizar(tour.data.precio, r.personas, r.lector);
+  const precio = cotizar(tour.data.precio, r.personas);
   return {
     subtotal: precio.subtotal,
-    descuento: precio.descuento,
     producto: 'travel' as const,
     orderId: r.codigo,
     itemDesc: `${tour.data.titulo} · ${r.fecha} · ${r.personas} persona(s)`,
@@ -114,7 +104,6 @@ export function metadatosDeFactura(
     tour: tour.id,
     fecha: r.fecha,
     personas: r.personas,
-    descuentoLector: r.lector ? Math.round(DESCUENTO_LECTOR * 100) : 0,
   };
 }
 
@@ -131,19 +120,19 @@ export function reconstruirReserva(
   sats: number,
   opciones: { ahora: number; mediaUrl: string; facturaId: string },
 ): Record<string, unknown> {
-  const { orderId, tour: tourId, fecha, personas, descuentoLector } = metadata;
+  const { orderId, tour: tourId, fecha, personas } = metadata;
   if (!tour || tour.id !== tourId) throw new ErrorReserva('La experiencia de esta factura ya no existe.', 409);
   if (typeof orderId !== 'string' || !/^[0-9A-F]{8}$/.test(orderId)) throw new ErrorReserva('La factura no tiene una reserva válida.', 409);
   if (typeof fecha !== 'string' || typeof personas !== 'number' || !Number.isInteger(personas) || personas < 1) {
     throw new ErrorReserva('La factura no tiene una reserva válida.', 409);
   }
-  const lector = Number(descuentoLector) > 0;
   const { subtotal, descuento } = metadata;
+  // Invoices written before the reader discount was removed carry a descuento: their total keeps it.
   // Invoices made before the price was written on them fall back to the catalogue price.
   const precio =
     typeof subtotal === 'number' && typeof descuento === 'number'
-      ? { subtotal, descuento, total: subtotal - descuento }
-      : cotizar(tour.data.precio, personas, lector);
+      ? { subtotal, total: subtotal - descuento }
+      : cotizar(tour.data.precio, personas);
   if (precio.total !== sats) {
     throw new ErrorReserva('El monto de la factura no coincide con la reserva. La reserva no se confirma.', 409);
   }
@@ -153,7 +142,6 @@ export function reconstruirReserva(
       codigo: orderId,
       fecha,
       personas,
-      lector,
       ahora: opciones.ahora,
       mediaUrl: opciones.mediaUrl,
       facturaId: opciones.facturaId,

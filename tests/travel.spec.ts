@@ -3,7 +3,6 @@ import { expect, test, type APIRequestContext, type Page } from '@playwright/tes
 // Most tests run with the intro off. The intro tests at the bottom switch motion back on.
 test.use({ contextOptions: { reducedMotion: 'reduce' } });
 
-const MEDIA = 'http://localhost:4321';
 const DIA = 24 * 60 * 60 * 1000;
 // Weekday codes in Date.getUTCDay() order, the same codes the catalogue uses.
 const DIAS = ['dom', 'lun', 'mar', 'mie', 'jue', 'vie', 'sab'];
@@ -24,9 +23,18 @@ interface Tour {
   historias: string[];
 }
 
+interface Reparto {
+  operador: number;
+  plataforma: number;
+  autor: number;
+}
+
 interface Catalogo {
   tours: Tour[];
-  reparto: { operador: number; plataforma: number; autor: number };
+  /** Split of an experience with at least one linked story. */
+  reparto: Reparto;
+  /** Split of an experience with no linked story: the author takes nothing. */
+  repartoSinHistoria: Reparto;
 }
 
 async function catalogo(request: APIRequestContext): Promise<Catalogo> {
@@ -82,73 +90,6 @@ async function expectVisibles(page: Page, esperadas: Tour[]): Promise<void> {
 
 // The regtest test wallet of the BTCPay demo. It pays a real Lightning invoice made by BTCPay.
 const BTCPAY = process.env.BTCPAY_PUERTA ?? 'http://127.0.0.1:8088';
-
-/**
- * A Cacao Media reader token for a paid story, or null when the story is free or unknown.
- * Media gives a token only after its invoice is paid. A BTCPay invoice (lnbcrt…) is paid with the test wallet
- * and then read until Media sees it paid; a simulated invoice (demo mode) is paid with the demo route.
- */
-async function tokenDePago(request: APIRequestContext, slug: string): Promise<string | null> {
-  const cobro = await request.post(`${MEDIA}/api/cobro/`, { data: { slug } });
-  if (!cobro.ok()) return null;
-  const creado = (await cobro.json()) as { id?: string; estado: string; token?: string; factura?: string };
-  // A reader who already has access gets the token straight away.
-  if (creado.token) return creado.token;
-  if (!creado.id) return null;
-  if (creado.factura?.startsWith('lnbcrt')) {
-    const pago = await request.post(`${BTCPAY}/billetera/api/pagar`, { data: { factura: creado.factura } });
-    if (!pago.ok()) return null;
-  } else {
-    const pago = await request.post(`${MEDIA}/api/cobro/${creado.id}/pagar/`);
-    if (!pago.ok()) return null;
-  }
-  for (let intento = 0; intento < 10; intento++) {
-    const estado = await request.get(`${MEDIA}/api/cobro/${creado.id}/`);
-    if (estado.ok()) {
-      const token = ((await estado.json()) as { token?: string }).token;
-      if (token) return token;
-    }
-    await new Promise((listo) => setTimeout(listo, 1000));
-  }
-  return null;
-}
-
-/** The first paid story of the list, with its token. */
-async function primeraPagada(request: APIRequestContext, slugs: string[]): Promise<{ slug: string; token: string } | null> {
-  for (const slug of slugs) {
-    const token = await tokenDePago(request, slug);
-    if (token) return { slug, token };
-  }
-  return null;
-}
-
-/** A tour with a paid story linked to it, and that story's reader token. */
-async function tourConHistoriaPagada(request: APIRequestContext, tours: Tour[]): Promise<{ tour: Tour; slug: string; token: string }> {
-  for (const tour of tours) {
-    const h = await primeraPagada(request, tour.historias);
-    if (h) return { tour, ...h };
-  }
-  throw new Error('no paid story is linked to any experience');
-}
-
-/** A tour, and a paid story linked to some other tour but not to this one. */
-async function lectorAjeno(request: APIRequestContext, tours: Tour[]): Promise<{ tour: Tour; slug: string; token: string }> {
-  for (const tour of tours) {
-    const ajenas = [...new Set(tours.filter((o) => o.id !== tour.id).flatMap((o) => o.historias))].filter(
-      (s) => !tour.historias.includes(s),
-    );
-    const h = await primeraPagada(request, ajenas);
-    if (h) return { tour, ...h };
-  }
-  throw new Error('no paid story is linked to a tour other than these');
-}
-
-/** Booking URL with the reader token in the fragment, on a day the tour runs. */
-function reservaConLector(tour: Tour, token: string): { url: string; personas: number } {
-  const fecha = proximaFecha(tour.salidas[0]);
-  const personas = Math.min(tour.grupo.max, Math.max(tour.grupo.min, 3));
-  return { url: `/experiencias/${tour.id}/?fecha=${fecha}&personas=${personas}#lector=${token}`, personas };
-}
 
 test('home shows one card per experience in the API and the count matches', async ({ page, request }) => {
   const { tours } = await catalogo(request);
@@ -265,7 +206,7 @@ test('the date and group size chosen on home travel to the experience page', asy
 });
 
 test('the people stepper stops at the group limits, and the total and the split add up', async ({ page, request }) => {
-  const { tours, reparto } = await catalogo(request);
+  const { tours, reparto, repartoSinHistoria } = await catalogo(request);
   const t = tours[0];
   await page.goto(`/experiencias/${t.id}/`);
   const contador = page.locator('[data-personas]');
@@ -293,8 +234,11 @@ test('the people stepper stops at the group limits, and the total and the split 
   const plataforma = pesos(await page.locator('[data-r-plataforma]').textContent());
   const autor = pesos(await page.locator('[data-r-autor]').textContent());
   const totalMaximo = pesos(await total.textContent());
+  // The split follows the experience, not the visitor: no linked story means no author share.
+  const segun = t.historias.length > 0 ? reparto : repartoSinHistoria;
   expect(operador + plataforma + autor).toBe(totalMaximo);
-  expect(plataforma).toBe(Math.floor(totalMaximo * reparto.plataforma));
+  expect(plataforma).toBe(Math.floor(totalMaximo * segun.plataforma));
+  expect(autor).toBe(Math.floor(totalMaximo * segun.autor));
 
   for (let i = 0; i < 20 && (await menos.isEnabled()); i++) {
     await menos.click();
@@ -443,55 +387,6 @@ test('POST /api/reservar/ refuses bad bookings with a 4xx and a JSON error, neve
     expect(typeof json?.error, nombre).toBe('string');
     expect(json?.codigo, nombre).toBeUndefined();
   }
-});
-
-test('a reader token from a paid story linked to the tour gives 10% off', async ({ page, request }) => {
-  const { tours } = await catalogo(request);
-  const { tour, token } = await tourConHistoriaPagada(request, tours);
-  const { url, personas } = reservaConLector(tour, token);
-
-  const lector = page.waitForResponse((r) => r.url().endsWith('/api/lector/'));
-  await page.goto(url);
-  expect(((await (await lector).json()) as { valido: boolean }).valido).toBe(true);
-
-  await expect(page.locator('[data-reservar]')).toHaveText('Reservar');
-  await expect(page.locator('[data-reservar]')).toBeEnabled();
-  await expect(page.locator('[data-fila-descuento]')).toBeVisible();
-  const subtotal = tour.precio * personas;
-  expect(pesos(await page.locator('[data-descuento-monto]').textContent())).toBe(Math.round(subtotal * 0.1));
-  expect(pesos(await page.locator('[data-total]').textContent())).toBe(subtotal - Math.round(subtotal * 0.1));
-  expect(page.url()).not.toContain('lector');
-});
-
-test('a reader token for a story not linked to the tour gives no discount', async ({ page, request }) => {
-  const { tours } = await catalogo(request);
-  const { tour, token } = await lectorAjeno(request, tours);
-  const { url, personas } = reservaConLector(tour, token);
-
-  const lector = page.waitForResponse((r) => r.url().endsWith('/api/lector/'));
-  await page.goto(url);
-  expect(((await (await lector).json()) as { valido: boolean }).valido).toBe(false);
-
-  await expect(page.locator('[data-reservar]')).toHaveText('Reservar');
-  await expect(page.locator('[data-reservar]')).toBeEnabled();
-  await expect(page.locator('[data-fila-descuento]')).toBeHidden();
-  expect(pesos(await page.locator('[data-total]').textContent())).toBe(tour.precio * personas);
-});
-
-test('Reservar is disabled while the reader discount is being checked', async ({ page, request }) => {
-  const { tours } = await catalogo(request);
-  const { tour, token } = await tourConHistoriaPagada(request, tours);
-  const { url } = reservaConLector(tour, token);
-
-  await page.route('**/api/lector/', async (route) => {
-    await new Promise((r) => setTimeout(r, 1200));
-    await route.continue();
-  });
-  await page.goto(url);
-  await expect(page.locator('[data-reservar]')).toBeDisabled();
-  await expect(page.locator('[data-reservar]')).toBeEnabled();
-  await expect(page.locator('[data-reservar]')).toHaveText('Reservar');
-  await expect(page.locator('[data-fila-descuento]')).toBeVisible();
 });
 
 test('the map shows one marker per experience with a place, and a list button opens its popup', async ({ page, request }) => {

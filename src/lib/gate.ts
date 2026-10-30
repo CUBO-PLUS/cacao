@@ -39,21 +39,19 @@ export function estadoGate(slug: string, ahora: number = Date.now()): EstadoGate
   return g.expira > ahora ? 'desbloqueado' : 'expirado';
 }
 
-/** The stored token for a story, if it has not expired. Cacao Travel links carry it for the reader discount. */
-export function tokenDe(slug: string, ahora: number = Date.now()): string | null {
-  const g = leer(slug);
-  return g && g.expira > ahora ? g.token : null;
-}
-
-/** Stores a pass that arrived from a Cacao Travel booking. Its expiry is read from the payload. */
-export function aceptarPase(slug: string, token: string): boolean {
+/** Stores the paid token the server signed for a story. Its expiry is read from the payload. */
+export function guardarAcceso(slug: string, token: string): boolean {
   try {
     const datos = token.split('.')[0].replace(/-/g, '+').replace(/_/g, '/');
     const bytes = Uint8Array.from(atob(datos), (c) => c.charCodeAt(0));
-    // fatal: bytes that are not valid UTF-8 throw, and the pass is refused.
-    const pase = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)) as { slugs?: string[]; exp?: number };
-    if (!pase.slugs?.includes(slug) || typeof pase.exp !== 'number') return false;
-    guardar(slug, { token, expira: pase.exp });
+    // fatal: bytes that are not valid UTF-8 throw, and the token is refused.
+    const pago = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)) as {
+      tipo?: string;
+      slugs?: string[];
+      exp?: number;
+    };
+    if (pago.tipo !== 'pago' || !pago.slugs?.includes(slug) || typeof pago.exp !== 'number') return false;
+    guardar(slug, { token, expira: pago.exp });
     return true;
   } catch {
     return false;

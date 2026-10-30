@@ -7,8 +7,7 @@ autor: Josh Pineda
 lugar: San Salvador
 coords: 13.69°N · 89.22°W
 minutos: 3
-precio: 0
-gratis: true
+precio: 120
 portada: /portadas/como-preparar-cafe-de-altura-en-casa.jpg
 alt: 'Café molido en un filtro blanco de cerámica, con burbujas de florecimiento y una tetera negra de cuello fino'
 credito: 'Indigo.udm'
@@ -25,16 +24,4 @@ No hace falta equipo caro. Lo que sí importa es el café: en San Salvador hay c
 
 Un filtro de papel, una jarra o taza debajo, un molinillo y agua filtrada. Si tenés balanza, mejor, porque medir siempre da resultados más parejos que medir con cuchara. Empezá con una proporción de alrededor de 1 gramo de café por 15 de agua, y ajustá según tu gusto. Después de hervir, dejá reposar el agua uno o dos minutos antes de usarla.
 
-Moliendo justo antes de preparar, el café conserva más aroma. Usá una molienda media, parecida a la sal fina. Si sale muy fina, el agua tarda y el sabor se vuelve amargo; si sale muy gruesa, pasa rápido y queda ácido y aguado. Un molinillo de cuchilla da una molienda despareja, así que si podés, invertí en uno de muelas. Guardá el café en un frasco cerrado, lejos de la luz y del calor, para que dure más.
-
-## El vertido, paso a paso
-
-Poné el filtro en el dripper, enjuágalo con agua caliente para quitarle el sabor a papel y tirá esa agua. Después echá el café molido, dale un ligero golpe para nivelarlo y verté unos 30 gramos de agua en el centro. Esperá cerca de 30 segundos. Ese paso se llama florecimiento y deja que el café se hinche y suelte gas.
-
-Después verté el resto en círculos lentos, sin tocar las paredes del filtro, hasta llegar a la cantidad que elegiste. Mientras vertés, el agua debería bajar sin quedarse estancada sobre el café. Todo el proceso debería tardar entre dos y tres minutos. Si tarda mucho, la molienda está muy fina; si termina en medio minuto, probá una más fina.
-
-## Cuando el sabor no te convence
-
-Si el café sabe amargo, probablemente se extrajo de más: usá una molienda más gruesa o acortá el tiempo. Si sabe agrio y aguado, se extrajo de menos: probá una molienda más fina o un poco más de café. Y si cambiás una sola cosa por vez, sabés cuál fue la que hizo la diferencia.
-
-Anotá cada prueba: gramos de café, de agua, molienda y tiempo. En dos o tres intentos vas a ver un patrón, y eso vale más que cualquier receta. No te preocupes si la primera taza no sale perfecta, porque casi nunca sale. Si la taza te gusta, guardá esos números para repetirla.
+<!-- gate -->

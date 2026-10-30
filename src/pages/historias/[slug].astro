@@ -212,15 +212,6 @@ const tipo = d.seccion === 'guia' ? 'guía' : d.seccion === 'cronica' ? 'crónic
 </style>
 
 <script>
-  // A Cacao Travel pass in the fragment is dropped from the address bar on a free story. On a paid
-  // story the gate reads it and drops it.
-  const articulo = document.querySelector<HTMLElement>('article[data-historia]');
-  if (articulo?.dataset.gateEstado === 'gratis' && location.hash.includes('pase=')) {
-    history.replaceState(null, '', location.pathname + location.search);
-  }
-</script>
-
-<script>
   // Reading progress: answers the reader's own scrolling, nothing moves by itself.
   const avance = document.querySelector<HTMLElement>('[data-avance]');
   const texto = document.querySelector<HTMLElement>('.historia');

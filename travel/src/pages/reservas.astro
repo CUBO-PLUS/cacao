@@ -151,11 +151,9 @@ import { MEDIA_URL } from '../lib/tours';
     fecha?: unknown;
     personas?: unknown;
     subtotal?: unknown;
-    descuento?: unknown;
     total?: unknown;
     reparto?: unknown;
     lecturas?: unknown;
-    pase?: unknown;
     /** True for bookings paid through BTCPay. Demo bookings have no such field. */
     pagada?: unknown;
   }
@@ -243,7 +241,6 @@ import { MEDIA_URL } from '../lib/tours';
     const talon = el('div', 'ticket__talon');
     const totales = el('dl', 'ticket__filas');
     fila(totales, 'Subtotal', sats(r.subtotal), 'monto');
-    if (Number(r.descuento) > 0) fila(totales, 'Descuento lector', `−${sats(r.descuento)}`, 'monto');
     fila(totales, 'Total', sats(r.total), 'monto monto--grande');
     talon.append(totales);
 
@@ -260,15 +257,14 @@ import { MEDIA_URL } from '../lib/tours';
     let bloque: HTMLElement | null = null;
     if (items.length > 0) {
       bloque = el('div', 'ticket__lecturas');
-      bloque.append(el('p', 'dato ticket__subtitulo', 'Tu reserva desbloquea estas historias en Cacao Media por 30 días'));
+      bloque.append(el('p', 'dato ticket__subtitulo', 'Estas historias sobre el lugar están gratis en Cacao Media'));
       const lista = el('ul', 'ticket__lista');
-      const pase = texto(r.pase);
       for (const item of items) {
         // Bookings made before titles were saved have none: fall back to the slug words.
         const palabras = texto(item.slug).replace(/-/g, ' ');
         const nombreHistoria = texto(item.titulo).trim() || palabras.charAt(0).toUpperCase() + palabras.slice(1);
         const enlace = el('a', '', nombreHistoria);
-        enlace.href = texto(item.url) + (pase ? `#pase=${encodeURIComponent(pase)}` : '');
+        enlace.href = texto(item.url);
         const li = el('li');
         li.append(enlace);
         lista.append(li);

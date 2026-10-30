@@ -11,11 +11,10 @@ import { expect, test, type APIRequestContext, type Page } from '@playwright/tes
 
 const BILLETERA = process.env.BTCPAY_BILLETERA ?? 'http://127.0.0.1:8088';
 const SERVIDOR_CAIDO = 'http://localhost:4331';
-const SLUG = 'la-ola-que-cambio-un-pueblo';
-const OTRO_SLUG = 'lo-que-nadie-te-cuenta-del-tunco';
+const SLUG = 'la-barra-de-santiago';
+const OTRO_SLUG = 'lago-de-ilopango-volcan-lleno-de-agua';
 const PAGA = `/historias/${SLUG}/`;
 const OTRA_PAGA = `/historias/${OTRO_SLUG}/`;
-const CLAVE = `cacao-gate:${SLUG}`;
 const PAUSA = 'Los pagos están en pausa por unos minutos. Probá de nuevo en un rato.';
 const ADMIN = process.env.CLERK_QA_ADMIN ?? 'remitente+clerk_test@example.com';
 const NO_ADMIN = process.env.CLERK_QA_NO_ADMIN ?? 'destinatario-qa+clerk_test@example.com';
@@ -193,22 +192,6 @@ test.describe('paid story with BTCPay invoices', () => {
     expect(desborde).toBeLessThanOrEqual(0);
   });
 
-  test('a travel pass in the fragment unlocks the story without paying', async ({ page, browser, request }) => {
-    await page.goto(PAGA);
-    await desbloquearConBilletera(page, request);
-    const pase = (await page.evaluate((k) => JSON.parse(localStorage.getItem(k)!), CLAVE)) as { token: string };
-
-    const otra = await browser.newContext({ baseURL: 'http://localhost:4321' });
-    try {
-      const pagina = await otra.newPage();
-      await pagina.goto(`${PAGA}#pase=${pase.token}`);
-      await expect(cerrado(pagina)).toBeVisible();
-      await expect(articulo(pagina)).toHaveAttribute('data-gate-estado', 'desbloqueado');
-      expect(pagina.url()).not.toContain('pase');
-    } finally {
-      await otra.close();
-    }
-  });
 });
 
 test.describe('BTCPay down', () => {
@@ -278,7 +261,7 @@ test.describe('admin panel', () => {
 
     await page.goto('/admin/transacciones/?estado=pagada');
     await expect(page.getByRole('heading', { name: 'Transacciones' })).toBeVisible();
-    const fila = page.locator('tbody tr', { hasText: 'La ola que cambió un pueblo' }).first();
+    const fila = page.locator('tbody tr', { hasText: 'La Barra de Santiago' }).first();
     await expect(fila).toBeVisible();
     await expect(fila.locator('.chip')).toHaveText('Pagada');
   });

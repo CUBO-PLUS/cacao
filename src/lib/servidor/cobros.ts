@@ -81,7 +81,7 @@ export async function tieneAcceso(lector: string, slug: string): Promise<boolean
   return data !== null;
 }
 
-/** The signed pass that opens one story for seven days. Same token type as the Travel pass. */
+/** The signed token that opens one story for seven days after its payment. */
 export function tokenDeAcceso(slug: string): { token: string; expira: number } {
   const expira = Date.now() + DIAS_DE_ACCESO * DIA;
   return { token: firmar({ tipo: 'pago', slugs: [slug], exp: expira }), expira };

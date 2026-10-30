@@ -1,6 +1,6 @@
 // Public catalogue. Cacao Media's story pages call this to show the experience that goes with a story.
 import type { APIContext } from 'astro';
-import { PARTES } from '../../lib/reparto';
+import { PARTES, PARTES_SIN_HISTORIA } from '../../lib/reparto';
 import { coordenadas, personas, todosLosTours, urlTour } from '../../lib/tours';
 
 export async function GET({ site }: APIContext) {
@@ -24,5 +24,6 @@ export async function GET({ site }: APIContext) {
     alt: t.data.alt,
     historias: t.data.historias,
   }));
-  return Response.json({ version: 3, moneda: 'sats', demo: true, reparto: PARTES, tours });
+  // reparto applies to experiences with linked stories; repartoSinHistoria to the rest.
+  return Response.json({ version: 3, moneda: 'sats', demo: true, reparto: PARTES, repartoSinHistoria: PARTES_SIN_HISTORIA, tours });
 }

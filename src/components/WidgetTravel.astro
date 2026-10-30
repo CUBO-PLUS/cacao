@@ -30,7 +30,6 @@ const { historia, lugar, seccion, limite = 3 } = Astro.props;
   <header class="wt__cabeza">
     <a class="wt__marca" href={`${TRAVEL_URL}/`}><b>cacao</b>travel</a>
     <p>{historia ? 'Experiencias para ir a verlo.' : 'Experiencias en El Salvador, con precio en sats.'}</p>
-    {historia && <p class="wt__lector">Desbloqueaste esta historia: tenés 10% de descuento en su experiencia.</p>}
     <a class="pastilla wt__todas" href={`${TRAVEL_URL}/`}>Ver todas las experiencias</a>
   </header>
   <div class="wt__celdas" data-widget-celdas></div>
@@ -56,8 +55,6 @@ const { historia, lugar, seccion, limite = 3 } = Astro.props;
   .wt__marca b { font-weight: 800; }
   .wt__marca:hover { color: inherit; text-decoration: underline; }
   .wt__cabeza p { color: var(--tinta-suave); }
-  .wt__lector { display: none; font-weight: 800; color: var(--criollo) !important; }
-  .wt[data-widget-lector] .wt__lector { display: block; }
   .wt__todas { justify-self: start; white-space: normal; background: var(--tostado); color: var(--pulpa); }
   @media (min-width: 800px) {
     .wt--inicio .wt__cabeza { grid-template-columns: auto 1fr auto; }
@@ -118,8 +115,6 @@ const { historia, lugar, seccion, limite = 3 } = Astro.props;
 </style>
 
 <script>
-  import { tokenDe } from '../lib/gate';
-
   interface TourApi {
     id: string;
     titulo: string;
@@ -216,31 +211,10 @@ const { historia, lugar, seccion, limite = 3 } = Astro.props;
         ? califica(tours, slug, widget.dataset.widgetLugar ?? '', widget.dataset.widgetSeccion ?? '')
         : tours.slice(0, Number(widget.dataset.limite) || 3);
       const origen = new URL(api).origin;
-      const tarjetas = elegidos.flatMap((t) => {
-        const a = boleto(t, origen);
-        return a ? [{ a, tour: t, destino: a.href }] : [];
-      });
+      const tarjetas = elegidos.map((t) => boleto(t, origen)).filter((a): a is HTMLAnchorElement => a !== null);
       if (tarjetas.length === 0) continue;
-      celdas.append(...tarjetas.map((x) => x.a));
+      celdas.append(...tarjetas);
       widget.hidden = false;
-
-      // Only experiences that list this story give a discount, so only their links get the token.
-      // The token rides in the URL fragment, which browsers do not send to servers; Cacao Travel
-      // verifies its signature.
-      if (slug) {
-        const conDescuento = tarjetas.filter((x) => x.tour.historias.includes(slug));
-        const firmarEnlaces = () => {
-          const token = tokenDe(slug);
-          for (const x of tarjetas) {
-            x.a.href = token && x.tour.historias.includes(slug)
-              ? `${x.destino}#lector=${encodeURIComponent(token)}`
-              : x.destino;
-          }
-          widget.toggleAttribute('data-widget-lector', Boolean(token) && conDescuento.length > 0);
-        };
-        firmarEnlaces();
-        document.addEventListener('cacao:desbloqueada', firmarEnlaces);
-      }
     } catch {
       // Cacao Travel unreachable: the story reads fine without the widget.
     }

@@ -1,7 +1,7 @@
 // Starts a booking. The server recomputes everything from the catalogue: the client only says
-// which tour, which date, how many people, and optionally shows a reader token.
+// which tour, which date and how many people.
 //
-// With BTCPay configured, the booking is a Lightning invoice and no pase is signed yet: the browser
+// With BTCPay configured, the booking is a Lightning invoice: the browser
 // polls /api/reservar/estado/ until BTCPay says the invoice is Settled. Without BTCPay this is the
 // demo: nothing is charged and the booking is marked demo:true.
 import { createHash } from 'node:crypto';
@@ -10,7 +10,6 @@ import { crearFactura, enlaceBilleteraDePrueba } from '../../lib/btcpay';
 import { cotizacionUsdBtc } from '../../lib/precio';
 import { cotizar, diaDe, hoyEnElSalvador, NOMBRE_DIA } from '../../lib/reparto';
 import { MEDIA_URL, personas as limites, todosLosTours } from '../../lib/tours';
-import { esLector } from '../../lib/lector';
 import { entornoServidor } from '../../lib/entorno';
 import {
   btcpayEnPausa,
@@ -27,7 +26,7 @@ const error = (mensaje: string, status = 400) => Response.json({ error: mensaje 
 const sinCache = { headers: { 'Cache-Control': 'no-store' } };
 
 export async function POST({ request }: APIContext) {
-  let c: { tour?: unknown; fecha?: unknown; personas?: unknown; lector?: unknown };
+  let c: { tour?: unknown; fecha?: unknown; personas?: unknown };
   try {
     c = await request.json();
   } catch {
@@ -53,10 +52,9 @@ export async function POST({ request }: APIContext) {
   const n = Number(c.personas);
   if (!Number.isInteger(n) || n < min || n > max) return error(`El grupo es de ${min} a ${max} personas.`);
 
-  const lector = esLector(c.lector, d.historias);
   const ahora = Date.now();
   const codigo = createHash('sha256').update(`${tour.id}|${fecha}|${n}|${ahora}|${Math.random()}`).digest('hex').slice(0, 8).toUpperCase();
-  const reserva = { codigo, fecha, personas: n, lector, ahora, mediaUrl: MEDIA_URL };
+  const reserva = { codigo, fecha, personas: n, ahora, mediaUrl: MEDIA_URL };
 
   const entorno = entornoServidor();
   const pagos = await pagosConfigurados(entorno);
@@ -65,7 +63,7 @@ export async function POST({ request }: APIContext) {
     return Response.json(construirReserva(tour, reserva), sinCache);
   }
 
-  const cotizacion = cotizar(d.precio, n, lector);
+  const cotizacion = cotizar(d.precio, n);
   let cotizacionUsd: number;
   try {
     cotizacionUsd = await cotizacionUsdBtc({ env: entorno });
@@ -82,7 +80,6 @@ export async function POST({ request }: APIContext) {
         codigo,
         fecha,
         personas: n,
-        lector,
         cotizacionUsdBtc: cotizacionUsd,
         usdCentavos: Math.ceil((cotizacion.total * cotizacionUsd) / 1e6),
       }),

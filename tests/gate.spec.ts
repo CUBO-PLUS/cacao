@@ -2,10 +2,11 @@ import { readFile } from 'node:fs/promises';
 import { createClient } from '@supabase/supabase-js';
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
 
-const PAGA = '/historias/la-ola-que-cambio-un-pueblo/';
-const OTRA_PAGA = '/historias/lo-que-nadie-te-cuenta-del-tunco/';
+const PAGA = '/historias/la-barra-de-santiago/';
+const OTRA_PAGA = '/historias/lago-de-ilopango-volcan-lleno-de-agua/';
 const GRATIS = '/historias/como-pedir-un-cafe-de-altura/';
-const SLUG = 'la-ola-que-cambio-un-pueblo';
+const SLUG = 'la-barra-de-santiago';
+const OTRO_SLUG = 'lago-de-ilopango-volcan-lleno-de-agua';
 const CLAVE = `cacao-gate:${SLUG}`;
 const DIA = 24 * 60 * 60 * 1000;
 
@@ -263,7 +264,7 @@ test('the locked text is not in the page and the server refuses it without a val
   // A real pass for a different story does not open this one.
   await page.goto(OTRA_PAGA);
   await pagarHistoria(page);
-  const otra = await page.evaluate(() => localStorage.getItem('cacao-gate:lo-que-nadie-te-cuenta-del-tunco'));
+  const otra = await page.evaluate((k) => localStorage.getItem(k), `cacao-gate:${OTRO_SLUG}`);
   const tokenOtra = (JSON.parse(otra!) as { token: string }).token;
   expect((await request.get(api, { headers: { Authorization: `Bearer ${tokenOtra}` } })).status()).toBe(401);
 
@@ -329,18 +330,6 @@ test('without a database the gate says payments are not available and stays clos
   await expect(cerrado(page)).toBeHidden();
 });
 
-test('an unlocked story passes the reader token to its Cacao Travel experience', async ({ page, request }) => {
-  await requiereDemo(request);
-  await page.route(`${TRAVEL}/api/tours.json`, (r) => r.fulfill({ json: { tours: [TOUR] } }));
-  await page.route(`${TRAVEL}/fotos/**`, (r) => r.fulfill({ status: 204 }));
-  await page.goto(PAGA);
-  const enlace = page.locator('[data-widget-travel] .wt-boleto');
-  await expect(enlace).toHaveAttribute('href', TOUR.url);
-  await pagarHistoria(page);
-  await expect(enlace).toHaveAttribute('href', /#lector=/);
-  await expect(page.locator('.wt__lector')).toBeVisible();
-});
-
 test('unlocking one story does not unlock another', async ({ page, request }) => {
   await requiereDemo(request);
   await page.goto(PAGA);
@@ -375,12 +364,6 @@ test('free story has no wall', async ({ page }) => {
   await expect(page.locator('article[data-historia]')).toHaveAttribute('data-gate-estado', 'gratis');
   await expect(muro(page)).toHaveCount(0);
   await expect(page.locator('[data-gate-pastilla]')).toHaveText('Gratis');
-});
-
-test('a reading pass is removed from the address bar on a free story', async ({ page }) => {
-  await page.goto(GRATIS + '#pase=abc.def');
-  await expect(page.locator('article[data-historia]')).toHaveAttribute('data-gate-estado', 'gratis');
-  expect(page.url()).not.toContain('pase');
 });
 
 test('the Travel widget renders what the Cacao Travel API returns', async ({ page }) => {

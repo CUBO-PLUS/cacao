@@ -18,11 +18,11 @@ Guion para presentar el grupo Cacao en tres minutos. Cada bloque dice qué abrir
 
 ## 0:25 a 1:05 · Comprar una historia en Media
 
-**Abrí:** `https://cacao-media.vercel.app`, y dentro de Media, una historia de pago (la que tiene el muro al final).
+**Abrí:** `https://cacao-media.vercel.app/historias/ataco-y-sus-murales/`, una historia de pago (la que tiene el muro al final).
 
 **Tocá:** "Desbloquear por 120 sats".
 
-**Decí:** "Cada historia cuesta 120 sats. No hay suscripción: pagás una historia y listo. El pago es una factura Lightning, que genera BTCPay."
+**Decí:** "Las historias sin experiencia en Travel cuestan 120 sats. Las vinculadas son gratis, porque la venta viene de la reserva. No hay suscripción: pagás una historia y listo. El pago es una factura Lightning, que genera BTCPay."
 
 ## 1:05 a 1:45 · Pagar con la billetera de prueba
 

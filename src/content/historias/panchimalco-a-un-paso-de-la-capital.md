@@ -7,8 +7,7 @@ autor: Josh Pineda
 lugar: Panchimalco
 coords: 13.61°N · 89.19°W
 minutos: 3
-precio: 0
-gratis: true
+precio: 120
 portada: /portadas/panchimalco-a-un-paso-de-la-capital.jpg
 alt: Iglesia de fachada blanca con molduras y nichos con imágenes, tras un muro bajo, con cerros verdes al fondo.
 credito: 'Metztli'
@@ -27,20 +26,4 @@ Antes de subir, conviene saber que el pueblo se disfruta sin prisa. Las calles t
 
 La iglesia es el punto de referencia del pueblo. Su fachada blanca, con molduras y nichos con imágenes, se ve desde varias calles y ayuda a orientarse. Antes de entrar, mirá el atrio y el portón, y observá a la gente que llega a rezar o a conversar con los vecinos. Si hay una misa o un acto, esperá afuera hasta que termine. Cuando salgas, mirá la vista hacia los cerros desde la parte alta del pueblo.
 
-Alrededor de la iglesia hay tiendas y puestos. Probá algo de la cocina local, como pupusas o atol de elote, y preguntá cuál es la fiesta más importante del año. Muchas personas se sienten orgullosas de explicarla con calma. Si llegás temprano, las tiendas están más tranquilas y podés conversar sin apuro. Los horarios de los puestos cambian según el día y la temporada, así que no planees el almuerzo a una hora exacta sin confirmarla antes.
-
-## Tradiciones que se bailan
-
-Panchimalco es conocido por sus danzas tradicionales. Los historiantes son una de las danzas más reconocidas del país, y en algunas fiestas del año se presentan en el pueblo. Cada danza tiene su propio paso, su vestuario y su manera de contar una historia. Aunque no sepas nada de danza, la música y el ritmo se entienden enseguida.
-
-Si tenés la suerte de coincidir con una presentación, mirá sin interrumpir y no te acerqués demasiado. Las danzas son parte de una vida comunitaria, no un espectáculo montado para visitantes. Preguntá antes de sacar fotos de cerca a los bailarines. Si no entendés una danza, preguntá a alguien del pueblo, que suele tener algo para contar.
-
-## Un plan para el día
-
-Un día alcanza para ver lo principal, si salís temprano. Este orden funciona bien:
-
-- Llegá por la mañana, caminá el centro y visitá la iglesia.
-- Almorzá en un lugar del pueblo y probá algo de la cocina local.
-- Caminá por las calles altas con calma y regresá antes de que caiga la noche.
-
-Si vas en transporte público, pedí la ruta y el punto de salida antes de ir, porque los horarios cambian y conviene confirmarlos. Al regresar a la capital, lo que queda es la sensación de haber estado en otro ritmo. Panchimalco está cerca, pero se siente distinto, y eso lo hace fácil de volver. Dejá espacio en el día para volver con calma, porque siempre queda algo por mirar.
+<!-- gate -->

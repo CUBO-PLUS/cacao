@@ -176,7 +176,7 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
 
 <script>
   import QRCode from 'qrcode';
-  import { aceptarPase, tokenDe, traerCerrado } from '../lib/gate';
+  import { estadoGate, guardarAcceso, traerCerrado } from '../lib/gate';
 
   type Paso = 'inicio' | 'pendiente' | 'pagada' | 'vencida' | 'fallida' | 'sin-base';
   interface Respuesta {
@@ -426,7 +426,7 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
       );
     }
 
-    // The locked text goes into the page only now, from the server, with the reader's pass.
+    // The locked text goes into the page only now, from the server, with the reader's token.
     async function abrir(html: string, enfocar: boolean): Promise<void> {
       if (!cerrado) return;
       cerrado.innerHTML = html;
@@ -436,8 +436,6 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
       cerrado.append(fin);
       error(null);
       pintarArticulo('desbloqueado');
-      // Tell the Cacao Travel widget the reader now holds a token it can pass along.
-      document.dispatchEvent(new CustomEvent('cacao:desbloqueada', { detail: { slug } }));
       observarLectura();
       if (enfocar) {
         cerrado.tabIndex = -1;
@@ -446,13 +444,13 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
       }
     }
 
-    // Stores the pass, then opens the story. `recibo` shows "Pago recibido" first.
+    // Stores the token, then opens the story. `recibo` shows "Pago recibido" first.
     async function cobrado(token: string, recibo: boolean): Promise<void> {
       if (recibo) {
         mostrar('pagada', 'Pago recibido.');
         await new Promise((resolver) => setTimeout(resolver, PAUSA_RECIBO_MS));
       }
-      if (!aceptarPase(slug, token)) {
+      if (!guardarAcceso(slug, token)) {
         mostrar('inicio', SIN_COMPRAR);
         error(MENSAJE_RED);
         return;
@@ -522,15 +520,9 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
     }
 
     async function alCargar(): Promise<void> {
-      // A Cacao Travel booking hands over a reading pass in the fragment. Keep it, then drop it from the address bar.
-      const pase = new URLSearchParams(location.hash.slice(1)).get('pase');
-      if (pase) {
-        history.replaceState(null, '', location.pathname + location.search);
-        aceptarPase(slug, pase);
-      }
       enviar('vista_historia');
 
-      if (tokenDe(slug)) {
+      if (estadoGate(slug) === 'desbloqueado') {
         try {
           const html = await traerCerrado(slug);
           if (html !== null) {
@@ -538,11 +530,11 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
             return;
           }
         } catch {
-          // The pass is kept; the server check below decides.
+          // The token is kept; the server check below decides.
         }
       }
 
-      // No pass, or the server refused the stored one: ask whether this browser has paid for the story.
+      // No token, or the server refused the stored one: ask whether this browser has paid for the story.
       try {
         const r = await fetch('/api/desbloquear/', {
           method: 'POST',
@@ -558,7 +550,7 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
           pintarUsd(datos.precioUsdCentavos);
           return;
         }
-        if (!r.ok || !datos.token || !aceptarPase(slug, datos.token)) {
+        if (!r.ok || !datos.token || !guardarAcceso(slug, datos.token)) {
           error(MENSAJE_RED);
           return;
         }

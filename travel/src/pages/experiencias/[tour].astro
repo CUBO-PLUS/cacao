@@ -2,7 +2,7 @@
 import { render } from 'astro:content';
 import Base from '../../layouts/Base.astro';
 import Boleto from '../../components/Boleto.astro';
-import { DESCUENTO_LECTOR, NOMBRE_DIA, PARTES } from '../../lib/reparto';
+import { NOMBRE_DIA, PARTES } from '../../lib/reparto';
 import { MEDIA_URL, personas, sats, todosLosTours, type Tour } from '../../lib/tours';
 
 export async function getStaticPaths() {
@@ -79,7 +79,6 @@ const datos = [
         data-precio={d.precio}
         data-salidas={d.salidas.join(',')}
         data-con-autor={d.historias.length > 0 ? '1' : ''}
-        data-descuento={DESCUENTO_LECTOR}
         data-plataforma={PARTES.plataforma}
         data-autor={PARTES.autor}
       >
@@ -104,10 +103,6 @@ const datos = [
           </div>
           <div class="reserva__talon">
             <dl class="reserva__cuenta">
-              <div data-fila-descuento hidden>
-                <dt>Descuento por historia desbloqueada (10%)</dt>
-                <dd data-descuento-monto></dd>
-              </div>
               <div class="reserva__total">
                 <dt>Total</dt>
                 <dd data-total>{sats(d.precio * Math.max(grupo.min, 2))}</dd>
@@ -149,7 +144,7 @@ const datos = [
           <p class="reserva__codigo" data-codigo></p>
           <p data-resumen></p>
           <div data-lecturas-reserva hidden>
-            <p class="reserva__abre">Tu reserva desbloquea estas historias en Cacao Media por 30 días:</p>
+            <p class="reserva__abre">Estas historias sobre el lugar están gratis en Cacao Media:</p>
             <ul data-lecturas-lista></ul>
           </div>
           <a class="boton" href="/reservas/">Ver mis reservas</a>
@@ -421,7 +416,6 @@ const datos = [
     const form = caja.querySelector<HTMLFormElement>('[data-form]')!;
     const error = caja.querySelector<HTMLElement>('[data-error]')!;
     const boton = caja.querySelector<HTMLButtonElement>('[data-reservar]')!;
-    const filaDescuento = caja.querySelector<HTMLElement>('[data-fila-descuento]')!;
     const tour = caja.dataset.tour ?? '';
     const salidas = (caja.dataset.salidas ?? '').split(',');
     const conAutor = Boolean(caja.dataset.conAutor);
@@ -443,7 +437,6 @@ const datos = [
       tasaUsd = t;
       pintarTotalUsd();
     });
-    let esLector = false;
     // Fallback title from a slug: "el-lago" becomes "El lago".
     const tituloDeSlug = (s: string) => s.replace(/-/g, ' ').replace(/^./, (c) => c.toUpperCase());
 
@@ -452,17 +445,13 @@ const datos = [
       // The stepper only ever shows a whole number of people.
       const entero = Number.isFinite(n) ? Math.trunc(n) : min;
       const personas = Math.min(max, Math.max(min, entero));
-      const subtotal = precio * personas;
-      const descuento = esLector ? Math.round(subtotal * Number(caja.dataset.descuento)) : 0;
-      const aPagar = subtotal - descuento;
+      const aPagar = precio * personas;
       const plataforma = Math.floor(aPagar * Number(caja.dataset.plataforma));
       const autor = conAutor ? Math.floor(aPagar * Number(caja.dataset.autor)) : 0;
       salida.value = String(personas);
       total.textContent = sats(aPagar);
       aPagarActual = aPagar;
       pintarTotalUsd();
-      filaDescuento.hidden = descuento === 0;
-      poner('[data-descuento-monto]', `−${sats(descuento)}`);
       poner('[data-r-operador]', sats(aPagar - plataforma - autor));
       poner('[data-r-plataforma]', sats(plataforma));
       poner('[data-r-autor]', sats(autor));
@@ -502,49 +491,6 @@ const datos = [
     // Only a whole number of people from the search bar counts; anything else keeps the default.
     const pedidas = Number.parseInt(consulta.get('personas') ?? '', 10);
     pintar(Number.isFinite(pedidas) && pedidas >= 1 ? pedidas : Number(salida.value));
-
-    // Reader discount. Cacao Media's widget links here with the reader's token in the URL fragment
-    // (never sent to a server by the browser). Keep it for the session and ask our API if it counts.
-    const LECTOR = 'ct-lector';
-    const llegada = new URLSearchParams(location.hash.slice(1)).get('lector');
-    if (llegada) {
-      try {
-        sessionStorage.setItem(LECTOR, llegada);
-      } catch {}
-      history.replaceState(null, '', location.pathname + location.search);
-    }
-    let tokenLector = llegada ?? '';
-    try {
-      tokenLector ||= sessionStorage.getItem(LECTOR) ?? '';
-    } catch {}
-    // While the reader discount is checked, Reservar waits (at most 4 seconds) so the total on screen is the one booked.
-    let comprobando = false;
-    let espera = 0;
-    const terminarComprobacion = () => {
-      if (!comprobando) return;
-      comprobando = false;
-      clearTimeout(espera);
-      boton.disabled = false;
-      boton.textContent = 'Reservar';
-    };
-    if (tokenLector) {
-      comprobando = true;
-      boton.disabled = true;
-      boton.textContent = 'Comprobando descuento';
-      espera = window.setTimeout(terminarComprobacion, 4000);
-      fetch('/api/lector/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: tokenLector, tour }),
-      })
-        .then((r) => (r.ok ? r.json() : { valido: false }))
-        .then((r: { valido: boolean }) => {
-          esLector = r.valido;
-          pintar(Number(salida.value));
-        })
-        .catch(() => {})
-        .finally(terminarComprobacion);
-    }
 
     // Shows a Lightning invoice and waits for BTCPay to say it is paid. The browser never decides that:
     // it only asks /api/reservar/estado/, and the server asks BTCPay. Resolves with the paid booking.
@@ -670,8 +616,7 @@ const datos = [
         const r = await fetch('/api/reservar/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          // The token goes only once the discount is confirmed, so the server books the total on screen.
-          body: JSON.stringify({ tour, fecha: fecha.value, personas: Number(salida.value), lector: esLector ? tokenLector : undefined }),
+          body: JSON.stringify({ tour, fecha: fecha.value, personas: Number(salida.value) }),
         });
         // A reply that is not JSON gets the generic message, not the parser's text.
         let reserva: any = null;
@@ -711,7 +656,7 @@ const datos = [
           if (!origen || !l.url.startsWith(origen)) continue;
           const li = document.createElement('li');
           const a = document.createElement('a');
-          a.href = reserva.pase ? `${l.url}#pase=${encodeURIComponent(reserva.pase)}` : l.url;
+          a.href = l.url;
           a.textContent = l.titulo;
           li.append(a);
           ul.append(li);

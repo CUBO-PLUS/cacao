@@ -550,9 +550,11 @@ select {
   padding-block: clamp(24px, 6vh, 64px);
 }
 
+/* The base .encabezado is a row (title left, text right). Here the title and the text stack and center. */
 .entrar .encabezado {
+  flex-direction: column;
+  align-items: center;
   text-align: center;
-  justify-items: center;
   max-width: 28rem;
   margin-inline: auto;
 }

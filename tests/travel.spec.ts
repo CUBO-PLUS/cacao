@@ -80,22 +80,37 @@ async function expectVisibles(page: Page, esperadas: Tour[]): Promise<void> {
   expect(await titulosVisibles(page)).toEqual(porTitulo(esperadas));
 }
 
+// The regtest test wallet of the BTCPay demo. It pays a real Lightning invoice made by BTCPay.
+const BTCPAY = process.env.BTCPAY_PUERTA ?? 'http://127.0.0.1:8088';
+
 /**
  * A Cacao Media reader token for a paid story, or null when the story is free or unknown.
- * Media gives a token only after its invoice is paid, so this pays the simulated invoice.
+ * Media gives a token only after its invoice is paid. A BTCPay invoice (lnbcrt…) is paid with the test wallet
+ * and then read until Media sees it paid; a simulated invoice (demo mode) is paid with the demo route.
  */
 async function tokenDePago(request: APIRequestContext, slug: string): Promise<string | null> {
   const cobro = await request.post(`${MEDIA}/api/cobro/`, { data: { slug } });
   if (!cobro.ok()) return null;
-  const creado = (await cobro.json()) as { id?: string; estado: string; token?: string };
+  const creado = (await cobro.json()) as { id?: string; estado: string; token?: string; factura?: string };
   // A reader who already has access gets the token straight away.
   if (creado.token) return creado.token;
   if (!creado.id) return null;
-  const pago = await request.post(`${MEDIA}/api/cobro/${creado.id}/pagar/`);
-  if (!pago.ok()) return null;
-  const estado = await request.get(`${MEDIA}/api/cobro/${creado.id}/`);
-  if (!estado.ok()) return null;
-  return ((await estado.json()) as { token?: string }).token ?? null;
+  if (creado.factura?.startsWith('lnbcrt')) {
+    const pago = await request.post(`${BTCPAY}/billetera/api/pagar`, { data: { factura: creado.factura } });
+    if (!pago.ok()) return null;
+  } else {
+    const pago = await request.post(`${MEDIA}/api/cobro/${creado.id}/pagar/`);
+    if (!pago.ok()) return null;
+  }
+  for (let intento = 0; intento < 10; intento++) {
+    const estado = await request.get(`${MEDIA}/api/cobro/${creado.id}/`);
+    if (estado.ok()) {
+      const token = ((await estado.json()) as { token?: string }).token;
+      if (token) return token;
+    }
+    await new Promise((listo) => setTimeout(listo, 1000));
+  }
+  return null;
 }
 
 /** The first paid story of the list, with its token. */
@@ -319,7 +334,15 @@ test('a valid booking shows a code, is saved in this browser, appears on /reserv
 
   await page.goto(`/experiencias/${t.id}/?fecha=${fecha}&personas=${personas}`);
   await page.locator('[data-reservar]').click();
-  await expect(page.locator('[data-confirmada]')).toBeVisible();
+  // With BTCPay configured the booking waits for its Lightning payment: pay it with the test wallet.
+  const pago = page.locator('[data-pago]');
+  const confirmada = page.locator('[data-confirmada]');
+  await expect(page.locator('[data-pago]:visible, [data-confirmada]:visible')).toBeVisible();
+  if (await pago.isVisible()) {
+    const factura = await pago.locator('[data-pago-factura]').inputValue();
+    expect((await request.post(`${BTCPAY}/billetera/api/pagar`, { data: { factura } })).ok()).toBe(true);
+  }
+  await expect(confirmada).toBeVisible({ timeout: 15000 });
   const codigo = ((await page.locator('[data-codigo]').textContent()) ?? '').trim();
   expect(codigo).toMatch(/^[0-9A-F]{8}$/);
 
@@ -344,10 +367,13 @@ test('POST /api/reservar/ refuses bad bookings with a 4xx and a JSON error, neve
   if (!conDiaAjeno) throw new Error('every experience runs every day');
   const bien = { tour: t.id, fecha: proximaFecha(t.salidas[0]), personas: 2 };
 
-  // Control: the same request with good data is accepted.
+  // Control: the same request with good data is accepted. In demo mode it answers the booking; with BTCPay
+  // configured it answers a pending Lightning invoice, and the code comes once it is paid.
   const control = await request.post('/api/reservar/', { data: bien });
   expect(control.status()).toBe(200);
-  expect(((await control.json()) as { codigo: string }).codigo).toMatch(/^[0-9A-F]{8}$/);
+  const aceptada = (await control.json()) as { codigo?: string; estado?: string; factura?: { bolt11?: string } };
+  if (aceptada.estado === 'pendiente') expect(aceptada.factura?.bolt11).toMatch(/^lnbcrt[0-9a-z]+$/);
+  else expect(aceptada.codigo).toMatch(/^[0-9A-F]{8}$/);
 
   const casos: Record<string, string> = {
     'body null': 'null',

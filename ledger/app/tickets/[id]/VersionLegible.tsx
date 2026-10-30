@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 
 import { formatoUsd } from "../../../src/dinero.ts";
-import type { ResultadoConstruccion } from "../../../src/dte/construir.ts";
 import type { Ticket } from "../../../src/ticket.ts";
 import { fechaHoraSv } from "../../_componentes/formato.ts";
 
@@ -12,7 +11,12 @@ export const URL_CONSULTA = "https://admin.factura.gob.sv/consultaPublica";
 
 type Props = {
   ticket: Ticket;
-  resultado: ResultadoConstruccion;
+  // The document to show: the stored one (emitido = true) or the preview built from the ticket.
+  documento: Record<string, unknown>;
+  totalCentavos: number;
+  // The seal of the stored document, or the ticket's seal for a preview.
+  sello: string | null;
+  emitido: boolean;
   qrSvg: string;
 };
 
@@ -25,8 +29,8 @@ function Fila({ titulo, children }: { titulo: string; children: ReactNode }) {
   );
 }
 
-export function VersionLegible({ ticket, resultado, qrSvg }: Props) {
-  const doc = resultado.documento as Record<string, any>;
+export function VersionLegible({ ticket, documento, totalCentavos, sello, emitido, qrSvg }: Props) {
+  const doc = documento as Record<string, any>;
   const ident = (doc.identificacion ?? {}) as Record<string, any>;
   const emisor = (doc.emisor ?? {}) as Record<string, any>;
   const tipo = String(ident.tipoDte ?? "01");
@@ -73,7 +77,7 @@ export function VersionLegible({ ticket, resultado, qrSvg }: Props) {
           <span className="num">{`${pago.codigo ?? ""}${pago.referencia ? ` · ${pago.referencia}` : ""}`}</span>
         </Fila>
         <Fila titulo="Total">
-          <span className="num">{formatoUsd(resultado.totales.totalCentavos)}</span>
+          <span className="num">{formatoUsd(totalCentavos)}</span>
         </Fila>
         <Fila titulo="Modelo y transmisión">Modelo 1 (previo) · Transmisión 1 (normal) · Moneda USD</Fila>
         <Fila titulo="Ambiente">{ambiente === "01" ? "01, producción" : "00, pruebas"}</Fila>
@@ -84,14 +88,20 @@ export function VersionLegible({ ticket, resultado, qrSvg }: Props) {
           producción): <span className="num">{codGen}</span> · {fecEmi} · <span className="num">{ambiente}</span>
         </Fila>
         <Fila titulo="Sello de recepción">
-          {ticket.sello ? <span className="num">{ticket.sello.valor}</span> : "Todavía no hay sello para este ticket."}
-          {ticket.sello ? <span className="nota"> Emitido {fechaHoraSv(ticket.sello.momento)}.</span> : null}
+          {sello ? <span className="num">{sello}</span> : "Todavía no hay sello para este ticket."}
+          {sello && ticket.sello ? <span className="nota"> Emitido {fechaHoraSv(ticket.sello.momento)}.</span> : null}
         </Fila>
       </dl>
-      <p className="nota" style={{ marginTop: "0.75rem" }}>
-        Vista previa armada ahora desde el ticket. No consume correlativo, así que el número puede no coincidir con el
-        documento que se emitió.
-      </p>
+      {emitido ? (
+        <p className="nota" style={{ marginTop: "0.75rem" }}>
+          Versión legible del documento emitido. El sello es simulado: ningún servicio del Ministerio de Hacienda lo emitió.
+        </p>
+      ) : (
+        <p className="nota" style={{ marginTop: "0.75rem" }}>
+          Vista previa armada ahora desde el ticket. No consume correlativo, así que el número puede no coincidir con el
+          documento que se emitió.
+        </p>
+      )}
     </section>
   );
 }

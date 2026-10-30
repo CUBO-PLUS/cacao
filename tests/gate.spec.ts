@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { createClient } from '@supabase/supabase-js';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
 
 const PAGA = '/historias/la-ola-que-cambio-un-pueblo/';
 const OTRA_PAGA = '/historias/lo-que-nadie-te-cuenta-del-tunco/';
@@ -24,6 +24,15 @@ const TOUR = {
 
 const muro = (page: Page) => page.locator('[data-gate-muro]');
 const cerrado = (page: Page) => page.locator('[data-gate-cerrado]');
+
+/**
+ * The simulated-payment buttons exist only when the server runs with PUBLIC_DEMO=1. In the real BTCPay mode
+ * these tests skip; that path is covered by media-btcpay.spec.ts.
+ */
+async function requiereDemo(request: APIRequestContext): Promise<void> {
+  const html = await (await request.get(PAGA)).text();
+  test.skip(!html.includes('data-gate-simular'), 'Requiere el servidor con PUBLIC_DEMO=1: el pago real está en media-btcpay.spec.ts.');
+}
 
 /** Asks for an invoice from the gate and returns its id. */
 async function pedirFactura(page: Page): Promise<string> {
@@ -81,7 +90,8 @@ async function fraseCerrada(): Promise<string | null> {
   return html ? muestraDe(html) : null;
 }
 
-test('paid story starts locked with its price and the unlock button', async ({ page }) => {
+test('paid story starts locked with its price and the unlock button', async ({ page, request }) => {
+  await requiereDemo(request);
   await page.goto(PAGA);
   await expect(page.locator('article[data-historia]')).toHaveAttribute('data-gate-estado', 'bloqueado');
   await expect(cerrado(page)).toBeHidden();
@@ -95,7 +105,8 @@ test('paid story starts locked with its price and the unlock button', async ({ p
   await expect(muro(page)).toContainText('Modo demo');
 });
 
-test('the invoice shows a QR, the amount and a countdown', async ({ page }) => {
+test('the invoice shows a QR, the amount and a countdown', async ({ page, request }) => {
+  await requiereDemo(request);
   await page.goto(PAGA);
   await pedirFactura(page);
   await expect(page.locator('[data-gate-qr]')).toHaveAttribute('alt', 'Código QR de la factura');
@@ -111,7 +122,8 @@ test('the invoice shows a QR, the amount and a countdown', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Simular pago fallido' })).toBeVisible();
 });
 
-test('paying opens the story without a scroll jump', async ({ page }) => {
+test('paying opens the story without a scroll jump', async ({ page, request }) => {
+  await requiereDemo(request);
   await page.goto(PAGA);
   await pedirFactura(page);
   const simular = page.locator('[data-gate-simular]');
@@ -126,7 +138,8 @@ test('paying opens the story without a scroll jump', async ({ page }) => {
   await expect(page.locator('[data-gate-pastilla]')).toHaveText('Desbloqueado');
 });
 
-test('the unlock lasts seven days and survives a reload', async ({ page }) => {
+test('the unlock lasts seven days and survives a reload', async ({ page, request }) => {
+  await requiereDemo(request);
   await page.goto(PAGA);
   await pagarHistoria(page);
 
@@ -138,7 +151,8 @@ test('the unlock lasts seven days and survives a reload', async ({ page }) => {
   await expect(cerrado(page)).toBeVisible();
 });
 
-test('a second visit in the same browser opens the story without paying again', async ({ page }) => {
+test('a second visit in the same browser opens the story without paying again', async ({ page, request }) => {
+  await requiereDemo(request);
   await page.goto(PAGA);
   await pagarHistoria(page);
 
@@ -154,7 +168,8 @@ test('a second visit in the same browser opens the story without paying again', 
   expect(pedidos).toEqual([]);
 });
 
-test('reading the unlocked part sets the state to leyendo', async ({ page }) => {
+test('reading the unlocked part sets the state to leyendo', async ({ page, request }) => {
+  await requiereDemo(request);
   await page.goto(PAGA);
   await pagarHistoria(page);
   await expect(page.locator('article[data-historia]')).toHaveAttribute('data-gate-estado', 'desbloqueado');
@@ -164,7 +179,8 @@ test('reading the unlocked part sets the state to leyendo', async ({ page }) => 
   await expect(page.locator('[data-gate-pastilla]')).toHaveText('Leyendo');
 });
 
-test('the failed path explains itself and the reader can try again', async ({ page }) => {
+test('the failed path explains itself and the reader can try again', async ({ page, request }) => {
+  await requiereDemo(request);
   await page.goto(PAGA);
   await pedirFactura(page);
   await page.locator('[data-gate-fallar]').click();
@@ -199,7 +215,8 @@ test('an expired invoice reads vencida and a new one can be asked for', async ({
   await expect(muro(page)).toHaveAttribute('data-paso', 'pendiente');
 });
 
-test('a different browser stays locked and cannot read the first invoice', async ({ page, browser }) => {
+test('a different browser stays locked and cannot read the first invoice', async ({ page, browser, request }) => {
+  await requiereDemo(request);
   await page.goto(PAGA);
   const id = await pedirFactura(page);
   await page.locator('[data-gate-simular]').click();
@@ -219,7 +236,8 @@ test('a different browser stays locked and cannot read the first invoice', async
   }
 });
 
-test('an expired stored pass is renewed from the cookie', async ({ page }) => {
+test('an expired stored pass is renewed from the cookie', async ({ page, request }) => {
+  await requiereDemo(request);
   await page.goto(PAGA);
   await pagarHistoria(page);
   await page.evaluate((k) => localStorage.setItem(k, JSON.stringify({ token: 'viejo', expira: Date.now() - 1000 })), CLAVE);
@@ -229,6 +247,7 @@ test('an expired stored pass is renewed from the cookie', async ({ page }) => {
 });
 
 test('the locked text is not in the page and the server refuses it without a valid pass', async ({ page, request }) => {
+  await requiereDemo(request);
   const frase = await fraseCerrada();
   if (!frase) {
     test.skip(true, `Sin texto cerrado de muestra para ${SLUG}: correr con --env-file=.env.local o tener src/data/cerrado.json.`);
@@ -310,7 +329,8 @@ test('without a database the gate says payments are not available and stays clos
   await expect(cerrado(page)).toBeHidden();
 });
 
-test('an unlocked story passes the reader token to its Cacao Travel experience', async ({ page }) => {
+test('an unlocked story passes the reader token to its Cacao Travel experience', async ({ page, request }) => {
+  await requiereDemo(request);
   await page.route(`${TRAVEL}/api/tours.json`, (r) => r.fulfill({ json: { tours: [TOUR] } }));
   await page.route(`${TRAVEL}/fotos/**`, (r) => r.fulfill({ status: 204 }));
   await page.goto(PAGA);
@@ -321,7 +341,8 @@ test('an unlocked story passes the reader token to its Cacao Travel experience',
   await expect(page.locator('.wt__lector')).toBeVisible();
 });
 
-test('unlocking one story does not unlock another', async ({ page }) => {
+test('unlocking one story does not unlock another', async ({ page, request }) => {
+  await requiereDemo(request);
   await page.goto(PAGA);
   await pagarHistoria(page);
   await page.goto(OTRA_PAGA);
@@ -337,7 +358,8 @@ test('a failed invoice request explains itself', async ({ page }) => {
   await expect(muro(page)).toBeVisible();
 });
 
-test('the story opens even when the browser blocks storage', async ({ page }) => {
+test('the story opens even when the browser blocks storage', async ({ page, request }) => {
+  await requiereDemo(request);
   await page.addInitScript(() => {
     Storage.prototype.setItem = () => {
       throw new Error('blocked');

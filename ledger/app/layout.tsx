@@ -76,15 +76,16 @@ export const viewport: Viewport = {
 };
 
 // The owner's links and the account button. Read inside a Suspense boundary, so the static shell of the layout still
-// prerenders. A failed session read must not break the public pages: it falls back to "Entrar".
+// prerenders. A failed session read must not break the public pages: it falls back to "Entrar". A signed-in person
+// who is not an owner gets the account button (not "Entrar", which would only send them back here).
 async function NavegacionSesion() {
-  let dueno = false;
+  let sesion = null;
   try {
-    dueno = (await sesionActual())?.usuario.esAdmin === true;
+    sesion = await sesionActual();
   } catch (e) {
     console.error("La sesión no pudo leerse:", e);
   }
-  if (!dueno) {
+  if (!sesion) {
     return (
       <Link href="/entrar" className="nav-entrar">
         Entrar
@@ -93,8 +94,12 @@ async function NavegacionSesion() {
   }
   return (
     <>
-      <Link href="/tickets">Tickets</Link>
-      <Link href="/mes">Mes</Link>
+      {sesion.usuario.esAdmin ? (
+        <>
+          <Link href="/tickets">Tickets</Link>
+          <Link href="/mes">Mes</Link>
+        </>
+      ) : null}
       <span className="nav-usuario">
         <UserButton />
       </span>

@@ -270,3 +270,18 @@ describe('procesar y fallar un envío por Lightning', () => {
     expect(llamadas('pay_fallar')).toHaveLength(0);
   });
 });
+
+describe('textoDeBusqueda', () => {
+  it('writes a code typed without dashes in the stored shape', async () => {
+    const { textoDeBusqueda } = await import('./transferencias');
+    expect(textoDeBusqueda('cp2wg9jmg6')).toBe('CP-2WG9-JMG6');
+    expect(textoDeBusqueda(' CP-2WG9-JMG6 ')).toBe('CP-2WG9-JMG6');
+  });
+
+  it('removes characters that would change a PostgREST filter', async () => {
+    const { textoDeBusqueda } = await import('./transferencias');
+    expect(textoDeBusqueda('Rosa,remitente_id.neq.x')).toBe('Rosa remitente_id.neq.x');
+    expect(textoDeBusqueda('a(b)*c')).toBe('a b  c');
+    expect(textoDeBusqueda('Rosa Mejía')).toBe('Rosa Mejía');
+  });
+});

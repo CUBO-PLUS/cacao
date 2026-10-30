@@ -4,7 +4,7 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   testDir: './tests',
   projects: [
-    { name: 'media', testMatch: /gate\.spec\.ts/, use: { baseURL: 'http://localhost:4321' } },
+    { name: 'media', testMatch: /(gate|media-btcpay)\.spec\.ts/, use: { baseURL: 'http://localhost:4321' } },
     { name: 'travel', testMatch: /travel\.spec\.ts/, use: { baseURL: 'http://localhost:4322' } },
   ],
   webServer: [

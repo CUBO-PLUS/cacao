@@ -279,9 +279,28 @@ export async function misEnvios(
   usuarioId: string,
   opciones: { pagina?: number; estados?: EstadoEnvio[] | null; busqueda?: string } = {},
 ): Promise<PaginaEnvios> {
+  return misEnviosFiltrados(usuarioId, opciones);
+}
+
+/**
+ * The search text as the list query uses it. Characters that have a meaning in a PostgREST filter (comma,
+ * parentheses, asterisk, backslash, quote) are removed, so the text can only match, never change the filter.
+ * A code typed without its dashes (cp2wg9jmg6) is written back in the stored shape (CP-2WG9-JMG6).
+ */
+export function textoDeBusqueda(texto: string): string {
+  const limpio = texto.replace(/[,()*\\"]/g, ' ').trim().slice(0, 60);
+  const codigo = limpio.replace(/[\s-]/g, '').toUpperCase();
+  if (/^CP[0-9A-Z]{8}$/.test(codigo)) return `CP-${codigo.slice(2, 6)}-${codigo.slice(6)}`;
+  return limpio;
+}
+
+async function misEnviosFiltrados(
+  usuarioId: string,
+  opciones: { pagina?: number; estados?: EstadoEnvio[] | null; busqueda?: string },
+): Promise<PaginaEnvios> {
   if (!esUuid(usuarioId)) return paginaVacia(opciones.pagina);
   const pagina = paginaValida(opciones.pagina);
-  const busqueda = (opciones.busqueda ?? '').trim();
+  const busqueda = textoDeBusqueda(opciones.busqueda ?? '');
 
   const consultar = (numero: number) => {
     const [desde, hasta] = rangoDe(numero);

@@ -3,6 +3,7 @@
 import type { APIContext } from 'astro';
 import { ErrorBtcpay, leerFactura } from '../../../lib/btcpay';
 import { MEDIA_URL, todosLosTours } from '../../../lib/tours';
+import { entornoServidor } from '../../../lib/entorno';
 import { btcpayEnPausa, pagosConfigurados, PAUSA_BTCPAY, reconstruirReserva, ErrorReserva } from '../../../lib/reserva';
 
 export const prerender = false;
@@ -11,7 +12,7 @@ const error = (mensaje: string, status: number) => Response.json({ error: mensaj
 const sinCache = { headers: { 'Cache-Control': 'no-store' } };
 
 export async function GET({ url }: APIContext) {
-  const pagos = await pagosConfigurados(process.env);
+  const pagos = await pagosConfigurados(entornoServidor());
   if (!pagos) return error('Los pagos no están configurados.', 503);
 
   const facturaId = url.searchParams.get('id') ?? '';

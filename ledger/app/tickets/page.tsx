@@ -138,7 +138,7 @@ export default async function PaginaTickets({ searchParams }: PageProps<"/ticket
         </label>
         <label>
           Buscar
-          <input type="search" name="q" defaultValue={filtros.q} placeholder="Ticket, factura o producto" maxLength={100} />
+          <input type="search" name="q" defaultValue={filtros.q} placeholder="Ticket, factura o descripción" maxLength={100} />
         </label>
         <div>
           <button type="submit" className="boton">

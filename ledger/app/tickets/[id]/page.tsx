@@ -193,7 +193,9 @@ export default async function PaginaTicket({ params }: PageProps<"/tickets/[id]"
 
   const origen = ticket.origen;
   const vista = vistaDte(ticket);
-  const qrSvg = vista.ok ? await QRCode.toString(URL_CONSULTA, { type: "svg", margin: 1, errorCorrectionLevel: "M" }) : "";
+  const qrSvg = await QRCode.toString(URL_CONSULTA, { type: "svg", margin: 1, errorCorrectionLevel: "M" });
+  // The legible version of the stored document, when it was accepted: its own numbers, never the preview's.
+  const emitidoAceptado = registro !== null && registro.estado === "aceptado" && Object.keys(registro.documento as object).length > 0;
 
   return (
     <>
@@ -259,11 +261,35 @@ export default async function PaginaTicket({ params }: PageProps<"/tickets/[id]"
       <section className="bloque" aria-labelledby="titulo-documento">
         <h2 id="titulo-documento">Documento tributario</h2>
         {registro !== null ? (
-          <DocumentoEmitido registro={registro} />
+          <>
+            <DocumentoEmitido registro={registro} />
+            {emitidoAceptado ? (
+              <>
+                <VersionLegible
+                  ticket={ticket}
+                  documento={registro.documento as Record<string, unknown>}
+                  totalCentavos={totalDeTicket(ticket).totalCentavos}
+                  sello={registro.sello}
+                  emitido
+                  qrSvg={qrSvg}
+                />
+                <div className="acciones no-imprimir">
+                  <ImprimirBoton />
+                </div>
+              </>
+            ) : null}
+          </>
         ) : vista.ok ? (
           <>
             <p className="nota">Vista previa: este documento todavía no se emitió. El número y el código son de demostración.</p>
-            <VersionLegible ticket={ticket} resultado={vista.resultado} qrSvg={qrSvg} />
+            <VersionLegible
+              ticket={ticket}
+              documento={vista.resultado.documento}
+              totalCentavos={vista.resultado.totales.totalCentavos}
+              sello={ticket.sello?.valor ?? null}
+              emitido={false}
+              qrSvg={qrSvg}
+            />
             <div className="acciones no-imprimir">
               <ImprimirBoton />
             </div>

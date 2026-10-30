@@ -11,6 +11,7 @@ import { cotizacionUsdBtc } from '../../lib/precio';
 import { cotizar, diaDe, hoyEnElSalvador, NOMBRE_DIA } from '../../lib/reparto';
 import { MEDIA_URL, personas as limites, todosLosTours } from '../../lib/tours';
 import { esLector } from '../../lib/lector';
+import { entornoServidor } from '../../lib/entorno';
 import {
   btcpayEnPausa,
   construirReserva,
@@ -57,7 +58,8 @@ export async function POST({ request }: APIContext) {
   const codigo = createHash('sha256').update(`${tour.id}|${fecha}|${n}|${ahora}|${Math.random()}`).digest('hex').slice(0, 8).toUpperCase();
   const reserva = { codigo, fecha, personas: n, lector, ahora, mediaUrl: MEDIA_URL };
 
-  const pagos = await pagosConfigurados(process.env);
+  const entorno = entornoServidor();
+  const pagos = await pagosConfigurados(entorno);
   if (!pagos) {
     // Demo: no BTCPay configured, so the booking is confirmed without a payment and marked as demo.
     return Response.json(construirReserva(tour, reserva), sinCache);
@@ -66,7 +68,7 @@ export async function POST({ request }: APIContext) {
   const cotizacion = cotizar(d.precio, n, lector);
   let cotizacionUsd: number;
   try {
-    cotizacionUsd = await cotizacionUsdBtc();
+    cotizacionUsd = await cotizacionUsdBtc({ env: entorno });
   } catch {
     return error('No hay cotización del bitcoin. Probá de nuevo en un minuto.', 503);
   }

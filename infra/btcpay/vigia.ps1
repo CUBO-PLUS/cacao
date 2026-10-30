@@ -102,6 +102,10 @@ try {
     throw $motivo
   }
 
+  # bitcoind writes its chain index to disk only on a clean shutdown or hourly while blocks arrive. A Docker
+  # crash once rolled the regtest chain back to block 101. gettxoutsetinfo forces the write on every run.
+  cmd /c "docker exec cacao-btcpay-bitcoind-1 bitcoin-cli -regtest -rpcport=43782 -rpcuser=cacao -rpcpassword=cacao-regtest gettxoutsetinfo >nul 2>&1"
+
   # (c) The tunnel container: create it when missing or stopped, same as tunel.ps1.
   $corriendo = (cmd /c "docker inspect -f {{.State.Running}} cacao-tunel 2>nul") -join ''
   if ($corriendo.Trim() -ne 'true') {

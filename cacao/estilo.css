@@ -531,3 +531,37 @@ p { margin: 0; }
   .alcance-dos { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: clamp(40px, 5vw, 80px); }
   .alcance-pagina .alcance-dos { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
 }
+
+/* The brand line with the grain, on top of the page. */
+.grito {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 8px;
+  padding: 20px clamp(18px, 4.5vw, 72px) 0;
+}
+.linea {
+  font-weight: 800;
+  font-size: clamp(34px, 13.2vw, 88px);
+  line-height: 0.9;
+  letter-spacing: -0.045em;
+  white-space: nowrap;
+}
+.linea-lugar { grid-column: 1; grid-row: 1; justify-self: start; }
+.linea-grano { grid-column: 1 / -1; grid-row: 2; justify-self: start; color: var(--mazorca); }
+.grano { grid-column: 2; grid-row: 1; display: flex; }
+.grano svg { display: block; width: clamp(56px, 15vw, 88px); height: auto; overflow: visible; }
+
+@media (min-width: 761px) {
+  .grito {
+    grid-template-columns: auto auto;
+    width: max-content;
+    max-width: 100%;
+    column-gap: clamp(16px, 2.4vw, 40px);
+    padding-top: 40px;
+  }
+  .linea { font-size: clamp(34px, 7.4vw, 150px); }
+  .linea-grano { grid-column: 1; justify-self: end; }
+  .grano { grid-row: 1 / span 2; }
+  .grano svg { width: clamp(80px, 13vw, 240px); }
+}

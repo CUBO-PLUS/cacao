@@ -10,7 +10,7 @@
 // shown again with --mostrar-ficticios. A demo seller that left the list is hidden the same way.
 //
 // Run from the market folder: node --env-file=.env.local scripts/sembrar-reales.mjs
-// Only the local Supabase (127.0.0.1) is accepted.
+// Only the local Supabase (127.0.0.1) is accepted, unless --produccion is given.
 
 import { readFileSync } from 'node:fs';
 
@@ -22,8 +22,8 @@ if (!url || !claveServicio) {
   console.error('Faltan NEXT_PUBLIC_SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY. Usá --env-file=.env.local.');
   process.exit(1);
 }
-if (new URL(url).hostname !== '127.0.0.1') {
-  console.error('Este script solo corre contra el Supabase local (127.0.0.1). No se hizo nada.');
+if (new URL(url).hostname !== '127.0.0.1' && !process.argv.includes('--produccion')) {
+  console.error('Sin --produccion, este script solo corre contra el Supabase local (127.0.0.1). No se hizo nada.');
   process.exit(1);
 }
 

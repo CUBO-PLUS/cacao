@@ -52,7 +52,7 @@ async function facturaPay(pay: ConfigPay, lector: string, historia: HistoriaDePa
     descripcion: `Historia: ${historia.titulo}`.slice(0, 200),
     referencia: `${historia.slug}:${lector}`,
     venceEnSegundos: SEGUNDOS_PARA_PAGAR,
-    avisoUrl: `${origen}/api/pagos/pay`,
+    avisoUrl: `${origen}/api/pagos/pay/`,
   };
   const primera = await crearCobroPay(pay, { ...entrada, clave });
   if (cobroUtilizable(primera)) return primera;

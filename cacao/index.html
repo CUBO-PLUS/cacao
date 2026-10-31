@@ -32,7 +32,10 @@
 <div class="inicio-texto">
 <h1 id="inicio-titulo">Cacao es cinco productos de El Salvador, conectados.</h1>
 <p class="inicio-bajada">Lo que se cobra en Media, Travel, Market o Pay termina en Ledger. Todo se paga con bitcoin de prueba por Lightning: no tiene valor.</p>
+<div class="inicio-rutas">
 <a class="inicio-ruta" href="#probar">Probalo en 3 pasos</a>
+<a class="inicio-ruta" href="#alcance">Ver hasta dónde podría llegar</a>
+</div>
 </div>
 <nav class="productos" aria-label="Los cinco productos">
 <a class="producto" href="https://cacao-media.vercel.app">
@@ -61,6 +64,28 @@
 <span class="producto-direccion">cacao-cuentas.vercel.app</span>
 </a>
 </nav>
+</section>
+
+<section class="alcance" id="alcance" aria-labelledby="alcance-titulo">
+<h2 id="alcance-titulo">Hasta dónde podría llegar.</h2>
+<div class="alcance-cuerpo">
+<div class="mapa-caja" data-mapa></div>
+<div class="alcance-texto">
+<p class="cifra" data-total></p>
+<p class="alcance-frase">negocios en El Salvador ya aceptan bitcoin, según BTC Map. Hoy ninguno usa Cacao: esto muestra hasta dónde podría llegar.</p>
+<p>No son clientes ni socios de Cacao, y no firmaron nada.</p>
+<p>Cacao les podría dar:</p>
+<ul class="funciones">
+<li>Cobrar por Lightning.</li>
+<li>Vender en Market.</li>
+<li>Facturar en Ledger.</li>
+</ul>
+<p class="alcance-fecha">Verificados desde <span data-anio></span>. Cada sucursal cuenta aparte. Datos del <span data-generado></span>.</p>
+<a class="inicio-ruta" href="/alcance">Ver los negocios, por tipo</a>
+</div>
+</div>
+<p class="atribucion">Datos de <a href="https://btcmap.org/">BTC Map</a> y colaboradores de <a href="https://www.openstreetmap.org/copyright">OpenStreetMap (ODbL)</a>.</p>
+<p class="error" data-error hidden>No pudimos cargar los datos del mapa. Probá de nuevo en un rato.</p>
 </section>
 
 <section class="probar" id="probar" aria-labelledby="probar-titulo">
@@ -93,5 +118,6 @@
 <p class="gigante" aria-hidden="true"><svg viewBox="-38 -42 76 84"><g transform="rotate(30)"><path class="mitad-izq" d="M -2.5 -34.35 A 40 40 0 0 0 -2.5 34.35 Z"></path><path class="mitad-der" d="M 2.5 -34.35 A 40 40 0 0 1 2.5 34.35 Z"></path></g></svg><span>cacao</span></p>
 </footer>
 </div>
+<script src="/alcance.js" defer></script>
 </body>
 </html>

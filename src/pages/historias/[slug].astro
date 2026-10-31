@@ -8,6 +8,7 @@ import { fechaCorta, fechaIso, precio } from '../../lib/formato';
 import { seccionPorId, slugTag } from '../../lib/secciones';
 import { autorPorNombre, urlAutor } from '../../lib/autores';
 import WidgetTravel from '../../components/WidgetTravel.astro';
+import PagarBitcoin from '../../components/PagarBitcoin.astro';
 
 export async function getStaticPaths() {
   const todas = await todasLasHistorias();
@@ -76,6 +77,8 @@ const tipo = d.seccion === 'guia' ? 'guía' : d.seccion === 'cronica' ? 'crónic
     </div>
 
     <WidgetTravel historia={historia.id} lugar={d.lugar} seccion={d.seccion} />
+
+    <PagarBitcoin coords={d.coords} />
 
     {
       autor && (

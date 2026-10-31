@@ -1061,3 +1061,95 @@ main:focus {
   width: 100%;
   max-width: 26rem;
 }
+
+/* Directory of businesses that accept bitcoin (/negocios-bitcoin). A plain list with rules between
+   rows, not a grid of boxes. Its text is always Tostado on Pulpa or Blanco. */
+.directorio {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+
+.directorio__cabeza {
+  display: grid;
+  gap: 12px;
+}
+
+.directorio__cifra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 12px;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.directorio__cifra span {
+  font-size: clamp(3.5rem, 18vw, 6rem);
+  font-weight: 800;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+}
+
+.directorio__aviso {
+  padding: 14px 16px;
+  border: 2px solid var(--tostado);
+  border-radius: var(--radio-chico);
+  background: var(--blanco);
+  font-weight: 600;
+}
+
+.directorio__lista {
+  border-top: 2px solid var(--tostado);
+}
+
+.directorio__item {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding-block: 16px;
+  border-bottom: 1px solid rgba(42, 25, 18, 0.25);
+}
+
+.directorio__nombre {
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.directorio__dato {
+  font-size: 0.9375rem;
+}
+
+.directorio__item a {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.directorio__paginas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.directorio__paginas .boton {
+  flex: none;
+}
+
+.directorio__fuente {
+  padding-top: 16px;
+  border-top: 1px solid rgba(42, 25, 18, 0.25);
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+
+.directorio__fuente a {
+  font-weight: 600;
+}
+
+/* The one link from the home page to the directory, below the catalogue. */
+.enlace-directorio {
+  font-weight: 600;
+}

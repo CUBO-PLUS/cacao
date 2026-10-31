@@ -6,7 +6,7 @@ import { connection } from 'next/server';
 import { ActualizarEnvio } from '@/componentes/ActualizarEnvio';
 import { esEstadoFinal, primerNombre, saludoDestinatario } from '@/componentes/textosEnvio';
 import { VistaDestinatario } from '@/componentes/VistaDestinatario';
-import { tokenDeCobroDelDestinatario } from '@/servidor/cobro';
+import { cobroDeEnvio, tokenDeCobroDelDestinatario } from '@/servidor/cobro';
 import { envioPara } from '@/servidor/transferencias';
 import { exigirSesion } from '@/servidor/sesion';
 
@@ -33,6 +33,8 @@ export default async function PaginaRecibido(props: PageProps<'/recibidos/[id]'>
   const nota = envio.nota.trim();
   // The claim link is read for this recipient alone, per request: the page is never cached.
   const token = await tokenDeCobroDelDestinatario(envio.id, sesion.usuario.id);
+  // Once the recipient has collected it, the page says where that bitcoin could be spent.
+  const cobrado = (await cobroDeEnvio(envio.id))?.estado === 'pagado';
 
   return (
     <div className={estilos.pagina}>
@@ -70,6 +72,14 @@ export default async function PaginaRecibido(props: PageProps<'/recibidos/[id]'>
               <p>
                 <Link href={`/cobrar/${token}`} prefetch={false} className="boton">
                   Cobrar
+                </Link>
+              </p>
+            )}
+            {cobrado && (
+              <p>
+                Ya cobraste este envío. El bitcoin de prueba de esta demo no lo acepta nadie: no tiene valor.{' '}
+                <Link href="/donde-gastar" className="boton boton--secundario">
+                  Dónde gastar bitcoin
                 </Link>
               </p>
             )}

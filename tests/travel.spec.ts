@@ -472,6 +472,24 @@ test('no page scrolls sideways at 320 px', async ({ page, request }) => {
   }
 });
 
+test('an experience near bitcoin places shows the nearby section, with the no-partner line outside the booking box', async ({ page, request }) => {
+  const { tours } = await catalogo(request);
+  let conCerca: string | null = null;
+  for (const t of tours) {
+    await page.goto(`/experiencias/${t.id}/`);
+    if ((await page.locator('[data-cerca]').count()) > 0) {
+      conCerca = t.id;
+      break;
+    }
+  }
+  if (!conCerca) throw new Error('no experience has bitcoin places nearby');
+  const seccion = page.locator('[data-cerca]');
+  await expect(seccion).toBeVisible();
+  await expect(seccion.locator('li').first()).toBeVisible();
+  await expect(page.locator('[data-cerca-aviso]')).toContainText('Aceptan bitcoin según BTC Map. No son aliados de Cacao.');
+  await expect(page.locator('.reserva [data-cerca]')).toHaveCount(0);
+});
+
 test('an unknown address returns 404 and shows the not-found heading', async ({ page }) => {
   const respuesta = await page.goto('/no-existe-esta-pagina/');
   expect(respuesta?.status()).toBe(404);

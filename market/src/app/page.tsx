@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Suspense } from 'react';
 
 import { Boton } from '@/componentes/Boton';
@@ -7,6 +8,7 @@ import { TarjetaProducto } from '@/componentes/TarjetaProducto';
 import { Vacio } from '@/componentes/Vacio';
 import { usdCentavosASats } from '@/lib/dinero';
 import { URL_PAY } from '@/lib/grupo';
+import { DATOS } from '@/lib/negocios-bitcoin';
 import { categorias, cotizacionSegura, productosDelCatalogo } from '@/servidor/catalogo';
 
 // The filters come from the URL, so the catalogue is read per request and streams in.
@@ -29,6 +31,12 @@ export default function Inicio(props: PageProps<'/'>) {
         <p className="aviso">
           ¿Te mandan dinero del exterior? Seguí tu envío en{' '}
           <a href={URL_PAY}>CacaoPay</a>
+        </p>
+
+        <p className="aviso">
+          <Link className="enlace-directorio" href="/negocios-bitcoin">
+            Mirá los {DATOS.total} negocios de El Salvador que ya aceptan bitcoin
+          </Link>
         </p>
       </div>
     </>

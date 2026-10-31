@@ -1,0 +1,78 @@
+---
+// "Para pagar con bitcoin por acá": real places near the story, from BTC Map. Nothing renders without coords or places.
+// These businesses are not partners of Cacao, so the copy says so.
+import { cercanos, distanciaTexto } from '../lib/cerca';
+
+interface Props {
+  /** The story's `coords` text, e.g. "13.87°N · 89.79°W". */
+  coords?: string;
+}
+const { coords } = Astro.props;
+const lugares = cercanos(coords);
+---
+
+{
+  lugares.length > 0 && (
+    <section class="pagar" data-pagar-bitcoin aria-labelledby="pagar-bitcoin-titulo">
+      <h2 id="pagar-bitcoin-titulo">Para pagar con bitcoin por acá</h2>
+      <p class="pagar__nota">Aceptan bitcoin según BTC Map. No son aliados de Cacao.</p>
+      <ul class="pagar__lista">
+        {lugares.map((lugar) => (
+          <li class="pagar__item" data-pagar-lugar>
+            <a class="pagar__nombre" href={lugar.url} rel="noopener">{lugar.nombre}</a>
+            <span class="pagar__dato">
+              {lugar.tipo} · a {distanciaTexto(lugar.km)}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p class="pagar__fuente">
+        Datos de <a href="https://btcmap.org/" rel="noopener">BTC Map</a> y{' '}
+        <a href="https://www.openstreetmap.org/copyright" rel="noopener">colaboradores de OpenStreetMap (ODbL)</a>.
+      </p>
+    </section>
+  )
+}
+
+<style>
+  .pagar {
+    width: min(100% - 2 * var(--canal), var(--ancho-lectura));
+    margin: clamp(32px, 5vw, 56px) auto 0;
+    padding: clamp(20px, 3vw, 32px);
+    display: grid;
+    gap: 12px;
+    justify-items: start;
+    background: var(--arena);
+    color: var(--tostado);
+    border-radius: var(--radio-chico);
+    min-width: 0;
+  }
+  .pagar h2 { font-size: var(--t-h2); font-weight: 800; }
+  .pagar__nota { font-weight: 600; }
+  .pagar__lista {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    display: grid;
+    gap: 10px;
+  }
+  .pagar__item {
+    display: grid;
+    gap: 2px;
+    padding-top: 10px;
+    border-top: 1.5px solid var(--arena-oscura);
+    min-width: 0;
+  }
+  .pagar__nombre {
+    font-weight: 700;
+    font-size: 1.0625rem;
+    overflow-wrap: anywhere;
+    text-decoration: underline;
+  }
+  .pagar__nombre:hover { color: var(--criollo); }
+  .pagar__dato { color: var(--tinta-suave); font-size: 1rem; }
+  .pagar__fuente { color: var(--tinta-suave); font-size: 0.9375rem; overflow-wrap: anywhere; }
+  .pagar__fuente a { color: var(--tostado); }
+  .pagar__fuente a:hover { color: var(--criollo); }
+</style>

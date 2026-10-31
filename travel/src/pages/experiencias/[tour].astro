@@ -4,6 +4,7 @@ import Base from '../../layouts/Base.astro';
 import Boleto from '../../components/Boleto.astro';
 import { NOMBRE_DIA, PARTES } from '../../lib/reparto';
 import { MEDIA_URL, personas, sats, todosLosTours, type Tour } from '../../lib/tours';
+import { fechaRevision, lugaresCercanos } from '../../lib/cerca';
 
 export async function getStaticPaths() {
   const tours = await todosLosTours();
@@ -28,6 +29,9 @@ const { tour, parecidas } = Astro.props;
 const d = tour.data;
 const { Content } = await render(tour);
 const grupo = personas(d.grupo);
+// Built here, at build time: only these few places reach the page, not the whole BTC Map extract.
+const cerca = lugaresCercanos(d.coords);
+const revisado = fechaRevision();
 const datos = [
   ['Duración', d.duracion],
   ['Nivel', d.nivel],
@@ -200,6 +204,29 @@ const datos = [
             </div>
           </dl>
         </section>
+
+        {
+          cerca.length > 0 && (
+            <section class="bloque cerca" data-cerca aria-labelledby="cerca-titulo">
+              <h2 id="cerca-titulo">Cerca de acá, con bitcoin</h2>
+              <ul class="cerca__lista">
+                {cerca.map((l) => (
+                  <li>
+                    <strong>{l.nombre}</strong>
+                    <span>{l.tipo} · a {l.distancia} km</span>
+                    <a href={l.enlace} rel="noopener">{l.enlaceTexto}</a>
+                  </li>
+                ))}
+              </ul>
+              <p class="cerca__aviso" data-cerca-aviso>
+                Aceptan bitcoin según BTC Map. No son aliados de Cacao. No forman parte de esta reserva ni de su precio.
+              </p>
+              <p class="cerca__fuente">
+                Lugares revisados el {revisado}. Datos de <a href="https://btcmap.org/">BTC Map</a> y colaboradores de <a href="https://www.openstreetmap.org/copyright">OpenStreetMap (ODbL)</a>.
+              </p>
+            </section>
+          )
+        }
       </div>
     </div>
   </article>
@@ -271,6 +298,17 @@ const datos = [
   .listas > div { padding: clamp(16px, 2.2vw, 24px); background: var(--chocolate); border-radius: var(--radio-chico); color: var(--pulpa); }
   .listas ul { margin: 0; padding-left: 1.2em; font-size: 1rem; }
   .listas li { margin: 0.4em 0; }
+
+  .cerca__lista { list-style: none; margin: 0; padding: 0; display: grid; }
+  .cerca__lista li { display: grid; gap: 2px; padding-block: 12px; border-top: 1.5px solid var(--chocolate); overflow-wrap: anywhere; }
+  .cerca__lista span { font-size: 0.9375rem; color: var(--tinta-suave); }
+  .cerca__lista a { justify-self: start; min-height: 36px; display: inline-flex; align-items: center; font-weight: 600; color: var(--chocolate); }
+  .cerca__lista a:hover { color: var(--tostado); }
+  .cerca a:hover { color: var(--tostado); }
+  .cerca a:focus-visible { outline-color: var(--tostado); }
+  .cerca__aviso, .cerca__fuente { margin-top: 12px; font-size: 0.9375rem; color: var(--tinta-suave); }
+  .cerca__fuente { font-size: 0.8125rem; }
+  .cerca__fuente a { color: var(--chocolate); }
 
   .condiciones { margin: 0; display: grid; }
   .condiciones > div { display: grid; gap: 2px; padding-block: 12px; border-top: 1.5px solid var(--chocolate); }

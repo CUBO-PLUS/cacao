@@ -425,3 +425,18 @@ test('the gate with an open invoice has no horizontal scroll at 320px', async ({
   const desborde = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(desborde).toBeLessThanOrEqual(0);
 });
+
+test('the bitcoin places sit after the wall, outside the locked text, with attribution', async ({ page }) => {
+  await page.goto(PAGA);
+  const seccion = page.locator('[data-pagar-bitcoin]');
+  await expect(seccion).toBeVisible();
+  await expect(seccion.getByRole('heading', { name: 'Para pagar con bitcoin por acá' })).toBeVisible();
+  await expect(seccion).toContainText('No son aliados de Cacao.');
+  const lugares = seccion.locator('[data-pagar-lugar]');
+  expect(await lugares.count()).toBeGreaterThanOrEqual(1);
+  expect(await lugares.count()).toBeLessThanOrEqual(4);
+  await expect(seccion.locator('a[href="https://btcmap.org/"]')).toBeVisible();
+  await expect(seccion.locator('a[href="https://www.openstreetmap.org/copyright"]')).toBeVisible();
+  await expect(seccion.locator('[data-gate-cerrado], [data-gate-muro]')).toHaveCount(0);
+  expect(await page.locator('[data-gate-muro] [data-pagar-bitcoin]').count()).toBe(0);
+});

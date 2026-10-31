@@ -40,6 +40,13 @@
   list-style: disc;
 }
 
+/* The bitcoin line sits after the facts, below the calculator on a phone. */
+.donde {
+  order: 4;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
 .enlaces {
   display: flex;
   flex-wrap: wrap;

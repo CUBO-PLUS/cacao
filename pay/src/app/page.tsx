@@ -4,6 +4,7 @@ import { Suspense } from 'react';
 
 import { Cotizador } from '@/componentes/Cotizador';
 import { MAXIMO_CENTAVOS, MINIMO_CENTAVOS, formatoMonto } from '@/lib/cotizacion';
+import negocios from '@/data/negocios.json';
 import { cotizacionUsdBtc } from '@/lib/precio/fuente';
 
 import estilos from './page.module.css';
@@ -30,6 +31,11 @@ export default function Inicio() {
           <Link href="/hacienda">Marco tributario de Hacienda y del BCR</Link>
         </nav>
       </section>
+
+      <p className={estilos.donde}>
+        Dónde gastar bitcoin en El Salvador: <Link href="/donde-gastar">ver los {negocios.total} negocios de BTC Map</Link>.
+        No son aliados de CacaoPay.
+      </p>
       </div>
 
       <section className={estilos.calculo} aria-label="Cuánto recibe tu familia">

@@ -62,6 +62,13 @@ export default async function PaginaCobrar(props: { params: Promise<{ token: str
         <Link href={`/t/${datos.codigo}`} className="boton boton--secundario">
           Ver el envío
         </Link>
+        <p className={estilos.texto}>
+          El bitcoin de prueba de esta demo no lo acepta nadie: no tiene valor. La lista muestra dónde podría gastarse
+          bitcoin real.
+        </p>
+        <Link href="/donde-gastar" className="boton boton--secundario">
+          Dónde gastar bitcoin
+        </Link>
       </div>
     );
   } else if (datos.estado === 'completada') {

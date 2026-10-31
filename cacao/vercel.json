@@ -1,14 +1,46 @@
 {
   "version": 2,
   "builds": [
-    { "src": "index.html", "use": "@vercel/static" },
-    { "src": "legal.html", "use": "@vercel/static" },
-    { "src": "alcance.html", "use": "@vercel/static" },
-    { "src": "alcance.js", "use": "@vercel/static" },
-    { "src": "datos/**", "use": "@vercel/static" },
-    { "src": "estilo.css", "use": "@vercel/static" },
-    { "src": "favicon.svg", "use": "@vercel/static" },
-    { "src": "ledger/**", "use": "@vercel/static" }
+    {
+      "src": "index.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "legal.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "alcance.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "sitio.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "alcance.css",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "alcance.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "datos/**",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "estilo.css",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "favicon.svg",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "ledger/**",
+      "use": "@vercel/static"
+    }
   ],
   "cleanUrls": true,
   "trailingSlash": false

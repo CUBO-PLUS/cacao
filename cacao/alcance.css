@@ -1,0 +1,567 @@
+/* Cacao, the company page. El Salvador, grano a grano. */
+:root {
+  --tostado: #2a1912;
+  --chocolate: #5a3221;
+  --criollo: #8c2f2b;
+  --grano: #5e3050;
+  --mazorca: #d9902f;
+  --pulpa: #f5ede3;
+  --pulpa-suave: #d8c7b4;
+  --pulpa-tenue: #bfae9b;
+  --linea: rgba(245, 237, 227, 0.16);
+  --fuente: "Bricolage Grotesque", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--tostado); color: var(--pulpa); }
+body {
+  font-family: var(--fuente);
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: var(--mazorca); color: var(--tostado); }
+a { color: inherit; }
+a:hover { color: var(--mazorca); }
+p { margin: 0; }
+:focus-visible { outline: 3px solid var(--mazorca); outline-offset: 3px; }
+
+.saltar {
+  position: absolute;
+  left: -9999px;
+  top: 8px;
+  z-index: 10;
+  background: var(--mazorca);
+  color: var(--tostado);
+  padding: 8px 12px;
+  font-size: 14px;
+}
+.saltar:focus { left: 8px; }
+
+.raiz {
+  min-height: 100vh;
+  overflow-x: hidden;
+  background: var(--tostado);
+}
+
+.cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  padding: 20px clamp(18px, 4vw, 56px);
+  background: var(--tostado);
+}
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--pulpa);
+  text-decoration: none;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.logo:hover { color: var(--pulpa); }
+.logo svg { overflow: visible; }
+.meta {
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  color: var(--pulpa-tenue);
+}
+
+.mitad-izq { fill: var(--pulpa); }
+.mitad-der { fill: var(--mazorca); }
+
+/* First screen: one sentence, then the five products, then the way in. */
+.inicio {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 14px 18px 24px;
+}
+.inicio h1 {
+  margin: 0;
+  font-weight: 800;
+  font-size: clamp(28px, 7.8vw, 68px);
+  line-height: 1;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+.inicio-bajada {
+  margin-top: 16px;
+  font-size: clamp(16px, 1.3vw, 19px);
+  line-height: 1.45;
+  color: var(--pulpa-suave);
+}
+.inicio-ruta {
+  display: inline-block;
+  margin-top: 18px;
+  font-weight: 800;
+  font-size: 18px;
+  color: var(--mazorca);
+  text-underline-offset: 5px;
+  text-decoration-thickness: 2px;
+}
+
+.productos {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid var(--linea);
+}
+.producto {
+  display: grid;
+  gap: 4px;
+  padding: 14px 0;
+  border-top: 1px solid var(--linea);
+  text-decoration: none;
+  color: var(--pulpa);
+}
+.producto:hover { color: var(--pulpa); }
+.producto:hover .producto-nombre { color: var(--mazorca); }
+.producto-nombre {
+  font-weight: 400;
+  font-size: clamp(26px, 2.6vw, 36px);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+.producto-nombre b { font-weight: 800; }
+.producto-bajada {
+  font-size: clamp(16px, 1.3vw, 18px);
+  line-height: 1.35;
+  color: var(--pulpa-suave);
+}
+.producto-direccion {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--pulpa-tenue);
+  overflow-wrap: anywhere;
+}
+
+/* The three-step test. */
+.probar {
+  padding: clamp(56px, 7vw, 96px) 18px clamp(40px, 5vw, 64px);
+  border-top: 1px solid var(--linea);
+}
+.probar h2 {
+  margin: 0 0 clamp(28px, 3.5vw, 48px);
+  font-weight: 800;
+  font-size: clamp(32px, 3.6vw, 56px);
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+  max-width: 14ch;
+  text-wrap: balance;
+}
+.pasos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 10px;
+}
+.paso {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: clamp(24px, 2.6vw, 34px);
+  background: var(--pulpa);
+  color: var(--tostado);
+  border-radius: 2px;
+}
+.paso-numero {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--criollo);
+}
+.paso-titulo {
+  font-weight: 800;
+  font-size: clamp(24px, 2.4vw, 32px);
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+.paso-bajada { font-size: clamp(16px, 1.3vw, 18px); line-height: 1.4; }
+.paso-enlace {
+  margin-top: auto;
+  padding-top: 8px;
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--criollo);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  overflow-wrap: anywhere;
+}
+.paso-enlace:hover { color: var(--tostado); }
+.paso-nota { color: var(--chocolate); text-decoration: none; }
+
+.pie {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: clamp(56px, 8vw, 120px) 18px 28px;
+  overflow: hidden;
+}
+.pie-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px 32px;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.gigante {
+  display: flex;
+  align-items: center;
+  gap: 0.03em;
+  margin: 0;
+  font-weight: 800;
+  font-size: clamp(72px, 27vw, 540px);
+  line-height: 0.8;
+  letter-spacing: -0.055em;
+  color: var(--pulpa);
+}
+.gigante svg {
+  width: 0.6em;
+  height: 0.66em;
+  flex: none;
+  overflow: visible;
+  margin-top: 0.12em;
+}
+.gigante span { padding-bottom: 0.06em; }
+
+@media (min-width: 900px) {
+  .cabecera { padding: 22px clamp(24px, 5vw, 80px); }
+  .inicio {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: center;
+    gap: clamp(48px, 6vw, 96px);
+    min-height: calc(100vh - 96px);
+    padding: 24px clamp(24px, 5vw, 80px) 72px;
+  }
+  .inicio-texto { max-width: 560px; }
+  .inicio-bajada { max-width: 46ch; }
+  .probar { padding-left: clamp(24px, 5vw, 80px); padding-right: clamp(24px, 5vw, 80px); }
+  .pie { padding-left: clamp(24px, 5vw, 80px); padding-right: clamp(24px, 5vw, 80px); }
+  .producto { padding: 20px 0; }
+}
+
+@media (max-width: 720px) {
+  .cabecera { padding: 16px 18px; gap: 12px; }
+  .logo { font-size: 22px; }
+  .logo svg { width: 28px; height: 28px; }
+  .meta { font-size: 11px; text-align: right; }
+  .pie { padding: 40px 18px 16px; }
+  .gigante { font-size: clamp(64px, 22vw, 128px); }
+  .producto { padding: 10px 0; }
+  .producto-direccion { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Legal page: the text column under the header. */
+.legal {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: clamp(40px, 6vw, 80px) clamp(20px, 4vw, 56px) 40px;
+  font-size: clamp(16px, 1.3vw, 18px);
+  line-height: 1.6;
+}
+.legal h1 {
+  margin: 0 0 24px;
+  font-weight: 800;
+  font-size: clamp(40px, 6vw, 72px);
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+}
+.legal h2 {
+  margin: 48px 0 12px;
+  font-weight: 800;
+  font-size: clamp(22px, 2.4vw, 30px);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  color: var(--mazorca);
+}
+.legal p + p { margin-top: 14px; }
+.legal ul { margin: 12px 0 0; padding-left: 1.2em; }
+.legal li + li { margin-top: 8px; }
+.legal .aviso {
+  padding: 18px 20px;
+  border-left: 3px solid var(--mazorca);
+  background: rgba(245, 237, 227, 0.06);
+}
+.legal .fecha {
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+.legal-volver {
+  display: inline-block;
+  margin-top: 48px;
+  font-family: var(--mono);
+  font-size: 13px;
+}
+
+/* Home: two ways in from the first screen. */
+.inicio-rutas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 28px;
+  margin-top: 18px;
+}
+.inicio-rutas .inicio-ruta { margin-top: 0; }
+
+/* Alcance: the map drawn from the businesses, and the numbers beside it. */
+.alcance {
+  padding: clamp(56px, 7vw, 96px) 18px clamp(40px, 5vw, 64px);
+  border-top: 1px solid var(--linea);
+}
+.alcance h2 {
+  margin: 0 0 clamp(28px, 3.5vw, 48px);
+  font-weight: 800;
+  font-size: clamp(32px, 3.6vw, 56px);
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+  max-width: 16ch;
+  text-wrap: balance;
+}
+.alcance-cuerpo,
+.alcance-dos {
+  display: grid;
+  gap: 32px;
+  align-items: center;
+}
+.alcance-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  font-size: clamp(17px, 1.4vw, 20px);
+  line-height: 1.4;
+  color: var(--pulpa-suave);
+}
+.alcance-texto .alcance-frase { color: var(--pulpa); }
+.alcance-texto .inicio-ruta { align-self: flex-start; margin-top: 8px; }
+.cifra {
+  font-weight: 800;
+  font-size: clamp(104px, 24vw, 230px);
+  line-height: 0.8;
+  letter-spacing: -0.055em;
+  color: var(--pulpa);
+}
+.alcance-fecha,
+.fecha,
+.mapa-nota {
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--pulpa-tenue);
+}
+.funciones {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-bottom: 1px solid var(--linea);
+}
+.funciones li {
+  padding: 12px 0;
+  border-top: 1px solid var(--linea);
+  font-weight: 800;
+  font-size: clamp(18px, 1.6vw, 22px);
+  line-height: 1.2;
+}
+.atribucion {
+  margin-top: 32px;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--pulpa-suave);
+}
+.atribucion a { text-decoration: underline; text-underline-offset: 3px; }
+.atribucion a:hover { color: var(--mazorca); }
+.error { margin-top: 16px; color: var(--mazorca); }
+[hidden] { display: none !important; }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* The map: one small dot per business, drawn from lat and lon. */
+.mapa { position: relative; }
+.mapa svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.mapa circle { fill: var(--mazorca); }
+.mapa circle.activo { fill: var(--pulpa); }
+.mapa-tip {
+  position: absolute;
+  display: none;
+  z-index: 2;
+  pointer-events: none;
+  max-width: 240px;
+  padding: 8px 10px;
+  background: var(--pulpa);
+  color: var(--tostado);
+  font-size: 15px;
+  line-height: 1.3;
+  border-radius: 2px;
+}
+.mapa-tip.visible { display: block; }
+.mapa-tip strong { display: block; font-weight: 800; }
+.mapa-tip span { color: var(--chocolate); }
+
+/* The breakdown by category. */
+.categorias {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-bottom: 1px solid var(--linea);
+}
+.categorias li {
+  display: grid;
+  grid-template-columns: minmax(96px, 150px) minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 12px 0;
+  border-top: 1px solid var(--linea);
+  font-size: clamp(17px, 1.5vw, 20px);
+}
+.cat-barra {
+  display: block;
+  height: 10px;
+  background: rgba(245, 237, 227, 0.12);
+}
+.cat-barra span {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  background: var(--mazorca);
+}
+.cat-cifra {
+  font-family: var(--mono);
+  font-size: 16px;
+  text-align: right;
+}
+
+/* The full list, for keyboards, screen readers and anyone who wants text. */
+.lista-bloque { margin-top: 56px; border-top: 1px solid var(--linea); padding-top: 16px; }
+.lista-bloque summary {
+  padding: 8px 0;
+  font-weight: 800;
+  font-size: 18px;
+  color: var(--mazorca);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 5px;
+  cursor: pointer;
+  list-style: none;
+}
+.lista-bloque summary::-webkit-details-marker { display: none; }
+.lista {
+  columns: 240px;
+  column-gap: 28px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 16px;
+  line-height: 1.35;
+}
+.lista li { break-inside: avoid; padding: 6px 0; border-top: 1px solid var(--linea); }
+.lista-tipo {
+  display: block;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--pulpa-tenue);
+}
+
+.alcance-pagina {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: clamp(40px, 6vw, 72px) 18px 40px;
+}
+.pagina-titulo {
+  margin: 0 0 16px;
+  font-weight: 800;
+  font-size: clamp(36px, 5.6vw, 68px);
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+.alcance-pagina .aviso {
+  margin: 24px 0 0;
+  padding: 18px 20px;
+  border-left: 3px solid var(--mazorca);
+  background: rgba(245, 237, 227, 0.06);
+  font-size: clamp(16px, 1.3vw, 18px);
+  line-height: 1.5;
+}
+.alcance-bloque { margin-top: clamp(48px, 6vw, 72px); }
+.alcance-bloque h2 {
+  margin: 0 0 16px;
+  font-weight: 800;
+  font-size: clamp(24px, 2.6vw, 32px);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  color: var(--mazorca);
+}
+.alcance-bloque > p { font-size: clamp(16px, 1.3vw, 18px); line-height: 1.5; color: var(--pulpa-suave); }
+.alcance-bloque .funciones { margin-top: 16px; }
+.alcance-bloque .funciones li { font-weight: 400; font-size: clamp(16px, 1.3vw, 18px); line-height: 1.45; }
+.alcance-bloque .funciones strong { font-weight: 800; color: var(--pulpa); }
+.alcance-pagina .alcance-texto .mapa-nota { font-size: 13px; color: var(--pulpa-tenue); }
+.alcance-pagina .alcance-texto .alcance-frase { font-family: var(--fuente); font-size: clamp(17px, 1.4vw, 20px); }
+
+@media (min-width: 900px) {
+  .alcance { padding-left: clamp(24px, 5vw, 80px); padding-right: clamp(24px, 5vw, 80px); }
+  .alcance-cuerpo,
+  .alcance-dos { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: clamp(40px, 5vw, 80px); }
+  .alcance-pagina .alcance-dos { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
+}
+
+/* The brand line with the grain, on top of the page. */
+.grito {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 8px;
+  padding: 20px clamp(18px, 4.5vw, 72px) 0;
+}
+.linea {
+  font-weight: 800;
+  font-size: clamp(34px, 13.2vw, 88px);
+  line-height: 0.9;
+  letter-spacing: -0.045em;
+  white-space: nowrap;
+}
+.linea-lugar { grid-column: 1; grid-row: 1; justify-self: start; }
+.linea-grano { grid-column: 1 / -1; grid-row: 2; justify-self: start; color: var(--mazorca); }
+.grano { grid-column: 2; grid-row: 1; display: flex; }
+.grano svg { display: block; width: clamp(56px, 15vw, 88px); height: auto; overflow: visible; }
+
+@media (min-width: 761px) {
+  .grito {
+    grid-template-columns: auto auto;
+    width: max-content;
+    max-width: 100%;
+    column-gap: clamp(16px, 2.4vw, 40px);
+    padding-top: 40px;
+  }
+  .linea { font-size: clamp(34px, 7.4vw, 150px); }
+  .linea-grano { grid-column: 1; justify-self: end; }
+  .grano { grid-row: 1 / span 2; }
+  .grano svg { width: clamp(80px, 13vw, 240px); }
+}

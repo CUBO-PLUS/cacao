@@ -21,7 +21,7 @@ export type EstadoFactura = 'New' | 'Processing' | 'Settled' | 'Expired' | 'Inva
 
 /** What every Cacao product writes in the invoice metadata. CacaoLedger reads it to build the ticket. */
 export type MetadatosCacao = {
-  producto: 'media' | 'travel' | 'market' | 'pay';
+  producto: 'media' | 'travel' | 'market' | 'pay' | 'negocios';
   /** The product's own id for what is being paid. */
   orderId: string;
   /** One line that describes the sale, shown in the receipt and the ticket. */

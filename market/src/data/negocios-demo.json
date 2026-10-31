@@ -1,0 +1,22 @@
+{
+  "criterio": "Negocios reales de BTC Map, elegidos a mano: aceptan bitcoin, tienen sitio web y fueron verificados desde 2025. Sin cadenas, ni negocios con nombre de persona o título, ni clínicas, escuelas, bancos, ni lugares políticos o religiosos.",
+  "fuente": "BTC Map (https://btcmap.org) y colaboradores de OpenStreetMap (https://www.openstreetmap.org/copyright)",
+  "negocios": [
+    { "btcmapId": 23673, "nombre": "Alquimia Coffee", "categoria": "cafe", "web": "https://www.alquimiacoffee.com/", "verificado": "2025-02-05" },
+    { "btcmapId": 27428, "nombre": "Arábica Coffee Shop", "categoria": "cafe", "web": "https://arabica-coffee-shop.kyte.site/en", "verificado": "2026-02-10" },
+    { "btcmapId": 18673, "nombre": "Cherito BitCafe Specialty Cafe Roasters", "categoria": "cafe", "web": "https://www.tierrabendita.net/en/?v=7516fd43adaa", "verificado": "2025-08-31" },
+    { "btcmapId": 21869, "nombre": "Dos Mundos Roaster & Co-Lab", "categoria": "cafe", "web": "https://www.dosmundoscafe.com/", "verificado": "2026-10-16" },
+    { "btcmapId": 3986, "nombre": "Good Beans El Salvador Coffee Shop", "categoria": "cafe", "web": "https://thegoodbeans.com", "verificado": "2026-01-22" },
+    { "btcmapId": 12509, "nombre": "Café Fulanos", "categoria": "cafe", "web": "https://linktr.ee/cafefulanos", "verificado": "2025-10-25" },
+    { "btcmapId": 18714, "nombre": "Azteca Mexican Cuisine & Bar", "categoria": "comida", "web": "https://aztecasv.com/", "verificado": "2025-10-23" },
+    { "btcmapId": 23179, "nombre": "Bubba's", "categoria": "comida", "web": "https://www.bubbassv.com/", "verificado": "2025-01-09" },
+    { "btcmapId": 5783, "nombre": "Cadejo Brewing Company", "categoria": "comida", "web": "https://cervezacadejo.com/", "verificado": "2026-04-22" },
+    { "btcmapId": 30785, "nombre": "Casa Clementina Restaurante y Galería", "categoria": "comida", "web": "http://www.casaclementina.com/", "verificado": "2025-11-20" },
+    { "btcmapId": 27418, "nombre": "Elixir Juices", "categoria": "comida", "web": "https://www.elixirjuicesv.com/", "verificado": "2025-07-24" },
+    { "btcmapId": 23187, "nombre": "Kikis Pan", "categoria": "comida", "web": "http://www.facebook.com/kikispansv/", "verificado": "2025-01-09" },
+    { "btcmapId": 42794, "nombre": "Utatlán - Permaculture Park", "categoria": "servicios", "web": "https://www.utatlan.com/", "verificado": "2026-09-12" },
+    { "btcmapId": 16566, "nombre": "Bitdriver", "categoria": "servicios", "web": "https://bitdriver.taxi/", "verificado": "2025-07-11" },
+    { "btcmapId": 34300, "nombre": "Expédition Maya", "categoria": "servicios", "web": "https://www.expeditionmaya.com/", "verificado": "2026-01-27" },
+    { "btcmapId": 4745, "nombre": "LAOLA El Sunzal", "categoria": "servicios", "web": "https://www.laolasurfcamp.com/elsalvador", "verificado": "2025-10-28" }
+  ]
+}

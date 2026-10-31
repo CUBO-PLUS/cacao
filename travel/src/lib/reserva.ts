@@ -3,13 +3,18 @@
 // Server only. The only I/O here is reading the BTCPay address (./url-btcpay.ts); the routes fetch the catalogue and talk to BTCPay.
 import { cotizar, repartir } from './reparto';
 import { configDesdeEntorno, ErrorBtcpay, type ConfigBtcpay } from './btcpay';
+import { ErrorPay } from './cacaopay';
 import { urlBtcpay } from './url-btcpay';
 
 /** What the reader sees when BTCPay cannot be reached. Never a stack trace. */
 export const PAUSA_BTCPAY = 'Los pagos están en pausa por unos minutos. Probá de nuevo en un rato.';
 
-/** True when BTCPay did not answer (status 0) or failed on its side (5xx). The reader is then asked to wait. */
+/**
+ * True when the payment service did not answer (status 0), failed on its side (5xx) or is rate limited (429).
+ * The reader is then asked to wait. Covers BTCPay and CacaoPay.
+ */
 export function btcpayEnPausa(error: unknown): boolean {
+  if (error instanceof ErrorPay) return error.estado === 0 || error.estado === 429 || error.estado >= 500;
   return error instanceof ErrorBtcpay && (error.estado === 0 || error.estado >= 500);
 }
 
@@ -62,6 +67,16 @@ export async function pagosConfigurados(
   });
   const storeId = (entorno.BTCPAY_STORE_ID ?? '').trim();
   return config && storeId ? { config, storeId } : null;
+}
+
+/**
+ * What CacaoPay keeps with a charge so the paid booking can be rebuilt without a store of its own. Written by the
+ * server from the catalogue and the price it computed. The price is the subtotal, so a later catalogue change never
+ * changes a paid booking.
+ */
+export function datosDeCobro(tour: TourReserva, r: { codigo: string; fecha: string; personas: number }): Record<string, unknown> {
+  const precio = cotizar(tour.data.precio, r.personas);
+  return { orderId: r.codigo, tour: tour.id, fecha: r.fecha, personas: r.personas, subtotal: precio.subtotal, descuento: 0 };
 }
 
 /** The booking as the browser receives it. A paid booking adds pagada and facturaId. */

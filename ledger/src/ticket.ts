@@ -69,7 +69,8 @@ export interface Rechazo {
 
 // Where the ticket came from, when it was imported. Absent on tickets typed by hand.
 // CacaoMarket: the order number. BTCPay: the invoice id, and the product that created it.
-export type ProductoCacao = "media" | "travel" | "market" | "pay";
+// "negocios": a sale of a business that charges with CacaoPay. It is never a ticket of the group (see ventas-api.ts).
+export type ProductoCacao = "media" | "travel" | "market" | "pay" | "negocios";
 
 export type OrigenTicket =
   | { plataforma: "cacaomarket"; numero: string }

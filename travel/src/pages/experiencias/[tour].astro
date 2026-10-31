@@ -436,6 +436,15 @@ const datos = [
   // Left by "Cambiar fecha o personas": the visitor went back to the form before the invoice was paid.
   class CambioDeDatos extends Error {}
 
+  // A random id (version 4 shape) for one booking attempt. It works without a secure context.
+  const nuevoIntento = (): string => {
+    const b = crypto.getRandomValues(new Uint8Array(16));
+    b[6] = (b[6] & 0x0f) | 0x40;
+    b[8] = (b[8] & 0x3f) | 0x80;
+    const h = [...b].map((x) => x.toString(16).padStart(2, '0')).join('');
+    return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+  };
+
   // Booking box: date and group size, with the total recomputed on every change.
   const caja = document.querySelector<HTMLElement>('[data-reserva]');
   if (caja) {
@@ -645,16 +654,23 @@ const datos = [
         document.addEventListener('visibilitychange', alVolver);
       });
 
+    // One id per booking attempt: a double tap or a retry sends the same one, so the server makes one invoice. It is
+    // kept only until the server answers with an invoice, and a new one is made for the next attempt (after
+    // "Cambiar fecha o personas", or when the date or the group size changed).
+    let intento: { id: string; para: string } | null = null;
+
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       if (!validarFecha()) return fecha.focus();
       boton.disabled = true;
       boton.textContent = 'Reservando';
       try {
+        const para = `${tour}|${fecha.value}|${salida.value}`;
+        if (!intento || intento.para !== para) intento = { id: nuevoIntento(), para };
         const r = await fetch('/api/reservar/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tour, fecha: fecha.value, personas: Number(salida.value) }),
+          body: JSON.stringify({ tour, fecha: fecha.value, personas: Number(salida.value), intento: intento.id }),
         });
         // A reply that is not JSON gets the generic message, not the parser's text.
         let reserva: any = null;
@@ -663,6 +679,8 @@ const datos = [
         } catch {}
         if (!r.ok) throw new Error(reserva?.error ?? 'No se pudo reservar. Probá de nuevo.');
         if (!reserva || typeof reserva !== 'object') throw new Error('No se pudo reservar. Probá de nuevo.');
+        // The server has answered with the charge: the next booking is a new attempt, whatever happens to this one.
+        intento = null;
 
         // With BTCPay the booking waits for the Lightning payment; the server answers with the booking once it is paid.
         if (reserva.estado === 'pendiente') {

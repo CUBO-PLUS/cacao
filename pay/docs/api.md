@@ -134,3 +134,196 @@ Todas las tablas (`pay_tasas`, `pay_tarifas`, `pay_transferencias`, `pay_histori
 | `pay_fallar` | `(p_transferencia, p_actor, p_motivo)` | Verifica motivo de 4 a 200 caracteres y estado `creada` o `procesando`, y avanza a `fallida`. |
 | `pay_cancelar` | `(p_transferencia, p_actor)` | Verifica que el actor sea el remitente y que el estado sea `creada`, y avanza a `cancelada`. |
 | `pay_resumen` | `(p_desde, p_hasta)` | Agrupa por `estado` los envíos creados en `[p_desde, p_hasta)`, convirtiendo los montos y comisiones en `EUR` a centavos de `USD` con la tasa guardada en `pay_tasas`. |
+
+## 7. API de cobros v1 (`/api/v1/`)
+
+Cacao Pay cobra por Lightning para los demás productos del grupo (Media, Travel y Market). Cada producto llama a esta API desde su servidor, con su propia clave. La API crea la factura en BTCPay, lee su estado y avisa cuando cambia. **No hay CORS**: ningún navegador puede llamarla, y la clave nunca debe llegar a una página.
+
+Las rutas terminan en barra, como el resto de la aplicación (`trailingSlash`). Sin la barra, el servidor responde 308.
+
+| Método y ruta | Qué hace |
+|---|---|
+| `POST /api/v1/cobros/` | Crea un cobro. Exige `Idempotency-Key`. Responde 201 si es nuevo y 200 si es una repetición. |
+| `GET /api/v1/cobros/{id}/` | Lee el cobro. Pide a BTCPay su estado mientras el cobro no esté pagado. Otra clave recibe 404. |
+| `POST /api/v1/cobros/{id}/cancelar/` | Cancela un cobro pendiente. Un cobro pagado responde 409. |
+| `POST /api/v1/btcpay/aviso/` | Webhook de BTCPay. Lo llama BTCPay, firmado con `BTCPay-Sig`. |
+| `GET` o `POST /api/v1/avisos/procesar/` | Envía los avisos pendientes. Exige `Authorization: Bearer` con `PAY_AVISOS_SECRET`. Lo llama el cron de Vercel una vez al día. |
+
+### Autenticación y límites
+
+Cada petición lleva `Authorization: Bearer cp_...`. Sin clave, con una clave que no existe o con una clave revocada: 401. Cada clave puede hacer 120 peticiones por minuto; pasado el límite responde 429 con `Retry-After`.
+
+Las claves se crean con `scripts/cliente-api.mjs` y se muestran una sola vez. En la base solo queda su hash SHA-256.
+
+### Crear un cobro
+
+Campos del cuerpo (JSON). Cualquier campo que no esté en esta lista responde 400.
+
+| Campo | Tipo | Regla |
+|---|---|---|
+| `monto` | entero | En centavos de dólar si `moneda` es `USD` (100 a 1000000). En sats si es `SATS` (1 a 100000000). |
+| `moneda` | texto | `USD` o `SATS`. |
+| `descripcion` | texto | 1 a 200 caracteres. Aparece en el ticket de CacaoLedger. |
+| `referencia` | texto | 1 a 120 caracteres. Es el id del producto para lo que se cobra (`orderId`). |
+| `producto` | texto | `media`, `travel`, `market` o `pay`. |
+| `tienda` | texto | Opcional. Solo si la clave puede elegir tienda y la tienda está asignada a esa clave. |
+| `vence_en_segundos` | entero | Opcional. De 300 a 86400. Por defecto, 3600. |
+| `aviso_url` | texto | Opcional. Dirección `https` donde Pay avisa los cambios de estado (ver "Avisos"). |
+| `datos` | objeto JSON | Opcional. Hasta 2000 bytes (con las claves ordenadas). Pay lo guarda tal cual y lo devuelve solo al cliente que lo mandó, en la respuesta de crear y de leer. Pay no lo interpreta, no lo manda a BTCPay ni en los avisos. Sirve para que el cliente reconstruya su propio registro (por ejemplo, una reserva) a partir del cobro. |
+
+El servidor calcula los sats con el precio del bitcoin en ese momento y los guarda. El navegador nunca decide el monto en sats.
+
+```bash
+curl -s https://pay.cacaomedia.example/api/v1/cobros/ \
+  -H "Authorization: Bearer $CACAO_PAY_CLAVE" \
+  -H "Idempotency-Key: pedido-1042-intento-1" \
+  -H "Content-Type: application/json" \
+  -d '{"monto": 2500, "moneda": "USD", "descripcion": "Pupusas para la mesa 4", "referencia": "pedido-1042", "producto": "market", "aviso_url": "https://market.ejemplo.com/cacao/avisos"}'
+```
+
+Respuesta (201):
+
+```json
+{
+  "id": "6f1c2a1e-0b7d-4a55-9e0e-3c2d8f7a9b10",
+  "estado": "pendiente",
+  "factura": "lnbc250n1p...",
+  "sats": 25000,
+  "usd_centavos": 2500,
+  "expira_en": "2026-10-31T01:30:00+00:00",
+  "enlace_pago": "https://btcpay.cacaomedia.example/i/AbC123...",
+  "pago_tardio": false,
+  "datos": null
+}
+```
+
+**Idempotencia.** `Idempotency-Key` tiene de 8 a 128 caracteres (letras, números, `-` y `_`).
+
+- La misma clave con el mismo cuerpo devuelve el cobro original (200, con `Idempotent-Replayed: true`). No se hace otra factura.
+- La misma clave con otro cuerpo responde 409 `IDEMPOTENCIA_CONFLICTO`. Los `datos` forman parte del cuerpo: la misma clave con otros `datos` también responde 409. El orden de las claves de `datos` no cambia nada.
+- Si otra petición con la misma clave todavía está creando la factura, responde 409 `IDEMPOTENCIA_EN_CURSO`. Repetir en un momento.
+- Si BTCPay rechaza la factura (error 4xx), no queda ninguna factura y la clave vuelve a quedar libre.
+- Si no hubo respuesta de BTCPay, la clave queda reservada. Repetir la misma petición después de un minuto encuentra la factura que BTCPay ya hizo, en vez de hacer otra.
+
+### Leer y cancelar
+
+```bash
+curl -s https://pay.cacaomedia.example/api/v1/cobros/6f1c2a1e-0b7d-4a55-9e0e-3c2d8f7a9b10/ \
+  -H "Authorization: Bearer $CACAO_PAY_CLAVE"
+
+curl -s -X POST https://pay.cacaomedia.example/api/v1/cobros/6f1c2a1e-0b7d-4a55-9e0e-3c2d8f7a9b10/cancelar/ \
+  -H "Authorization: Bearer $CACAO_PAY_CLAVE"
+```
+
+Estados: `pendiente`, `pagado`, `vencido` y `cancelado`.
+
+- Un cobro queda `pagado` solo cuando BTCPay dice que la factura está pagada (`Settled`). Pay vuelve a leerlo en BTCPay; el cuerpo de un aviso nunca se usa como prueba.
+- Cancelar primero le pide a BTCPay que invalide la factura, la vuelve a leer, y solo entonces cancela. Si la factura se pagó mientras tanto, el cobro queda `pagado` y la cancelación se rechaza con 409.
+- Un pago que llega a un cobro ya cancelado no cambia su estado: queda con `pago_tardio: true`, y hay que devolverlo.
+- Un cobro pagado no se cancela (409 `ESTADO_INVALIDO`).
+
+### Avisos
+
+Cuando un cobro pasa a `pagado`, `vencido` o `cancelado` y tiene `aviso_url`, Pay hace un `POST` a esa dirección:
+
+```json
+{"aviso": "0b7d4a55-...", "tipo": "cobro.estado", "id": "6f1c2a1e-...", "estado": "pagado"}
+```
+
+La cabecera `Cacao-Firma` tiene la forma `t=<segundos>,v1=<hex>`. `v1` es el HMAC-SHA256, con el secreto del cliente, del texto `<t>.<cuerpo>`. Para verificar un aviso:
+
+1. Calcular el HMAC del texto `t + "." + cuerpo` con el secreto del cliente, y compararlo con `v1` en tiempo constante.
+2. Rechazar si `t` se aleja más de 300 segundos de la hora actual (aviso repetido).
+3. Antes de actuar, leer el cobro con `GET /api/v1/cobros/{id}/`. El aviso solo dice que hay un cambio.
+
+```js
+import { createHmac, timingSafeEqual } from 'node:crypto';
+
+export function avisoValido(cabecera, cuerpo, secreto) {
+  const m = /^t=(\d+),v1=([0-9a-f]{64})$/.exec(cabecera ?? '');
+  if (!m || Math.abs(Date.now() / 1000 - Number(m[1])) > 300) return false;
+  const esperada = createHmac('sha256', secreto).update(`${m[1]}.${cuerpo}`, 'utf8').digest();
+  const recibida = Buffer.from(m[2], 'hex');
+  return recibida.length === esperada.length && timingSafeEqual(recibida, esperada);
+}
+```
+
+**Cabecera `Cacao-Aviso-Id`.** Cada intento lleva el id del aviso en esa cabecera, igual que el campo `aviso` del cuerpo. La entrega es *al menos una vez*: si el receptor respondió y Pay no llegó a registrarlo, el aviso puede llegar dos veces con el mismo id. El receptor debe descartar un id que ya procesó.
+
+**Entrega.** Cada aviso es una fila de `pay_avisos`, escrita en la misma operación que el cambio de estado del cobro. Si el proceso se cae justo después del cambio, el aviso sigue en la base y se envía después. Un fallo de aviso nunca cambia el cobro.
+
+**Reintentos.** Un intento fallido (error de red, respuesta distinta de 2xx, redirección o más de 5 segundos) espera 30 segundos, y luego el doble en cada intento, con techo de una hora: 30 s, 1 min, 2 min, 4 min, 8 min, 16 min, 32 min, 1 h, 1 h. Después del décimo intento sin respuesta el aviso queda `muerto` (`entrega = 'muerto'`). Un aviso muerto se conserva en `pay_avisos`, con su último error, y no se borra. Cada intento se firma de nuevo con su hora, así que la tolerancia de 300 segundos se aplica a la hora de cada intento.
+
+**Quién envía.** Justo después del cambio de estado, el mismo proceso envía el aviso con `after()`. Los pendientes los envía `GET` o `POST /api/v1/avisos/procesar/`, con `Authorization: Bearer <PAY_AVISOS_SECRET>`. La comparación es en tiempo constante, y sin el secreto configurado la ruta responde 401. Además, después de cada petición válida a la API, Pay envía hasta tres avisos pendientes, una vez enviada la respuesta. Cada envío toma sus avisos con un reclamo de dos minutos: si el proceso se cae, otro lo toma después, y dos envíos a la vez nunca mandan el mismo aviso.
+
+**Direcciones.** `aviso_url` se revisa al crear el cobro, y otra vez antes de cada intento:
+
+- `https` siempre. `http` solo en desarrollo y solo hacia `localhost` o `127.0.0.1`. En producción nunca.
+- Sin usuario ni clave. Sin direcciones IP escritas, en ninguna forma (decimal, hexadecimal, octal o IPv4 mapeada en IPv6). Sin `localhost`, ni nombres `.local` o `.internal`.
+- Solo el puerto 443. En desarrollo, la dirección local puede usar cualquier puerto.
+- El nombre se resuelve, y **todas** las direcciones deben ser públicas. Quedan fuera las privadas, de bucle, de enlace local, compartidas (100.64.0.0/10), multicast, reservadas, de metadatos de nube y las IPv4 mapeadas en IPv6.
+- La revisión se hace también al abrir la conexión: la conexión solo usa las direcciones que pasaron la revisión en ese momento. Así, un nombre que cambia de dirección después de guardar el cobro no lleva a la red interna.
+- No se siguen redirecciones: un 3xx es un intento fallido.
+- Cinco segundos como máximo por intento. La respuesta no se lee, y nunca se guardan el cuerpo del aviso ni el secreto.
+
+### Tiendas
+
+Cada clave cobra en su tienda por defecto. Con `puede_elegir_tienda`, puede cobrar también en las tiendas asignadas en `pay_api_tiendas`. Cualquier otra tienda responde 403 `NO_PERMITIDO`, y la base de datos lo verifica en `pay_reservar_cobro` aunque la API ya lo haya revisado.
+
+### Errores
+
+Todas las respuestas de error tienen la forma `{"error": {"codigo": "...", "mensaje": "..."}}`.
+
+| Código HTTP | Códigos |
+|---|---|
+| 400 | `DATOS_INVALIDOS` |
+| 401 | `NO_AUTORIZADO` |
+| 403 | `NO_PERMITIDO` |
+| 404 | `NO_ENCONTRADA` |
+| 409 | `IDEMPOTENCIA_CONFLICTO`, `IDEMPOTENCIA_EN_CURSO`, `ESTADO_INVALIDO` |
+| 429 | `LIMITE` |
+| 502 | `BTCPAY` |
+| 503 | `NO_DISPONIBLE`, `SIN_COTIZACION` |
+| 500 | `ERROR` |
+
+### Administración de clientes
+
+```bash
+node --env-file=.env.local scripts/cliente-api.mjs crear --nombre "Market" [--tienda ID] [--elegir] [--tiendas A,B]
+node --env-file=.env.local scripts/cliente-api.mjs listar
+node --env-file=.env.local scripts/cliente-api.mjs revocar cp_XXXXXXXX
+```
+
+`crear` imprime la clave y el secreto de los avisos una sola vez. `--tienda` es `BTCPAY_STORE_ID` por defecto.
+
+### Variables de entorno
+
+| Variable | Qué es |
+|---|---|
+| `PAY_BTCPAY_PLATAFORMA_KEY` | Clave de BTCPay con permisos para crear, leer y marcar como `Invalid` facturas en las tiendas de la plataforma (`btcpay.store.cancreateinvoice`, `btcpay.store.canviewinvoices`, `btcpay.store.canmodifyinvoices`). Solo en el servidor. |
+| `PAY_BTCPAY_WEBHOOK_SECRET` | Secreto con que BTCPay firma sus avisos (`BTCPay-Sig`). Es el mismo que se configura en el webhook de cada tienda que usa la API. |
+| `PAY_AVISOS_SECRET` | Secreto de `Authorization: Bearer` para la ruta que envía los avisos pendientes. Solo en el servidor. |
+
+Para la demostración, `infra/btcpay/local/clave-plataforma.mjs` crea la clave con permisos mínimos y el secreto del webhook, y los escribe en `pay/.env.local` sin mostrarlos. Ese archivo no está en git.
+
+### Pruebas
+
+```bash
+node --env-file=.env.local node_modules/vitest/vitest.mjs run tests/db/api-cobros.test.ts
+node --env-file=.env.local tests/api/cobros-api.mjs     # con el servidor de desarrollo en el puerto 4324
+```
+
+`tests/db/avisos.test.ts` prueba cola de avisos: el cambio y su aviso se escriben juntos, dos remitentes no toman el mismo aviso, un reclamo caído vuelve a tomarse, los reintentos esperan el doble hasta el techo, a los diez intentos el aviso queda `muerto`, y la ruta envía lo que quedó en la tabla sin envío en memoria. `src/servidor/avisos.test.ts` prueba cada forma de dirección rechazada (decimal, hexadecimal, octal, IPv4 mapeada, localhost en producción, metadatos, credenciales, redirección), la revisión al conectar y el secreto de la ruta.
+
+La prueba de extremo a extremo crea dos clientes, cobra, paga desde la billetera de prueba, verifica la firma del aviso con su propia implementación, y comprueba el aislamiento, la cancelación, la autenticación y la firma del webhook.
+
+### Pendiente para producción
+
+- Configurar el webhook de BTCPay en cada tienda que use la API, con `PAY_BTCPAY_WEBHOOK_SECRET`.
+- Definir `PAY_BTCPAY_PLATAFORMA_KEY` en el proyecto de Vercel, con los permisos mínimos.
+- Aplicar la migración `20261031000001_pay_api.sql` en Supabase antes de desplegar el código.
+- Aplicar `20261031000050_pay_avisos.sql` antes del código: añade la cola de avisos y quita `pay_marcar_aviso`.
+- Aplicar `20261103000001_pay_datos.sql` antes del código: añade `datos` a `pay_cobros` y cambia la firma de `pay_reservar_cobro`.
+- Definir `PAY_AVISOS_SECRET`. Vercel Cron envía `Authorization: Bearer <CRON_SECRET>`, así que `CRON_SECRET` tiene que tener el mismo valor.
+- El cron de `vercel.json` (`/api/v1/avisos/procesar/`, `0 7 * * *`) corre una vez al día, que es lo que permite el plan Hobby. En Pro puede correr cada minuto, cambiando el horario. Entre cruces, los reintentos dependen de las peticiones a la API.
+- Un cliente nuevo se crea con `scripts/cliente-api.mjs` contra la base de producción, y su clave se entrega por un canal privado.

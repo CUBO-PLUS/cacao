@@ -2,6 +2,7 @@
 import type { APIContext } from 'astro';
 import { bd, hayBase } from '../../../../lib/servidor/bd';
 import {
+  abrirAccesoPagoPay,
   cobroDe,
   respuestaError,
   sinGuardar,
@@ -13,16 +14,37 @@ import {
 } from '../../../../lib/servidor/cobros';
 import { leerFactura } from '../../../../lib/servidor/btcpay';
 import { configBtcpay } from '../../../../lib/servidor/pagos-btcpay';
+import { leerCobroPay, configPay, payIdDeFactura } from '../../../../lib/servidor/pay';
 import { registrarEvento } from '../../../../lib/servidor/eventos';
 import { cookieLector } from '../../../../lib/servidor/lector';
 
 export const prerender = false;
 
 /**
+ * Asks CacaoPay about a pending invoice that it charged. Only "pagado" counts, and the database then opens the access.
+ * Any error answers null, so the invoice stays pending and the next poll tries again.
+ */
+async function confirmarEnPay(cobro: Cobro): Promise<Cobro | null> {
+  const pay = configPay();
+  const payId = payIdDeFactura(cobro.btcpay_factura_id);
+  if (!pay || !payId) return null;
+  try {
+    const remoto = await leerCobroPay(pay, payId);
+    if (remoto.estado !== 'pagado') return null;
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+  return abrirAccesoPagoPay(cobro);
+}
+
+/**
  * Asks BTCPay about a pending BTCPay invoice. Only a Settled invoice counts: the database then records the payment.
  * Any BTCPay error answers null, so the invoice stays pending and the next poll tries again.
  */
 async function confirmarEnBtcpay(cobro: Cobro, lector: string): Promise<Cobro | null> {
+  // An invoice that CacaoPay made is read at CacaoPay, whatever the current settings say.
+  if (payIdDeFactura(cobro.btcpay_factura_id)) return confirmarEnPay(cobro);
   const config = await configBtcpay();
   if (!config || !cobro.btcpay_factura_id || !cobro.btcpay_tienda_id) return null;
   try {

@@ -18,6 +18,7 @@ import {
 } from '@/lib/negocios';
 
 import { CercaDeMi } from './CercaDeMi';
+import { CobranConCacaoPay } from './CobranConCacaoPay';
 import { FilaNegocio } from './FilaNegocio';
 import estilos from './estilos.module.css';
 
@@ -67,6 +68,10 @@ async function ListaNegocios({ busqueda }: { busqueda: PageProps<'/donde-gastar'
           gastarse bitcoin real.
         </p>
       </header>
+
+      <Suspense fallback={<p role="status">Cargando los negocios que cobran con CacaoPay…</p>}>
+        <CobranConCacaoPay />
+      </Suspense>
 
       <CercaDeMi />
 

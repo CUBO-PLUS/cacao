@@ -3,9 +3,11 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 
+import { AvisoDemo, EtiquetaEjemplo } from '@/componentes/Demo';
 import { Estrellas } from '@/componentes/Estrellas';
 import { FotoProducto } from '@/componentes/FotoProducto';
 import { RegistrarEvento } from '@/componentes/RegistrarEvento';
+import { esDemo, mostrarCerrado } from '@/lib/demo';
 import { cotizacionSegura } from '@/servidor/catalogo';
 import { sesionActual } from '@/servidor/sesion';
 import { servicioPublico, type ServicioDetalle } from '@/servidor/servicios';
@@ -44,6 +46,9 @@ async function DetalleServicio({ servicio }: { servicio: ServicioDetalle }) {
   return (
     <article className={estilos.servicio}>
       <RegistrarEvento nombre="vista_servicio" objeto={servicio.id} />
+      <div className={estilos.aviso}>
+        <AvisoDemo btcmapId={servicio.btcmapId} nombre={servicio.negocioNombre} />
+      </div>
       <figure className={estilos.figura}>
         <FotoProducto
           src={servicio.foto}
@@ -62,8 +67,9 @@ async function DetalleServicio({ servicio }: { servicio: ServicioDetalle }) {
         <h1>{servicio.titulo}</h1>
 
         <p className={estilos.oferta}>
-          Ofrece <Link href={`/negocios/${servicio.negocioId}`}>{servicio.negocioNombre}</Link>
-          {!servicio.abierto && (
+          Ofrece <Link href={`/negocios/${servicio.negocioId}`}>{servicio.negocioNombre}</Link>{' '}
+          <EtiquetaEjemplo activo={esDemo(servicio.btcmapId)} />
+          {mostrarCerrado(servicio.btcmapId, servicio.abierto) && (
             <>
               {' '}
               <span className="marca marca--cerrado">Cerrado por ahora</span>
@@ -99,7 +105,7 @@ async function AccionServicio({ servicio }: { servicio: ServicioDetalle }) {
     );
   }
 
-  if (!servicio.abierto) {
+  if (mostrarCerrado(servicio.btcmapId, servicio.abierto)) {
     return <p className="aviso">Este negocio no está recibiendo pedidos ahora.</p>;
   }
 

@@ -17,6 +17,11 @@
   min-width: 0;
 }
 
+/* The demo notice spans the whole service grid, above the photo and the details. */
+.aviso {
+  grid-column: 1 / -1;
+}
+
 .info {
   display: grid;
   gap: 14px;

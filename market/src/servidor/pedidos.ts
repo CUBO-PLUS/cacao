@@ -10,11 +10,12 @@ import type {
   ResumenOrden,
   RolOrden,
 } from '@/app/ordenes/tipos';
+import { esDemo } from '@/lib/demo';
 import { accionesPosibles, type OrdenParaAcciones } from '@/lib/estados';
 import type { Database } from '@/tipos/db';
 
 import { registrarEvento, sesionDeVisitaCreando } from './eventos';
-import { confirmarPagoEnBD } from './pagos';
+import { cancelarCobroEnPay, confirmarPagoEnBD } from './pagos';
 import { barrer } from './mantenimiento';
 import { desdeError, exito, fallo, type Resultado } from './resultado';
 import type { Sesion } from './sesion';
@@ -298,6 +299,29 @@ export async function accesoAOrden(ordenId: string, sesion: Sesion): Promise<Rol
   return rolEn(data, sesion);
 }
 
+/**
+ * Whether a shop is a demo profile (a real business from BTC Map shown as an example). Read with the
+ * service role, the same way the shop's name is read, so the order can say so to either party.
+ */
+export async function esNegocioDemo(negocioId: string): Promise<boolean> {
+  if (!esUuid(negocioId)) return false;
+  const { data, error } = await clienteServicio()
+    .from('negocios')
+    .select('btcmap_id')
+    .eq('id', negocioId)
+    .maybeSingle();
+  if (error) throw new Error(`No pudimos leer el negocio: ${error.message}`);
+  return esDemo(data?.btcmap_id ?? null);
+}
+
+/** Whether an order was placed with a demo seller. Used by the checkout screen, which reads the order first. */
+export async function esOrdenDemo(ordenId: string): Promise<boolean> {
+  if (!esUuid(ordenId)) return false;
+  const { data, error } = await clienteServicio().from('ordenes').select('negocio_id').eq('id', ordenId).maybeSingle();
+  if (error) throw new Error(`No pudimos leer la orden: ${error.message}`);
+  return data ? esNegocioDemo(data.negocio_id) : false;
+}
+
 /** One order for its parties. Null for anyone else, so the page can answer "not found". */
 export async function detalleDeOrden(ordenId: string, sesion: Sesion): Promise<DetalleOrden | null> {
   if (!esUuid(ordenId)) return null;
@@ -377,6 +401,7 @@ export async function detalleDeOrden(ordenId: string, sesion: Sesion): Promise<D
     estado: orden.estado,
     rol,
     otraParte,
+    demo: await esNegocioDemo(orden.negocio_id),
     totalUsdCentavos: orden.total_usd_centavos,
     totalSats: orden.total_sats,
     cotizacionUsdBtc: orden.cotizacion_usd_btc,
@@ -489,6 +514,9 @@ export async function cancelarOrden(
   if (largo(texto) < 4 || largo(texto) > 300) {
     return fallo('DATOS_INVALIDOS', 'El motivo tiene que tener entre 4 y 300 caracteres.');
   }
+  // A product order's CacaoPay charge is cancelled first: a charge already paid stops the cancel.
+  const cobroPay = await cancelarCobroEnPay(ordenId);
+  if (!cobroPay.ok) return cobroPay;
   return ejecutarRpc(
     clienteServicio().rpc('cancelar_orden', { p_orden: ordenId, p_actor: usuarioId, p_motivo: texto }),
   );

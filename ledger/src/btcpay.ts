@@ -53,6 +53,8 @@ export function leerFacturasArchivo(raw: unknown): Factura[] {
 export async function importarFacturaBtcpay(almacen: AlmacenTickets, factura: Factura, ahora: Date): Promise<ResultadoFacturaBtcpay> {
   if (factura.estado !== "Settled") return omitida(`la factura no está pagada (estado ${factura.estado})`);
   const meta = factura.metadata ?? {};
+  // A business's sale (CacaoPay para negocios) belongs to that business, not to the group: it is never imported.
+  if (meta.producto === "negocios") return omitida("la venta es de un negocio que cobra con CacaoPay: no es venta del grupo");
   if (typeof meta.producto !== "string" || !PRODUCTOS.includes(meta.producto)) {
     return omitida("la factura no trae un producto de Cacao válido (metadata.producto)");
   }

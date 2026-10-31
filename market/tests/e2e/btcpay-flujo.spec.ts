@@ -7,7 +7,10 @@ import { OPCIONES_CONTEXTO, seDesborda, servicio } from './ayuda';
 //   node --use-system-ca --env-file=.env.local node_modules/@playwright/test/cli.js test tests/e2e/btcpay-flujo.spec.ts
 // Every step checks the visible UI and the database state, in that order.
 
-const CAFETAL = '2d9eff07-35bb-4300-ad82-c1f981b66fd2';
+// The shop used by the flow. CAFETAL_ID picks another shop of the local database.
+const CAFETAL = process.env.CAFETAL_ID ?? '2d9eff07-35bb-4300-ad82-c1f981b66fd2';
+// Pay mode is on when this run reads CACAO_PAY_URL; an empty value means direct BTCPay.
+const PAY_ACTIVO = Boolean(process.env.CACAO_PAY_URL);
 const COMPRADOR = 'remitente-qa+clerk_test@example.com';
 const VENDEDOR = 'admin-qa+clerk_test@example.com';
 const BILLETERA = 'http://127.0.0.1:8088/billetera/api/pagar';
@@ -42,6 +45,17 @@ async function pagarEnBilletera(factura: string): Promise<void> {
   expect(respuesta.ok, `La billetera de prueba respondió ${respuesta.status}`).toBe(true);
   const cuerpo = (await respuesta.json()) as { pagada?: boolean };
   expect(cuerpo.pagada).toBe(true);
+}
+
+/** Tries to pay a BTCPay invoice in the test wallet and reports what the wallet said, without asserting it. */
+async function intentarPagarEnBilletera(factura: string): Promise<{ status: number; pagada: boolean }> {
+  const respuesta = await fetch(BILLETERA, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ factura }),
+  });
+  const cuerpo = (await respuesta.json().catch(() => ({}))) as { pagada?: boolean };
+  return { status: respuesta.status, pagada: cuerpo.pagada === true };
 }
 
 /**
@@ -339,12 +353,21 @@ test('5. cancelar un pedido sin pagar devuelve el stock y la factura pagada desp
   expect(await stockDe(estado.productoId)).toBe(antes);
 
   // Paying the old invoice afterwards must not revive the order.
-  await pagarEnBilletera(factura);
+  // Pay mode: the cancel also invalidated the invoice at BTCPay, so the wallet refuses it. If it reports it paid
+  // anyway, the order must still not be marked paid and the stock must not move: both are checked below.
+  // Direct mode: the invoice stays payable, so the wallet must pay it, and the order must still stay cancelled.
+  if (PAY_ACTIVO) {
+    const intento = await intentarPagarEnBilletera(factura);
+    expect(intento.status).toBeLessThan(500);
+  } else {
+    await pagarEnBilletera(factura);
+  }
   await pagina.reload();
   await expect(pagina.getByText('Cancelaste este pedido. No pagués esta factura.').first()).toBeVisible({ timeout: 60_000 });
   await pagina.waitForTimeout(4000);
   expect((await ordenDb(ordenId)).estado).toBe('cancelada');
   expect(await stockDe(estado.productoId)).toBe(antes);
+  expect((await cobroDb(ordenId)).estado).toBe('cancelado');
 });
 
 test('6. factura vencida: la pantalla dice que se acabó el tiempo y devuelve el stock', async () => {
@@ -362,7 +385,7 @@ test('6. factura vencida: la pantalla dice que se acabó el tiempo y devuelve el
   if (error) throw error;
 
   await pagina.reload();
-  await expect(pagina.getByText(/El tiempo para pagar se acabó/)).toBeVisible({ timeout: 60_000 });
+  await expect(pagina.getByText(/El tiempo para pagar se acabó/).first()).toBeVisible({ timeout: 60_000 });
   await expect(pagina.getByRole('link', { name: 'Volver al carrito' })).toBeVisible();
   expect(await seDesborda(pagina)).toBe(false);
 

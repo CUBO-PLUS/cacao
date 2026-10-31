@@ -911,6 +911,7 @@ export type Database = {
       negocios: {
         Row: {
           abierto: boolean
+          btcmap_id: number | null
           btcpay_tienda_id: string | null
           creado_en: string
           credencial_pago_cifrada: string | null
@@ -919,12 +920,14 @@ export type Database = {
           id: string
           lightning_address: string | null
           nombre: string
+          tipo_negocio: string | null
           tipo_proveedor_pago: Database["public"]["Enums"]["tipo_proveedor"]
           ubicacion: string
           usuario_id: string
         }
         Insert: {
           abierto?: boolean
+          btcmap_id?: number | null
           btcpay_tienda_id?: string | null
           creado_en?: string
           credencial_pago_cifrada?: string | null
@@ -933,12 +936,14 @@ export type Database = {
           id?: string
           lightning_address?: string | null
           nombre: string
+          tipo_negocio?: string | null
           tipo_proveedor_pago?: Database["public"]["Enums"]["tipo_proveedor"]
           ubicacion?: string
           usuario_id: string
         }
         Update: {
           abierto?: boolean
+          btcmap_id?: number | null
           btcpay_tienda_id?: string | null
           creado_en?: string
           credencial_pago_cifrada?: string | null
@@ -947,6 +952,7 @@ export type Database = {
           id?: string
           lightning_address?: string | null
           nombre?: string
+          tipo_negocio?: string | null
           tipo_proveedor_pago?: Database["public"]["Enums"]["tipo_proveedor"]
           ubicacion?: string
           usuario_id?: string
@@ -1064,6 +1070,240 @@ export type Database = {
           },
         ]
       }
+      pay_api_clientes: {
+        Row: {
+          aviso_secreto: string
+          clave_hash: string
+          creado_en: string
+          cuota_usos: number
+          cuota_ventana_en: string | null
+          id: string
+          nombre: string
+          prefijo: string
+          producto: string
+          puede_elegir_tienda: boolean
+          revocado_en: string | null
+          tienda_btcpay: string
+        }
+        Insert: {
+          aviso_secreto: string
+          clave_hash: string
+          creado_en?: string
+          cuota_usos?: number
+          cuota_ventana_en?: string | null
+          id?: string
+          nombre: string
+          prefijo: string
+          producto: string
+          puede_elegir_tienda?: boolean
+          revocado_en?: string | null
+          tienda_btcpay: string
+        }
+        Update: {
+          aviso_secreto?: string
+          clave_hash?: string
+          creado_en?: string
+          cuota_usos?: number
+          cuota_ventana_en?: string | null
+          id?: string
+          nombre?: string
+          prefijo?: string
+          producto?: string
+          puede_elegir_tienda?: boolean
+          revocado_en?: string | null
+          tienda_btcpay?: string
+        }
+        Relationships: []
+      }
+      pay_api_tiendas: {
+        Row: {
+          cliente_id: string
+          tienda_btcpay: string
+        }
+        Insert: {
+          cliente_id: string
+          tienda_btcpay: string
+        }
+        Update: {
+          cliente_id?: string
+          tienda_btcpay?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pay_api_tiendas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "pay_api_clientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pay_avisos: {
+        Row: {
+          cobro_id: string
+          creado_en: string
+          entrega: string
+          enviado_en: string | null
+          estado: string
+          id: string
+          intentos: number
+          muerto_en: string | null
+          proximo_intento_en: string
+          reclamado_hasta: string | null
+          reclamo: string | null
+          ultimo_error: string | null
+        }
+        Insert: {
+          cobro_id: string
+          creado_en?: string
+          entrega?: string
+          enviado_en?: string | null
+          estado: string
+          id?: string
+          intentos?: number
+          muerto_en?: string | null
+          proximo_intento_en?: string
+          reclamado_hasta?: string | null
+          reclamo?: string | null
+          ultimo_error?: string | null
+        }
+        Update: {
+          cobro_id?: string
+          creado_en?: string
+          entrega?: string
+          enviado_en?: string | null
+          estado?: string
+          id?: string
+          intentos?: number
+          muerto_en?: string | null
+          proximo_intento_en?: string
+          reclamado_hasta?: string | null
+          reclamo?: string | null
+          ultimo_error?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pay_avisos_cobro_id_fkey"
+            columns: ["cobro_id"]
+            isOneToOne: false
+            referencedRelation: "pay_cobros"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pay_cobros: {
+        Row: {
+          actualizado_en: string
+          aviso_url: string | null
+          btcpay_factura_id: string | null
+          cancelado_en: string | null
+          clave_idempotencia: string
+          cliente_id: string
+          cotizacion_usd_btc: number
+          creado_en: string
+          descripcion: string
+          estado: string
+          expira_en: string | null
+          factura: string | null
+          hash_pago: string | null
+          huella: string
+          id: string
+          moneda: string
+          monto: number
+          pagado_en: string | null
+          pago_tardio_en: string | null
+          producto: string
+          referencia: string
+          sats: number
+          tienda_btcpay: string
+          usd_centavos: number
+          vence_en_segundos: number
+          datos: string | null
+        }
+        Insert: {
+          actualizado_en?: string
+          aviso_url?: string | null
+          btcpay_factura_id?: string | null
+          cancelado_en?: string | null
+          clave_idempotencia: string
+          cliente_id: string
+          cotizacion_usd_btc: number
+          creado_en?: string
+          descripcion: string
+          estado?: string
+          expira_en?: string | null
+          factura?: string | null
+          hash_pago?: string | null
+          huella: string
+          id?: string
+          moneda: string
+          monto: number
+          pagado_en?: string | null
+          pago_tardio_en?: string | null
+          producto: string
+          referencia: string
+          sats: number
+          tienda_btcpay: string
+          usd_centavos: number
+          vence_en_segundos: number
+          datos?: string | null
+        }
+        Update: {
+          actualizado_en?: string
+          aviso_url?: string | null
+          btcpay_factura_id?: string | null
+          cancelado_en?: string | null
+          clave_idempotencia?: string
+          cliente_id?: string
+          cotizacion_usd_btc?: number
+          creado_en?: string
+          descripcion?: string
+          estado?: string
+          expira_en?: string | null
+          factura?: string | null
+          hash_pago?: string | null
+          huella?: string
+          id?: string
+          moneda?: string
+          monto?: number
+          pagado_en?: string | null
+          pago_tardio_en?: string | null
+          producto?: string
+          referencia?: string
+          sats?: number
+          tienda_btcpay?: string
+          usd_centavos?: number
+          vence_en_segundos?: number
+          datos?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pay_cobros_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "pay_api_clientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pay_cuotas_publicas: {
+        Row: {
+          clave: string
+          usos: number
+          ventana: string
+        }
+        Insert: {
+          clave: string
+          usos: number
+          ventana: string
+        }
+        Update: {
+          clave?: string
+          usos?: number
+          ventana?: string
+        }
+        Relationships: []
+      }
       pay_facturas: {
         Row: {
           btcpay_factura_id: string
@@ -1127,6 +1367,58 @@ export type Database = {
             columns: ["transferencia_id"]
             isOneToOne: false
             referencedRelation: "pay_transferencias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pay_negocios: {
+        Row: {
+          activo_en: string | null
+          cliente_id: string | null
+          creado_en: string
+          estado: string
+          negocio_id: string
+          reclamado_en: string | null
+          tienda_btcpay: string | null
+        }
+        Insert: {
+          activo_en?: string | null
+          cliente_id?: string | null
+          creado_en?: string
+          estado?: string
+          negocio_id: string
+          reclamado_en?: string | null
+          tienda_btcpay?: string | null
+        }
+        Update: {
+          activo_en?: string | null
+          cliente_id?: string | null
+          creado_en?: string
+          estado?: string
+          negocio_id?: string
+          reclamado_en?: string | null
+          tienda_btcpay?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pay_negocios_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: true
+            referencedRelation: "pay_api_clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pay_negocios_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: true
+            referencedRelation: "circularidad_negocios"
+            referencedColumns: ["negocio_id"]
+          },
+          {
+            foreignKeyName: "pay_negocios_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: true
+            referencedRelation: "negocios"
             referencedColumns: ["id"]
           },
         ]
@@ -1819,6 +2111,7 @@ export type Database = {
         }
         Returns: {
           abierto: boolean
+          btcmap_id: number | null
           btcpay_tienda_id: string | null
           creado_en: string
           credencial_pago_cifrada: string | null
@@ -1827,6 +2120,7 @@ export type Database = {
           id: string
           lightning_address: string | null
           nombre: string
+          tipo_negocio: string | null
           tipo_proveedor_pago: Database["public"]["Enums"]["tipo_proveedor"]
           ubicacion: string
           usuario_id: string
@@ -1867,6 +2161,7 @@ export type Database = {
         }
         Returns: {
           abierto: boolean
+          btcmap_id: number | null
           btcpay_tienda_id: string | null
           creado_en: string
           credencial_pago_cifrada: string | null
@@ -1875,6 +2170,7 @@ export type Database = {
           id: string
           lightning_address: string | null
           nombre: string
+          tipo_negocio: string | null
           tipo_proveedor_pago: Database["public"]["Enums"]["tipo_proveedor"]
           ubicacion: string
           usuario_id: string
@@ -2680,6 +2976,14 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      pay_api_cuota: {
+        Args: { p_cliente: string; p_maximo: number }
+        Returns: boolean
+      }
+      pay_aplicar_btcpay: {
+        Args: { p_estado: string; p_factura_id: string; p_hash: string }
+        Returns: Json
+      }
       pay_cancelar: {
         Args: { p_actor: string; p_transferencia: string }
         Returns: {
@@ -2741,6 +3045,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      pay_cancelar_cobro: {
+        Args: { p_cliente: string; p_id: string }
+        Returns: Json
       }
       pay_completar: {
         Args: { p_actor: string; p_transferencia: string }
@@ -2866,6 +3174,19 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      pay_crear_cliente_api: {
+        Args: {
+          p_aviso_secreto: string
+          p_clave_hash: string
+          p_nombre: string
+          p_prefijo: string
+          p_producto: string
+          p_puede_elegir: boolean
+          p_tienda: string
+          p_tiendas?: string[]
+        }
+        Returns: string
+      }
       pay_crear_transferencia: {
         Args: {
           p_clave: string
@@ -2941,6 +3262,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      pay_cuota_publica: {
+        Args: { p_clave: string; p_maximo: number; p_ventana_segundos: number }
+        Returns: boolean
       }
       pay_fallar: {
         Args: { p_actor: string; p_motivo: string; p_transferencia: string }
@@ -3139,6 +3464,48 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      pay_leer_cobro: {
+        Args: { p_cliente: string; p_id: string }
+        Returns: Json
+      }
+      pay_liberar_reserva: { Args: { p_id: string }; Returns: boolean }
+      pay_cerrar_aviso: {
+        Args: { p_aviso: string; p_error: string; p_ok: boolean; p_token: string }
+        Returns: string
+      }
+      pay_reclamar_avisos: {
+        Args: { p_aviso?: string; p_duracion_segundos: number; p_limite: number }
+        Returns: {
+          aviso_id: string
+          cobro_id: string
+          estado_cobro: string
+          intentos: number
+          token: string
+        }[]
+      }
+      pay_negocio_crear_cliente: {
+        Args: {
+          p_aviso_secreto: string
+          p_clave_hash: string
+          p_negocio: string
+          p_prefijo: string
+        }
+        Returns: string
+      }
+      pay_negocio_guardar_tienda: {
+        Args: { p_negocio: string; p_tienda: string }
+        Returns: undefined
+      }
+      pay_negocio_reclamar: {
+        Args: {
+          p_nombre: string
+          p_tipo: string
+          p_ubicacion: string
+          p_usuario: string
+        }
+        Returns: Json
+      }
+      pay_negocio_soltar: { Args: { p_negocio: string }; Returns: undefined }
       pay_procesar: {
         Args: { p_actor: string; p_transferencia: string }
         Returns: {
@@ -3341,6 +3708,34 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      pay_registrar_factura_cobro: {
+        Args: {
+          p_expira: string
+          p_factura: string
+          p_factura_id: string
+          p_id: string
+        }
+        Returns: Json
+      }
+      pay_reservar_cobro: {
+        Args: {
+          p_aviso_url: string
+          p_clave: string
+          p_cliente: string
+          p_datos?: string | null
+          p_cotizacion: number
+          p_descripcion: string
+          p_huella: string
+          p_moneda: string
+          p_monto: number
+          p_referencia: string
+          p_sats: number
+          p_tienda: string
+          p_usd_centavos: number
+          p_vence_en_segundos: number
+        }
+        Returns: Json
+      }
       pay_resumen: {
         Args: { p_desde: string; p_hasta: string }
         Returns: {
@@ -3350,6 +3745,7 @@ export type Database = {
           monto_origen_usd_centavos: number
         }[]
       }
+      pay_revocar_cliente_api: { Args: { p_prefijo: string }; Returns: boolean }
       pay_terminar_cobro: {
         Args: {
           p_hash: string
@@ -3721,6 +4117,7 @@ export type Database = {
         }
         Returns: {
           abierto: boolean
+          btcmap_id: number | null
           btcpay_tienda_id: string | null
           creado_en: string
           credencial_pago_cifrada: string | null
@@ -3729,6 +4126,7 @@ export type Database = {
           id: string
           lightning_address: string | null
           nombre: string
+          tipo_negocio: string | null
           tipo_proveedor_pago: Database["public"]["Enums"]["tipo_proveedor"]
           ubicacion: string
           usuario_id: string

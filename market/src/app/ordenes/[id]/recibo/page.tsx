@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
 
+import { AvisoPedidoDemo } from '@/componentes/Demo';
 import { formatoSats, formatoUsd, usdCentavosASats } from '@/lib/dinero';
 import { URL_LEDGER } from '@/lib/grupo';
 import { detalleDeOrden, referenciaDeCobro } from '@/servidor/pedidos';
@@ -70,6 +71,7 @@ async function Recibo({ params }: { params: Promise<{ id: string }> }) {
           <h1 id="comprobante-titulo">Comprobante de pago</h1>
           <p className={styles.numero}>{trabajo ? `Trabajo ${detalle.numero}` : `Orden ${detalle.numero}`}</p>
         </header>
+        <AvisoPedidoDemo activo={detalle.demo} />
 
         <dl className={styles.datos}>
           <div>

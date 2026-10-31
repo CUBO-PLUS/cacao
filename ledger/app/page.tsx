@@ -5,6 +5,7 @@ import { after, connection } from "next/server";
 import { formatoSats, formatoUsd } from "../src/dinero.ts";
 import { URL_GRUPO } from "../src/grupo.ts";
 import { almacenDeEntorno } from "../src/servidor/configuracion.ts";
+import { mesActualSv, negociosDelMes } from "../src/servidor/api.ts";
 import { sesionActual } from "../src/servidor/sesion.ts";
 import { leerEstadoSincronizacion, lineaSincronizacion, sincronizarSiHaceFalta } from "../src/servidor/sincronizacion.ts";
 import { todosEntre } from "../src/servidor/tiempo-sv.ts";
@@ -191,6 +192,25 @@ export default async function PaginaTablero() {
     );
   }
 
+  // Owner only: the business sales of the month, on a line of their own. They are not revenue of Grupo Cacao.
+  let negocios: ReactNode = null;
+  if (dueno) {
+    try {
+      const n = await negociosDelMes(mesActualSv(ahora));
+      negocios = (
+        <section className="bloque" aria-labelledby="titulo-negocios">
+          <h2 id="titulo-negocios">Ventas de negocios que cobran con CacaoPay</h2>
+          <p className="nota">Estas ventas no son ingresos de Grupo Cacao: cada negocio lleva las suyas.</p>
+          <p>
+            {plural(n.ventas, "venta", "ventas")}, {formatoUsd(n.centavos)} este mes.
+          </p>
+        </section>
+      );
+    } catch (e) {
+      console.error("El tablero no pudo leer las ventas de negocios:", e);
+    }
+  }
+
   return (
     <>
       <div className="encabezado">
@@ -208,6 +228,7 @@ export default async function PaginaTablero() {
 
       {atencion}
       {estadoSincro}
+      {negocios}
 
       {tickets.length === 0 ? (
         <section className="bloque">

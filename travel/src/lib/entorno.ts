@@ -4,6 +4,8 @@
 // really turns a service off. Looked up by name, so the build never inlines a secret.
 
 const VARIABLES = [
+  'CACAO_PAY_URL',
+  'CACAO_PAY_API_KEY',
   'BTCPAY_URL',
   'BTCPAY_API_KEY',
   'BTCPAY_STORE_ID',

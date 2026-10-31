@@ -2,9 +2,11 @@ import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
 
+import { AvisoPedidoDemo } from '@/componentes/Demo';
 import type { EstadoOrden } from '@/lib/estados';
 import { registrarEvento, sesionDeVisita } from '@/servidor/eventos';
 import { asegurarCobro, enlaceBilleteraDePruebaDe, estadoDePago } from '@/servidor/pagos';
+import { esOrdenDemo } from '@/servidor/pedidos';
 import { exigirSesion } from '@/servidor/sesion';
 
 import { PagoCliente } from './PagoCliente';
@@ -88,6 +90,9 @@ async function PagoOrden({
     estado.proveedor === 'btcpay' && estado.estado === 'esperando_pago' ? await enlaceBilleteraDePruebaDe(estado.bolt11) : null;
 
   return (
-    <PagoCliente ordenId={id} inicial={estado} errorCobro={problema} billeteraDePrueba={billeteraDePrueba} />
+    <>
+      <AvisoPedidoDemo activo={await esOrdenDemo(id)} />
+      <PagoCliente ordenId={id} inicial={estado} errorCobro={problema} billeteraDePrueba={billeteraDePrueba} />
+    </>
   );
 }

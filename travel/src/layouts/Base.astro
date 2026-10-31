@@ -196,8 +196,10 @@ const canonica = new URL(Astro.url.pathname, Astro.site);
     padding-block: clamp(40px, 6vw, 72px);
     color: var(--pulpa);
   }
+  /* Sized by the footer's own width, so the whole word always fits, on any screen. */
+  .pie { container-type: inline-size; }
   .pie__gigante {
-    font-size: clamp(3rem, 17.5vw, 16.5rem);
+    font-size: 19.2cqi;
     font-weight: 400;
     line-height: 0.8;
     letter-spacing: -0.045em;

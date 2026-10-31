@@ -714,6 +714,7 @@ export type Database = {
       negocios: {
         Row: {
           abierto: boolean
+          btcmap_id: number | null
           btcpay_tienda_id: string | null
           creado_en: string
           credencial_pago_cifrada: string | null
@@ -728,6 +729,7 @@ export type Database = {
         }
         Insert: {
           abierto?: boolean
+          btcmap_id?: number | null
           btcpay_tienda_id?: string | null
           creado_en?: string
           credencial_pago_cifrada?: string | null
@@ -742,6 +744,7 @@ export type Database = {
         }
         Update: {
           abierto?: boolean
+          btcmap_id?: number | null
           btcpay_tienda_id?: string | null
           creado_en?: string
           credencial_pago_cifrada?: string | null

@@ -62,6 +62,8 @@ export type DetalleOrden = {
   estado: EstadoOrden;
   rol: RolOrden;
   otraParte: string;
+  /** The seller is a demo profile: the order is a demonstration and no real business receives it. */
+  demo: boolean;
   totalUsdCentavos: number;
   totalSats: number;
   cotizacionUsdBtc: number;

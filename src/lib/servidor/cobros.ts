@@ -5,6 +5,7 @@ import { todasLasHistorias } from '../historias';
 import { cotizacionUsdBtc } from './precio';
 import { bd, leerError } from './bd';
 import { enlaceBilleteraDePrueba, type ConfigBtcpay } from './btcpay';
+import { registrarEvento } from './eventos';
 
 export type EstadoCobro = 'pendiente' | 'pagada' | 'vencida' | 'fallida';
 
@@ -91,6 +92,49 @@ export function tokenDeAcceso(slug: string): { token: string; expira: number } {
 export async function vencerCobros(): Promise<void> {
   const { error } = await bd().rpc('media_vencer_cobros');
   if (error) throw error;
+}
+
+/** The newest invoice of this reader and story, in any state. Null when there is none. */
+export async function ultimoCobro(lector: string, slug: string): Promise<{ id: string } | null> {
+  const { data, error } = await bd()
+    .from('media_cobros')
+    .select('id')
+    .eq('lector_id', lector)
+    .eq('slug', slug)
+    .order('creado_en', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as { id: string } | null) ?? null;
+}
+
+/** The invoice a CacaoPay notice or a poll refers to, found by its stored id. Null when this site has no such invoice. */
+export async function cobroDePay(facturaId: string): Promise<Cobro | null> {
+  const { data, error } = await bd().from('media_cobros').select('*').eq('btcpay_factura_id', facturaId).maybeSingle();
+  if (error) throw error;
+  return (data as Cobro | null) ?? null;
+}
+
+/**
+ * Opens the reader's access for a pending invoice that CacaoPay reports as paid, through media_pagar_cobro.
+ * Null when the database refuses it (past the deadline, or no longer pending): the invoice is then left as it is.
+ */
+export async function abrirAccesoPagoPay(cobro: Cobro): Promise<Cobro | null> {
+  const { data, error } = await bd().rpc('media_pagar_cobro', { p_cobro: cobro.id });
+  if (error) {
+    const { codigo } = leerError(error);
+    if (codigo === 'FUERA_DE_PLAZO' || codigo === 'ESTADO_INVALIDO') return null;
+    throw error;
+  }
+  const pagada = (Array.isArray(data) ? data[0] : data) as Cobro;
+  await registrarEvento({
+    sesion: cobro.lector_id,
+    nombre: 'pago',
+    ruta: `/historias/${pagada.slug}/`,
+    objeto: pagada.slug,
+    valorUsdCentavos: pagada.precio_usd_centavos,
+  });
+  return pagada;
 }
 
 /** The invoice, only when it belongs to this reader. Null for anyone else. */

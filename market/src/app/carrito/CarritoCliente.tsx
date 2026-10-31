@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
 import { Boton } from '@/componentes/Boton';
+import { AvisoPedidoDemo, EtiquetaEjemplo } from '@/componentes/Demo';
+import { modoDeEntrega, opcionesDeEntrega } from '@/lib/demo';
 import { EtiquetaPrecio } from '@/componentes/EtiquetaPrecio';
 import { FotoProducto } from '@/componentes/FotoProducto';
 import { Vacio } from '@/componentes/Vacio';
@@ -63,6 +65,8 @@ type Fila = {
   cantidad: number;
   stock: number | null;
   motivo: string | null;
+  /** The seller is a demo profile. Known once the cart has been checked. */
+  demo: boolean;
 };
 
 function filaDe(linea: LineaCarrito, producto: ProductoRevisado | undefined, revisada: boolean): Fila {
@@ -74,6 +78,7 @@ function filaDe(linea: LineaCarrito, producto: ProductoRevisado | undefined, rev
     categoriaId: 0,
     precioUsdCentavos: linea.precioUsdCentavos,
     stock: null,
+    demo: false,
   };
   if (!revisada) return { ...guardada, disponible: true, cantidad: linea.cantidad, motivo: null };
   if (!producto) {
@@ -87,6 +92,7 @@ function filaDe(linea: LineaCarrito, producto: ProductoRevisado | undefined, rev
     categoriaId: producto.categoriaId,
     precioUsdCentavos: producto.precioUsdCentavos,
     stock: producto.stock,
+    demo: producto.demo,
   };
   if (!producto.disponible) {
     return { ...actual, disponible: false, cantidad: 0, motivo: producto.motivo };
@@ -100,6 +106,8 @@ type Grupo = {
   filas: Fila[];
   disponibles: Fila[];
   totalUsdCentavos: number;
+  /** The shop is a demo profile: its order is a demonstration. */
+  demo: boolean;
 };
 
 function agrupar(filas: Fila[]): Grupo[] {
@@ -114,10 +122,12 @@ function agrupar(filas: Fila[]): Grupo[] {
         filas: [],
         disponibles: [],
         totalUsdCentavos: 0,
+        demo: false,
       };
       porNegocio.set(id, grupo);
     }
     grupo.filas.push(fila);
+    if (fila.demo) grupo.demo = true;
     if (fila.disponible) {
       grupo.disponibles.push(fila);
       grupo.totalUsdCentavos += fila.precioUsdCentavos * fila.cantidad;
@@ -259,7 +269,7 @@ function CarritoListo({ datos }: { datos: string }) {
       const resultado = await hacerPedido({
         negocioId: grupo.negocioId,
         lineas: grupo.disponibles.map((f) => ({ productoId: f.linea.productoId, cantidad: f.cantidad })),
-        modo: modos[grupo.negocioId] ?? 'recogida',
+        modo: modoDeEntrega(grupo.demo, modos[grupo.negocioId] ?? 'recogida'),
         clave: claveIdempotencia(grupo.negocioId),
       });
 
@@ -361,7 +371,7 @@ function BloqueNegocio({
   return (
     <section className={styles.negocio} aria-labelledby={idTitulo}>
       <h2 id={idTitulo} className={styles.negocioTitulo}>
-        {grupo.negocioNombre}
+        {grupo.negocioNombre} <EtiquetaEjemplo activo={grupo.demo} />
       </h2>
 
       <ul className={styles.lineas}>
@@ -389,27 +399,31 @@ function BloqueNegocio({
         )}
       </div>
 
-      <fieldset className={styles.modo}>
-        <legend>Cómo querés recibirlo</legend>
-        {MODOS.map((opcion) => (
-          <label key={opcion.valor} className={styles.opcion}>
-            <input
-              type="radio"
-              name={`modo-${grupo.negocioId}`}
-              value={opcion.valor}
-              checked={modo === opcion.valor}
-              onChange={() => onModo(opcion.valor)}
-            />
-            {opcion.etiqueta}
-          </label>
-        ))}
-      </fieldset>
+      {opcionesDeEntrega(grupo.demo).length > 0 && (
+        <fieldset className={styles.modo}>
+          <legend>Cómo querés recibirlo</legend>
+          {MODOS.map((opcion) => (
+            <label key={opcion.valor} className={styles.opcion}>
+              <input
+                type="radio"
+                name={`modo-${grupo.negocioId}`}
+                value={opcion.valor}
+                checked={modo === opcion.valor}
+                onChange={() => onModo(opcion.valor)}
+              />
+              {opcion.etiqueta}
+            </label>
+          ))}
+        </fieldset>
+      )}
 
       {error && (
         <p role="alert" className={styles.error}>
           {error}
         </p>
       )}
+
+      <AvisoPedidoDemo activo={grupo.demo} />
 
       <div className={styles.accion}>
         <Boton onClick={onPedir} disabled={!puedePedir}>

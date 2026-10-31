@@ -211,8 +211,10 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
     color: var(--pulpa);
   }
   .pie { overflow: hidden; }
+  /* Sized by the footer's own width, so the whole word always fits, on any screen. */
+  .pie { container-type: inline-size; }
   .pie__gigante {
-    font-size: clamp(3rem, 16.5vw, 15rem);
+    font-size: 18.2cqi;
     font-weight: 400;
     line-height: 0.8;
     letter-spacing: -0.045em;

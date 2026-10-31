@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
 
+import { ConmutadorModo } from './ConmutadorModo';
 import { EnlaceCuenta, EnlaceCuentaCargando } from './EnlaceCuenta';
 import { Logo } from './Logo';
 import { NavegacionCabecera } from './NavegacionCabecera';
@@ -19,6 +20,9 @@ export function Cabecera() {
           <NavegacionCabecera />
         </Suspense>
         <div className="cabecera__cuenta">
+          <Suspense fallback={null}>
+            <ConmutadorModo />
+          </Suspense>
           <Suspense fallback={<EnlaceCuentaCargando />}>
             <EnlaceCuenta />
           </Suspense>

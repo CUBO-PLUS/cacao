@@ -1,6 +1,8 @@
 import Link from 'next/link';
 
+import { EtiquetaEjemplo } from '@/componentes/Demo';
 import { FotoProducto } from '@/componentes/FotoProducto';
+import { esDemo, mostrarCerrado } from '@/lib/demo';
 import type { ServicioCatalogo } from '@/servidor/servicios';
 
 import { PrecioServicio } from './PrecioServicio';
@@ -29,9 +31,11 @@ export function TarjetaServicio({
             {servicio.titulo}
           </Link>
         </h3>
-        <p className="tarjeta__dato">{servicio.negocioNombre}</p>
+        <p className="tarjeta__dato">
+          {servicio.negocioNombre} <EtiquetaEjemplo activo={esDemo(servicio.btcmapId)} />
+        </p>
         <p className="tarjeta__dato">{servicio.zona}</p>
-        {!servicio.abierto && (
+        {mostrarCerrado(servicio.btcmapId, servicio.abierto) && (
           <div className="tarjeta__estados">
             <span className="marca marca--cerrado">Cerrado por ahora</span>
           </div>

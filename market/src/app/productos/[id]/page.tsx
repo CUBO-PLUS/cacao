@@ -4,10 +4,12 @@ import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 
 import { AgregarAlCarrito } from '@/componentes/AgregarAlCarrito';
+import { AvisoDemo, EtiquetaCerrado, EtiquetaEjemplo } from '@/componentes/Demo';
 import { EtiquetaPrecio } from '@/componentes/EtiquetaPrecio';
 import { Estrellas } from '@/componentes/Estrellas';
 import { FotoProducto } from '@/componentes/FotoProducto';
 import { RegistrarEvento } from '@/componentes/RegistrarEvento';
+import { esDemo, mostrarCerrado } from '@/lib/demo';
 import { usdCentavosASats } from '@/lib/dinero';
 import type { ProductoDetalle } from '@/servidor/catalogo';
 import { cotizacionSegura, productoPorId } from '@/servidor/catalogo';
@@ -42,13 +44,16 @@ async function DetalleProducto({ producto }: { producto: ProductoDetalle }) {
   const motivo =
     producto.stock === 0
       ? 'Este producto está agotado.'
-      : !producto.abierto
+      : mostrarCerrado(producto.btcmapId, producto.abierto)
         ? 'La tienda está cerrada por ahora. Volvé a pedir cuando abra.'
         : null;
 
   return (
     <article className="producto">
       <RegistrarEvento nombre="vista_producto" objeto={producto.id} />
+      <div className="producto__aviso">
+        <AvisoDemo btcmapId={producto.btcmapId} nombre={producto.negocioNombre} />
+      </div>
       <figure>
         <FotoProducto
           src={producto.foto}
@@ -66,13 +71,9 @@ async function DetalleProducto({ producto }: { producto: ProductoDetalle }) {
 
         <p className="producto__tienda">
           Vende{' '}
-          <Link href={`/negocios/${producto.negocioId}`}>{producto.negocioNombre}</Link>
-          {!producto.abierto && (
-            <>
-              {' '}
-              <span className="marca marca--cerrado">Cerrado</span>
-            </>
-          )}
+          <Link href={`/negocios/${producto.negocioId}`}>{producto.negocioNombre}</Link>{' '}
+          <EtiquetaEjemplo activo={esDemo(producto.btcmapId)} />
+          <EtiquetaCerrado btcmapId={producto.btcmapId} abierto={producto.abierto} texto="Cerrado" />
         </p>
         {producto.negocioPromedio !== null && producto.negocioResenas > 0 && (
           <Estrellas valor={producto.negocioPromedio} cantidad={producto.negocioResenas} />

@@ -1,6 +1,8 @@
 // Gives every approved business its own BTCPay store, a Lightning and on-chain wallet, the market user as
 // employee, and the webhook that tells CacaoMarket when an invoice settles. Then it records the store id
 // with asignar_tienda_btcpay, which also switches the business to the 'btcpay' provider.
+// Last, every business store is allowed for the Market client of CacaoPay (pay_api_tiendas), so a charge
+// through CacaoPay is not refused for a new seller.
 //
 // Only businesses with btcpay_tienda_id null are touched, so running it twice is safe. A store created in
 // BTCPay whose later step fails is not recorded: check BTCPay for it before running again.
@@ -133,6 +135,7 @@ async function main() {
 
   if (data.length === 0) {
     console.log('No hay negocios aprobados sin tienda de BTCPay.');
+    await permitirTiendasEnPay();
     return;
   }
   console.log(`${dryRun ? 'Simulación: ' : ''}${data.length} negocio(s) sin tienda de BTCPay.`);
@@ -160,7 +163,53 @@ async function main() {
   }
 
   if (!dryRun) console.log(`Listo: ${correctos} OK, ${fallidos} con error.`);
+  await permitirTiendasEnPay();
   if (fallidos > 0) process.exitCode = 1;
+}
+
+// CacaoPay charges a store only when it is in the Market client's list (pay_api_tiendas). The Market client is the
+// one named "Market" (pay/scripts/cliente-api.mjs crear --nombre Market --producto market); other clients are left
+// alone. Every store of a business is listed, not only the new ones, so a store missed before is added on the next
+// run. Without it, CacaoPay refuses the charge (403) and the buyer sees "try again".
+async function permitirTiendasEnPay() {
+  const { data: clientes, error: errorClientes } = await s
+    .from('pay_api_clientes')
+    .select('id, nombre')
+    .eq('producto', 'market')
+    .eq('nombre', 'Market')
+    .is('revocado_en', null);
+  if (errorClientes) throw new Error(`No pudimos leer los clientes de CacaoPay: ${errorClientes.message}`);
+  if (clientes.length === 0) {
+    console.log('CacaoPay: no hay cliente activo de Market. Los cobros van directo a BTCPay.');
+    return;
+  }
+
+  const { data: negocios, error: errorNegocios } = await s
+    .from('negocios')
+    .select('nombre, btcpay_tienda_id')
+    .not('btcpay_tienda_id', 'is', null);
+  if (errorNegocios) throw new Error(`No pudimos leer las tiendas: ${errorNegocios.message}`);
+
+  for (const cliente of clientes) {
+    const { data: permitidas, error: errorPermitidas } = await s
+      .from('pay_api_tiendas')
+      .select('tienda_btcpay')
+      .eq('cliente_id', cliente.id);
+    if (errorPermitidas) throw new Error(`No pudimos leer las tiendas de CacaoPay: ${errorPermitidas.message}`);
+    const yaPermitidas = new Set(permitidas.map((p) => p.tienda_btcpay));
+    for (const negocio of negocios.filter((n) => !yaPermitidas.has(n.btcpay_tienda_id))) {
+      if (dryRun) {
+        console.log(`- CacaoPay: ${negocio.nombre} se permitiría en ${cliente.nombre}`);
+        continue;
+      }
+      const { error } = await s.from('pay_api_tiendas').upsert(
+        { cliente_id: cliente.id, tienda_btcpay: negocio.btcpay_tienda_id },
+        { onConflict: 'cliente_id,tienda_btcpay', ignoreDuplicates: true },
+      );
+      if (error) throw new Error(`CacaoPay, ${negocio.nombre}: ${error.message}`);
+      console.log(`- CacaoPay: ${negocio.nombre} permitida en ${cliente.nombre}`);
+    }
+  }
 }
 
 main().catch((e) => {

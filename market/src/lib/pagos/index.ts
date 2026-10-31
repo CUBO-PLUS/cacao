@@ -5,9 +5,20 @@ import type { ConfigBtcpay } from './btcpay-api';
 import { crearProveedorBtcpay } from './btcpay';
 import { crearProveedorFalso } from './falso';
 import { crearProveedorManual } from './manual';
+import { crearProveedorPay } from './pay';
+import { esReferenciaPay, type ConfigPay } from './pay-api';
 import type { ProveedorDePago } from './proveedor';
 
 export type { Cobro, ProveedorDePago } from './proveedor';
+
+// Charges go through CacaoPay when it is configured. A referencia made by BTCPay directly (an order in flight from
+// before the switch) is still read through the direct adapter, so both modes resolve it.
+function conPay(pay: ProveedorDePago, directo: ProveedorDePago): ProveedorDePago {
+  return {
+    crearCobro: (entrada) => pay.crearCobro(entrada),
+    consultarCobro: (cobro) => (esReferenciaPay(cobro.referencia) ? pay : directo).consultarCobro(cobro),
+  };
+}
 
 export type NegocioPago = {
   tipoProveedorPago: 'manual' | 'falso' | 'nwc' | 'blink' | 'btcpay';
@@ -19,6 +30,8 @@ export type NegocioPago = {
 export type OpcionesProveedor = {
   /** BTCPay configuration from the environment. Null or missing when BTCPay is not set up. */
   btcpay?: ConfigBtcpay | null;
+  /** CacaoPay configuration from the environment. Null or missing: charges stay on BTCPay directly. */
+  pay?: ConfigPay | null;
 };
 
 export function proveedorPara(negocio: NegocioPago, opciones: OpcionesProveedor = {}): ProveedorDePago {
@@ -38,7 +51,8 @@ export function proveedorPara(negocio: NegocioPago, opciones: OpcionesProveedor 
       if (!config || !tienda) {
         throw new Error('NO_DISPONIBLE: El cobro con BTCPay no está configurado.');
       }
-      return crearProveedorBtcpay(config, tienda);
+      const directo = crearProveedorBtcpay(config, tienda);
+      return opciones.pay ? conPay(crearProveedorPay(opciones.pay, tienda), directo) : directo;
     }
     case 'nwc':
     case 'blink':

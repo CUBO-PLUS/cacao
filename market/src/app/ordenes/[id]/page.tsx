@@ -4,6 +4,7 @@ import { Suspense } from 'react';
 
 import { EstadoOrden } from '@/componentes/EstadoOrden';
 import { Boton } from '@/componentes/Boton';
+import { AvisoPedidoDemo } from '@/componentes/Demo';
 import { EtiquetaPrecio } from '@/componentes/EtiquetaPrecio';
 import { Estrellas } from '@/componentes/Estrellas';
 import { formatoSats, formatoUsd, usdCentavosASats } from '@/lib/dinero';
@@ -53,7 +54,8 @@ async function Orden({ params }: { params: Promise<{ id: string }> }) {
   const parte = trabajo
     ? `${esComprador ? 'Quien trabaja' : 'Cliente'}: ${detalle.otraParte}`
     : `${esComprador ? 'Tienda' : 'Comprador'}: ${detalle.otraParte}`;
-  const descripcion = descripcionDeEstado(detalle.estado, detalle.rol, detalle.tipo);
+  // A demo order is not on its way from a real business: its state sentences are replaced by the notice.
+  const descripcion = detalle.demo ? null : descripcionDeEstado(detalle.estado, detalle.rol, detalle.tipo);
   // A job's reminder while agreed or done: who pays and when.
   const recordatorio =
     trabajo && (detalle.estado === 'acordada' || detalle.estado === 'hecha')
@@ -76,7 +78,7 @@ async function Orden({ params }: { params: Promise<{ id: string }> }) {
           <EstadoOrden estado={detalle.estado} />
         </p>
         {/* The provider's agreed sentence is the same text as the reminder: show it once. */}
-        {descripcion !== recordatorio && <p>{descripcion}</p>}
+        {descripcion !== null && descripcion !== recordatorio && <p>{descripcion}</p>}
         {detalle.pagadaEn !== null && (
           <p>
             <Boton href={`/ordenes/${detalle.id}/recibo`} variante="secundario">
@@ -86,6 +88,7 @@ async function Orden({ params }: { params: Promise<{ id: string }> }) {
         )}
       </header>
 
+      <AvisoPedidoDemo activo={detalle.demo} />
       {recordatorio !== null && <p className={styles.recordatorio}>{recordatorio}</p>}
 
       {acciones.length > 0 && (
@@ -190,7 +193,7 @@ async function Orden({ params }: { params: Promise<{ id: string }> }) {
             </div>
           )}
           {/* A job has no delivery mode. */}
-          {detalle.modoEntrega !== null && (
+          {detalle.modoEntrega !== null && !detalle.demo && (
             <div>
               <dt>Entrega</dt>
               <dd>{modoTexto}</dd>

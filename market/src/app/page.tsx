@@ -22,6 +22,7 @@ export default function Inicio(props: PageProps<'/'>) {
         <section className="encabezado">
           <h1>Comprá directo al productor.</h1>
           <p>Precios en dólares. Cada vendedor tiene su propia tienda.</p>
+          <p>Algunos negocios de esta página son perfiles de demostración: no reciben pedidos reales.</p>
         </section>
 
         <Suspense fallback={<CatalogoCargando />}>

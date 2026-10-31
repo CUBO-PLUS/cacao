@@ -11,8 +11,10 @@ import {
   TEXTO_NO_DISPONIBLE,
   tieneAcceso,
   tokenDeAcceso,
+  ultimoCobro,
   vistaCobro,
   type Cobro,
+  type HistoriaDePago,
 } from '../../../lib/servidor/cobros';
 import { cerradoDe } from '../../../lib/servidor/cerrado';
 import { lectorDe } from '../../../lib/servidor/lector';
@@ -20,11 +22,100 @@ import { registrarEvento } from '../../../lib/servidor/eventos';
 import { cotizacionUsdBtc } from '../../../lib/servidor/precio';
 import { crearFactura, type ConfigBtcpay } from '../../../lib/servidor/btcpay';
 import { btcpayEnPausa, configBtcpay, PAUSA_BTCPAY, tiendaBtcpay } from '../../../lib/servidor/pagos-btcpay';
+import {
+  claveDeReintento,
+  claveIdempotencia,
+  configPay,
+  cobroUtilizable,
+  crearCobroPay,
+  ErrorPay,
+  facturaIdDePay,
+  payEnPausa,
+  type CobroPay,
+  type ConfigPay,
+} from '../../../lib/servidor/pay';
 
 export const prerender = false;
 
 const SIN_BASE = 'Los pagos no están disponibles en este momento.';
 const SIN_FACTURA = 'No pudimos crear la factura en este momento. Probá de nuevo en un rato.';
+
+/**
+ * The invoice from CacaoPay for this reader and story. The key comes from the newest cobro row, so a retry asks for
+ * the same invoice. When CacaoPay answers with one that is already past its time, the next try gets its own key.
+ */
+async function facturaPay(pay: ConfigPay, lector: string, historia: HistoriaDePago, origen: string): Promise<CobroPay> {
+  const previo = await ultimoCobro(lector, historia.slug);
+  const clave = claveIdempotencia(lector, historia.slug, previo?.id ?? null);
+  const entrada = {
+    sats: historia.precioSats,
+    descripcion: `Historia: ${historia.titulo}`.slice(0, 200),
+    referencia: `${historia.slug}:${lector}`,
+    venceEnSegundos: SEGUNDOS_PARA_PAGAR,
+    avisoUrl: `${origen}/api/pagos/pay`,
+  };
+  const primera = await crearCobroPay(pay, { ...entrada, clave });
+  if (cobroUtilizable(primera)) return primera;
+  const segunda = await crearCobroPay(pay, { ...entrada, clave: claveDeReintento(clave, primera.id) });
+  if (!cobroUtilizable(segunda)) throw new ErrorPay('CacaoPay no devolvió una factura vigente.', 502);
+  return segunda;
+}
+
+/** The invoice of a reader who has no access yet, charged through CacaoPay. Same answer as cobroBtcpay. */
+async function cobroPay(
+  lector: string,
+  historia: HistoriaDePago,
+  pay: ConfigPay,
+  tienda: string,
+  origen: string,
+): Promise<Response> {
+  try {
+    const { data: vigente, error: errorVigente } = await bd().rpc('media_cobro_vigente', {
+      p_lector: lector,
+      p_slug: historia.slug,
+    });
+    if (errorVigente) throw errorVigente;
+    const viva = (Array.isArray(vigente) ? vigente[0] : vigente) as Cobro | null;
+    if (viva?.id) return Response.json(vistaCobro(viva, await configBtcpay()), { headers: sinGuardar });
+
+    let cotizacion: number;
+    let factura: CobroPay;
+    try {
+      cotizacion = await cotizacionUsdBtc();
+      factura = await facturaPay(pay, lector, historia, origen);
+    } catch (error) {
+      console.error(error);
+      const mensaje = btcpayEnPausa(error) || payEnPausa(error) ? PAUSA_BTCPAY : SIN_FACTURA;
+      return Response.json({ error: mensaje }, { status: 503, headers: sinGuardar });
+    }
+    const facturaId = facturaIdDePay(factura.id);
+    if (!facturaId) return Response.json({ error: SIN_FACTURA }, { status: 503, headers: sinGuardar });
+
+    const { data, error } = await bd().rpc('media_crear_cobro_btcpay', {
+      p_lector: lector,
+      p_slug: historia.slug,
+      p_titulo: historia.titulo,
+      p_precio_sats: historia.precioSats,
+      p_cotizacion: cotizacion,
+      p_factura: factura.factura,
+      p_factura_id: facturaId,
+      p_tienda: tienda,
+      p_expira: new Date(factura.expira_en).toISOString(),
+    });
+    if (error) return respuestaError(error);
+
+    const cobro = (Array.isArray(data) ? data[0] : data) as Cobro;
+    await registrarEvento({
+      sesion: lector,
+      nombre: 'creo_cobro',
+      ruta: `/historias/${historia.slug}/`,
+      objeto: historia.slug,
+    });
+    return Response.json(vistaCobro(cobro, await configBtcpay()), { headers: sinGuardar });
+  } catch (error) {
+    return respuestaError(error);
+  }
+}
 
 /** The invoice of a reader who has no access yet, made by BTCPay Server (real Lightning). */
 async function cobroBtcpay(
@@ -128,6 +219,12 @@ export async function POST(context: APIContext) {
 
   // Outside the demo, the invoice is a real Lightning invoice from BTCPay Server, or there is no payment at all.
   if (!modoDemo()) {
+    const pay = configPay();
+    if (pay) {
+      const tiendaPay = tiendaBtcpay();
+      if (!tiendaPay) return Response.json({ error: SIN_BASE }, { status: 503, headers: sinGuardar });
+      return cobroPay(lector, historia, pay, tiendaPay, context.url.origin);
+    }
     const config = await configBtcpay();
     const tienda = tiendaBtcpay();
     if (!config || !tienda) {

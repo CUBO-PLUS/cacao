@@ -1,0 +1,46 @@
+/* Switch between the personal side and the business side, in the header. Two outlined pills, the current one filled. */
+.conmutador {
+  display: inline-flex;
+  flex: none;
+  gap: 4px;
+  padding: 3px;
+  border: 2px solid var(--tostado);
+  border-radius: 999px;
+}
+
+.opcion {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.opcion[aria-current='page'] {
+  background: var(--tostado);
+  color: var(--pulpa);
+}
+
+/* Phones: only the other side shows, as one pill, so the logo and the account link stay on screen beside it. */
+@media (max-width: 520px) {
+  .conmutador {
+    gap: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .opcion {
+    min-height: 38px;
+    padding: 0 10px;
+    border: 2px solid var(--tostado);
+    font-size: 0.8125rem;
+  }
+
+  .opcion[aria-current='page'] {
+    display: none;
+  }
+}

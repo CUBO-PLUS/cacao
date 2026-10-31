@@ -24,6 +24,8 @@ export type ProductoCatalogo = {
   negocioId: string;
   negocioNombre: string;
   abierto: boolean;
+  /** BTC Map id of a demo seller, null for a normal seller. */
+  btcmapId: number | null;
   /** The shop's average rating, null when the shop has no reviews. */
   negocioPromedio: number | null;
   negocioResenas: number;
@@ -37,6 +39,7 @@ export type NegocioDetalle = {
   descripcion: string;
   ubicacion: string;
   abierto: boolean;
+  btcmapId: number | null;
   promedio: number | null;
   cantidadResenas: number;
   productos: ProductoCatalogo[];
@@ -51,7 +54,7 @@ export type Resena = {
 
 // Columns are named on purpose: the database grants column by column on `negocios`.
 const COLUMNAS_PRODUCTO =
-  'id, nombre, unidad, precio_usd_centavos, stock, fotos, categoria_id, categorias(nombre), negocios!inner(id, nombre, abierto)';
+  'id, nombre, unidad, precio_usd_centavos, stock, fotos, categoria_id, categorias(nombre), negocios!inner(id, nombre, abierto, btcmap_id)';
 
 type FilaProducto = {
   id: string;
@@ -62,7 +65,7 @@ type FilaProducto = {
   fotos: string[];
   categoria_id: number;
   categorias: { nombre: string } | null;
-  negocios: { id: string; nombre: string; abierto: boolean } | null;
+  negocios: { id: string; nombre: string; abierto: boolean; btcmap_id: number | null } | null;
 };
 
 type Cliente = Awaited<ReturnType<typeof clienteSesion>>;
@@ -82,6 +85,7 @@ function aProducto(fila: FilaProducto): ProductoCatalogo | null {
     negocioId: fila.negocios.id,
     negocioNombre: fila.negocios.nombre,
     abierto: fila.negocios.abierto,
+    btcmapId: fila.negocios.btcmap_id ?? null,
     negocioPromedio: null,
     negocioResenas: 0,
   };
@@ -208,7 +212,7 @@ export async function negocioPorId(id: string): Promise<NegocioDetalle | null> {
   const [negocio, productos, puntuaciones] = await Promise.all([
     db
       .from('negocios')
-      .select('id, nombre, descripcion, ubicacion, abierto')
+      .select('id, nombre, descripcion, ubicacion, abierto, btcmap_id')
       .eq('id', id)
       .maybeSingle(),
     productosDelCatalogo({ negocioId: id }),
@@ -230,6 +234,7 @@ export async function negocioPorId(id: string): Promise<NegocioDetalle | null> {
     descripcion: negocio.data.descripcion,
     ubicacion: negocio.data.ubicacion,
     abierto: negocio.data.abierto,
+    btcmapId: negocio.data.btcmap_id ?? null,
     promedio,
     cantidadResenas: notas.length,
     productos,

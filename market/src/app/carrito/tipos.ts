@@ -16,6 +16,8 @@ export type ProductoRevisado = {
   disponible: boolean;
   /** Why the product cannot be ordered now. Null when it can. */
   motivo: string | null;
+  /** The seller is a demo profile (a real business shown as an example). */
+  demo: boolean;
 };
 
 export type RevisionCarrito = {

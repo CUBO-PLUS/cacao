@@ -54,3 +54,25 @@ también está permitido por CC BY y CC BY-SA.
 | Arreglo de barba | servicio-arreglo-barba.jpg | Gkbediako | CC BY-SA 4.0 ([licencia](https://creativecommons.org/licenses/by-sa/4.0)) | https://commons.wikimedia.org/wiki/File:A_Ghanaian_Barber_trims_a_beard.jpg |
 | Reparación de celulares | servicio-reparacion-celulares.jpg | Amuzujoe | CC BY-SA 4.0 ([licencia](https://creativecommons.org/licenses/by-sa/4.0)) | https://commons.wikimedia.org/wiki/File:Phone_Repair_01.jpg |
 | Instalación eléctrica en casa | servicio-instalacion-electrica-casa.jpg | CacaoMarket (imagen propia) | Uso interno del proyecto | Generada para el catálogo de servicios |
+
+## Fotos de los negocios de demostración
+
+Estas fotos son las mismas de las historias de Cacao Media y de las rutas de Cacao Travel, con el
+mismo autor y la misma licencia. Solo se copiaron al catálogo; no se recortaron. Ilustran el tipo de
+producto o servicio, no a un negocio real.
+
+| Producto o servicio | Archivo | Autor | Licencia | Fuente |
+|---|---|---|---|---|
+| Pupusas | pupusas-de-madrugada.jpg | PizzaKing13 | CC BY-SA 4.0 ([licencia](https://creativecommons.org/licenses/by-sa/4.0)) | https://commons.wikimedia.org/wiki/File:Pupuser%C3%ADas_in_Olocuilta_at_night.jpg |
+| Yuca frita | yuca-frita-pasteles-y-la-tarde.jpg | Ruth Hartnup from Vancouver, Canada | CC BY 2.0 ([licencia](https://creativecommons.org/licenses/by/2.0)) | https://commons.wikimedia.org/wiki/File:Pupusa_and_yucca_frita_from_Guanaco_food_truck_(11594529115).jpg |
+| Sopa de pata | sopa-de-pata-en-domingo.jpg | Mima | CC BY 2.0 ([licencia](https://creativecommons.org/licenses/by/2.0)) | https://commons.wikimedia.org/wiki/File:Sopa_de_pata.jpg |
+| Tamales y atol | tamales-atol-y-la-mesa-de-diciembre.jpg | Wotancito | CC BY-SA 4.0 ([licencia](https://creativecommons.org/licenses/by-sa/4.0)) | https://commons.wikimedia.org/wiki/File:Tamal_de_elote_con_nieve_de_leche_quemada.jpg |
+| Cóctel de conchas | cocteles-de-conchas.jpg | Hermann Luyken | CC BY-SA 3.0 ([licencia](https://creativecommons.org/licenses/by-sa/3.0)) | https://commons.wikimedia.org/wiki/File:2010.05.05.151853_Mariscada_El_Sunzal_El_Salvador.jpg |
+| Pupusa de arroz | pupusa-de-arroz-contra-la-de-maiz.jpg | JMRAFFi | CC BY-SA 4.0 ([licencia](https://creativecommons.org/licenses/by-sa/4.0)) | https://commons.wikimedia.org/wiki/File:Pupusas_con_curtido_y_salsa_El_Salvador.JPG |
+| Horchata de morro | horchata-de-morro-ensalada-y-frescos.jpg | David Amsler | CC BY 2.0 ([licencia](https://creativecommons.org/licenses/by/2.0)) | https://commons.wikimedia.org/wiki/File:Crescentia_cujete_in_El_Salvador_(Morro_-_Calabash_Tree).jpg |
+| Café de altura en bolsa | leer-la-etiqueta-bolsa-de-cafe.jpg | Dietmar Rabich | CC BY-SA 4.0 ([licencia](https://creativecommons.org/licenses/by-sa/4.0)) | https://commons.wikimedia.org/wiki/File:D%C3%BClmen,_Privatr%C3%B6sterei_Schr%C3%B6er,_Kaffeesack_--_2018_--_0567.jpg |
+| Café coado | como-pedir-un-cafe-de-altura.jpg | Melsj | CC BY-SA 4.0 ([licencia](https://creativecommons.org/licenses/by-sa/4.0)) | https://commons.wikimedia.org/wiki/File:Caf%C3%A9_coado.jpg |
+| Café en grano (Dos Mundos) | una-cata-de-cafe-paso-a-paso.jpg | DFID - UK Department for International Development | CC BY 2.0 ([licencia](https://creativecommons.org/licenses/by/2.0)) | https://commons.wikimedia.org/wiki/File:The_shape,_colour_and_odour_of_beans.jpg |
+| Clase de surf | clase-de-surf-en-el-tunco.jpg | Casa Presidencial El Salvador | CC0 (dominio público) | https://commons.wikimedia.org/wiki/File:Surfistas_en_El_Tunco.jpg |
+| Tour guiado por el Centro Histórico | centro-historico-caminado-con-guia.jpg | Lexdjelectronic2013 | CC BY-SA 3.0 ([licencia](https://creativecommons.org/licenses/by-sa/3.0)) | https://commons.wikimedia.org/wiki/File:Centro_Hist%C3%B3rico_de_San_Salvador,_Plaza_Libertad.jpg |
+| Caminata guiada en El Imposible | caminata-en-el-imposible.jpg | ElmerGuevara | CC BY-SA 3.0 ([licencia](https://creativecommons.org/licenses/by-sa/3.0)) | https://commons.wikimedia.org/wiki/File:Flor_de_la_Reserva_Ecologica_El_Imposible..JPG |

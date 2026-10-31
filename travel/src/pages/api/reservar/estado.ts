@@ -5,6 +5,7 @@ import { ErrorBtcpay, leerFactura } from '../../../lib/btcpay';
 import { MEDIA_URL, todosLosTours } from '../../../lib/tours';
 import { entornoServidor } from '../../../lib/entorno';
 import { btcpayEnPausa, pagosConfigurados, PAUSA_BTCPAY, reconstruirReserva, ErrorReserva } from '../../../lib/reserva';
+import { configPay, ErrorPay, leerCobroPay, type CobroPay, type ConfigPay } from '../../../lib/cacaopay';
 
 export const prerender = false;
 
@@ -12,7 +13,11 @@ const error = (mensaje: string, status: number) => Response.json({ error: mensaj
 const sinCache = { headers: { 'Cache-Control': 'no-store' } };
 
 export async function GET({ url }: APIContext) {
-  const pagos = await pagosConfigurados(entornoServidor());
+  const entorno = entornoServidor();
+  const pay = configPay(entorno);
+  if (pay) return estadoConPay(pay, url.searchParams.get('id') ?? '');
+
+  const pagos = await pagosConfigurados(entorno);
   if (!pagos) return error('Los pagos no están configurados.', 503);
 
   const facturaId = url.searchParams.get('id') ?? '';
@@ -40,6 +45,38 @@ export async function GET({ url }: APIContext) {
       ahora: Date.now(),
       mediaUrl: MEDIA_URL,
       facturaId: factura.id,
+    });
+    return Response.json(reserva, sinCache);
+  } catch (e) {
+    if (e instanceof ErrorReserva) return error(e.message, e.estado);
+    throw e;
+  }
+}
+
+/**
+ * The status of a charge in CacaoPay. Only a charge CacaoPay reports as pagado becomes a booking, rebuilt from the datos
+ * this server stored with it. A charge that expired or was cancelled is "vencida"; one that is paid later is then saved.
+ */
+async function estadoConPay(pay: ConfigPay, id: string): Promise<Response> {
+  let cobro: CobroPay;
+  try {
+    cobro = await leerCobroPay(pay, id);
+  } catch (e) {
+    if (e instanceof ErrorPay && (e.estado === 400 || e.estado === 404)) return error('Factura no encontrada.', 404);
+    if (btcpayEnPausa(e)) return error(PAUSA_BTCPAY, 503);
+    return error('No se pudo consultar el pago. Probá de nuevo.', 502);
+  }
+
+  if (cobro.estado === 'vencido' || cobro.estado === 'cancelado') return Response.json({ estado: 'vencida' }, sinCache);
+  if (cobro.estado !== 'pagado') return Response.json({ estado: 'pendiente' }, sinCache);
+
+  const datos = cobro.datos ?? {};
+  const tour = (await todosLosTours()).find((t) => t.id === datos.tour);
+  try {
+    const reserva = reconstruirReserva(tour, datos, cobro.sats, {
+      ahora: Date.now(),
+      mediaUrl: MEDIA_URL,
+      facturaId: cobro.id,
     });
     return Response.json(reserva, sinCache);
   } catch (e) {

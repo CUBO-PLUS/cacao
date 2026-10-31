@@ -314,6 +314,45 @@ test('a valid booking shows a code, is saved in this browser, appears on /reserv
   await expect(tickets).toHaveCount(0);
 });
 
+// Runs when Travel charges through CacaoPay (TRAVEL_PAGO=cacaopay). The charge id is a CacaoPay UUID, not a BTCPay invoice.
+test('con CacaoPay, un mismo intento da la misma factura, y al pagarla la reserva se confirma por Pay', async ({ request }) => {
+  test.skip(process.env.TRAVEL_PAGO !== 'cacaopay', 'Corré con TRAVEL_PAGO=cacaopay cuando Travel cobra por CacaoPay.');
+  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const { tours } = await catalogo(request);
+  const t = tours[0];
+  const fecha = proximaFecha(t.salidas[0]);
+  const personas = Math.min(t.grupo.max, Math.max(t.grupo.min, 2));
+  const cuerpo = { tour: t.id, fecha, personas, intento: crypto.randomUUID() };
+
+  // A double tap: the same attempt sent twice makes one charge.
+  const primera = await request.post('/api/reservar/', { data: cuerpo });
+  const segunda = await request.post('/api/reservar/', { data: cuerpo });
+  expect(primera.ok()).toBe(true);
+  expect(segunda.ok()).toBe(true);
+  const factura = ((await primera.json()) as { factura: { id: string; bolt11: string } }).factura;
+  expect(factura.id).toMatch(UUID);
+  expect(((await segunda.json()) as { factura: { id: string } }).factura.id).toBe(factura.id);
+
+  expect((await request.post(`${BTCPAY}/billetera/api/pagar`, { data: { factura: factura.bolt11 } })).ok()).toBe(true);
+  await expect
+    .poll(
+      async () => {
+        const r = await request.get(`/api/reservar/estado/?id=${factura.id}`);
+        return r.ok() ? (await r.json()).pagada === true : false;
+      },
+      { timeout: 30000 },
+    )
+    .toBe(true);
+  const reserva = (await (await request.get(`/api/reservar/estado/?id=${factura.id}`)).json()) as {
+    codigo: string;
+    facturaId: string;
+    total: number;
+  };
+  expect(reserva.codigo).toMatch(/^[0-9A-F]{8}$/);
+  expect(reserva.facturaId).toBe(factura.id);
+  expect(reserva.total).toBe(t.precio * personas);
+});
+
 test('Cambiar fecha o personas stops the polling, and an invoice paid after leaving is saved once', async ({ page, request }) => {
   const { tours } = await catalogo(request);
   const t = tours[0];

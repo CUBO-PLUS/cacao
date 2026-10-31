@@ -2,8 +2,10 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 
+import { AvisoDemo, EstadoNegocio, EtiquetaEjemplo, PieDemo } from '@/componentes/Demo';
 import { Estrellas } from '@/componentes/Estrellas';
 import { TarjetaProducto } from '@/componentes/TarjetaProducto';
+import { esDemo } from '@/lib/demo';
 import { usdCentavosASats } from '@/lib/dinero';
 import {
   cotizacionSegura,
@@ -47,15 +49,14 @@ async function DetalleNegocio({ params }: { params: Promise<{ id: string }> }) {
 
   return (
     <article className="negocio">
+      <AvisoDemo btcmapId={negocio.btcmapId} nombre={negocio.nombre} />
       <header className="negocio__cabeza">
         <p>
-          {negocio.abierto ? (
-            <span className="marca marca--abierto">Abierto ahora</span>
-          ) : (
-            <span className="marca marca--cerrado">Cerrado por ahora</span>
-          )}
+          <EstadoNegocio btcmapId={negocio.btcmapId} abierto={negocio.abierto} />
         </p>
-        <h1>{negocio.nombre}</h1>
+        <h1>
+          {negocio.nombre} <EtiquetaEjemplo activo={esDemo(negocio.btcmapId)} />
+        </h1>
         {negocio.ubicacion && <p className="dato">{negocio.ubicacion}</p>}
         {negocio.descripcion && <p>{negocio.descripcion}</p>}
         {negocio.promedio === null ? (
@@ -99,6 +100,8 @@ async function DetalleNegocio({ params }: { params: Promise<{ id: string }> }) {
           </ul>
         )}
       </section>
+
+      <PieDemo btcmapId={negocio.btcmapId} />
     </article>
   );
 }

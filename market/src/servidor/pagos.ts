@@ -6,6 +6,13 @@ import type { EstadoOrden } from '@/lib/estados';
 import { enlaceBilleteraDePrueba } from '@/lib/pagos/btcpay-api';
 import { proveedorPara } from '@/lib/pagos';
 import type { Cobro } from '@/lib/pagos';
+import {
+  cancelarCobroPay,
+  claveIdempotenciaMarket,
+  configDesdeEntornoPay,
+  ErrorPay,
+  payIdDeReferencia,
+} from '@/lib/pagos/pay-api';
 import { cotizacionUsdBtc } from '@/lib/precio/fuente';
 
 import { registrarEvento, sesionDePago, sesionDeVisita } from './eventos';
@@ -103,7 +110,7 @@ export async function confirmarPagoEnBD(
 }
 
 // BTCPay settings come from the server here, not in the lib: the address from Supabase, the key from the
-// environment. Null when BTCPay is not configured.
+// environment. Null when BTCPay is not configured. CacaoPay is used when its address and key are both set.
 async function proveedorDe(negocio: NegocioLeido) {
   return proveedorPara(
     {
@@ -111,14 +118,15 @@ async function proveedorDe(negocio: NegocioLeido) {
       lightningAddress: negocio.lightning_address,
       btcpayTiendaId: negocio.btcpay_tienda_id,
     },
-    { btcpay: await configBtcpay() },
+    { btcpay: await configBtcpay(), pay: configDesdeEntornoPay(process.env) },
   );
 }
 
-// BTCPay unreachable or failing on its side: the buyer is asked to come back later. Other errors keep their sentence.
+// BTCPay or CacaoPay unreachable or failing (a store CacaoPay does not allow included): the buyer is asked to come
+// back later. The detail goes to the log. Other errors keep their sentence.
 function desdeErrorDeCobro(error: unknown): Resultado<never> {
-  if (esPausaBtcpay(error)) {
-    console.error('BTCPay al crear el cobro:', error instanceof Error ? error.message : error);
+  if (esPausaBtcpay(error) || error instanceof ErrorPay) {
+    console.error('Cobro en pausa:', error instanceof Error ? error.message : error);
     return fallo('NO_DISPONIBLE', MENSAJE_PAUSA);
   }
   return desdeError(error);
@@ -179,6 +187,8 @@ async function asegurarCobroDeTrabajo(servicio: Servicio, orden: FilaOrdenCobro)
       memo: `CacaoMarket trabajo ${orden.numero}`,
       expiraEnSeg: SEGUNDOS_COBRO,
       metadatos: metadatosDeCobro(orden, negocio.nombre, cotizacion, 'Trabajo'),
+      referencia: String(orden.numero),
+      clave: claveIdempotenciaMarket(ordenId, actual?.id ?? null),
     });
   } catch (error) {
     // The job stays 'hecha': the client can ask for a new request once the provider works.
@@ -232,6 +242,9 @@ export async function asegurarCobro(ordenId: string): Promise<Resultado<null>> {
         memo: `CacaoMarket orden ${orden.numero}`,
         expiraEnSeg: SEGUNDOS_COBRO,
         metadatos: metadatosDeCobro(orden, negocio.nombre, orden.cotizacion_usd_btc, 'Orden'),
+        referencia: String(orden.numero),
+        // The first attempt at an order: no charge row before it.
+        clave: claveIdempotenciaMarket(ordenId, null),
       });
     } catch (error) {
       // The order stays creada; it expires by itself and the stock comes back.
@@ -276,6 +289,34 @@ async function consultarPago(
   } catch (error) {
     console.error('consultarCobro:', error instanceof Error ? error.message : error);
     return false;
+  }
+}
+
+/**
+ * Cancels the CacaoPay charge of an unpaid product order, before the order itself is cancelled. CacaoPay refuses a paid
+ * charge (409) and then the order stays as it is. If CacaoPay cannot be reached the order is still cancelled here: the
+ * local state check then refuses any payment (confirmar_pago needs a pending charge), and the error is logged.
+ */
+export async function cancelarCobroEnPay(ordenId: string): Promise<Resultado<null>> {
+  const config = configDesdeEntornoPay(process.env);
+  if (!config) return exito(null);
+  try {
+    const servicio = clienteServicio();
+    const orden = await leerOrden(servicio, ordenId);
+    if (!orden || orden.tipo !== 'productos') return exito(null);
+    if (orden.estado !== 'creada' && orden.estado !== 'esperando_pago') return exito(null);
+    const cobro = await leerCobro(servicio, ordenId);
+    const payId = payIdDeReferencia(cobro?.referencia_externa ?? null);
+    if (payId === null) return exito(null);
+    await cancelarCobroPay(config, payId);
+    return exito(null);
+  } catch (error) {
+    if (error instanceof ErrorPay && error.estado === 409) {
+      return fallo('ESTADO_INVALIDO', 'Esta orden ya no se puede cancelar. Si ya pagaste, abrí una disputa.');
+    }
+    if (error instanceof ErrorPay && error.estado === 404) return exito(null);
+    console.error('cacaopay: no se pudo cancelar el cobro de la orden, queda cancelada aquí:', error instanceof Error ? error.message : error);
+    return exito(null);
   }
 }
 

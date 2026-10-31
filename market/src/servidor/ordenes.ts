@@ -1,6 +1,7 @@
 import 'server-only';
 
 import type { ModoEntrega, ProductoRevisado, RevisionCarrito } from '@/app/carrito/tipos';
+import { esDemo } from '@/lib/demo';
 import { cotizacionUsdBtc } from '@/lib/precio/fuente';
 
 import { cotizacionSegura } from './catalogo';
@@ -108,11 +109,11 @@ type FilaRevision = {
   activo: boolean;
   fotos: string[];
   categoria_id: number;
-  negocios: { id: string; nombre: string; abierto: boolean } | null;
+  negocios: { id: string; nombre: string; abierto: boolean; btcmap_id: number | null } | null;
 };
 
 const COLUMNAS_REVISION =
-  'id, nombre, unidad, precio_usd_centavos, stock, activo, fotos, categoria_id, negocios!inner(id, nombre, abierto)';
+  'id, nombre, unidad, precio_usd_centavos, stock, activo, fotos, categoria_id, negocios!inner(id, nombre, abierto, btcmap_id)';
 
 // Same wording as the product page, so the reason does not change between screens.
 function motivoNoDisponible(fila: FilaRevision): string | null {
@@ -177,6 +178,7 @@ export async function revisarCarrito(entrada: unknown): Promise<Resultado<Revisi
         stock: fila.stock,
         disponible: motivo === null,
         motivo,
+        demo: esDemo(fila.negocios?.btcmap_id ?? null),
       };
     });
     return exito({ productos, cotizacion });

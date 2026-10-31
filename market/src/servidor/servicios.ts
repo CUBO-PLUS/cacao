@@ -40,6 +40,8 @@ export type ServicioCatalogo = {
   negocioId: string;
   negocioNombre: string;
   abierto: boolean;
+  /** BTC Map id of a demo seller, null for a normal seller. */
+  btcmapId: number | null;
 };
 
 export type ServicioDetalle = ServicioCatalogo & {
@@ -100,7 +102,7 @@ const COLUMNAS = [
   'fotos',
   'categoria_id',
   'categorias_servicio(nombre)',
-  'negocios!inner(id, nombre, abierto, descripcion)',
+  'negocios!inner(id, nombre, abierto, descripcion, btcmap_id)',
 ].join(', ');
 
 type FilaServicio = {
@@ -114,7 +116,7 @@ type FilaServicio = {
   fotos: string[];
   categoria_id: number;
   categorias_servicio: { nombre: string } | null;
-  negocios: { id: string; nombre: string; abierto: boolean; descripcion: string } | null;
+  negocios: { id: string; nombre: string; abierto: boolean; descripcion: string; btcmap_id: number | null } | null;
 };
 
 const COLUMNAS_MIO =
@@ -137,6 +139,7 @@ function aCatalogo(fila: FilaServicio): ServicioCatalogo | null {
     negocioId: fila.negocios.id,
     negocioNombre: fila.negocios.nombre,
     abierto: fila.negocios.abierto,
+    btcmapId: fila.negocios.btcmap_id ?? null,
   };
 }
 

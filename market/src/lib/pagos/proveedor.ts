@@ -7,6 +7,10 @@ export interface ProveedorDePago {
     expiraEnSeg: number;
     /** Optional. Only the BTCPay adapter writes it into the invoice; the others ignore it. */
     metadatos?: { orderId: string; itemDesc: string; usdCentavos: number; cotizacionUsdBtc: number };
+    /** Optional. CacaoPay makes it the charge's referencia (the order number). The others ignore it. */
+    referencia?: string;
+    /** Optional. Idempotency-Key of this attempt. CacaoPay needs it; the others ignore it. */
+    clave?: string;
   }): Promise<Cobro>;
   consultarCobro(cobro: {
     referencia: string | null;

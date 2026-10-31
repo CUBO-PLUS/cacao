@@ -43,11 +43,12 @@ const canonica = new URL(Astro.url.pathname, Astro.site);
     <Telon />
     <a class="saltar" href="#contenido">Saltar al contenido</a>
     <div class="hoja">
-      <p class="aviso dato">Modo demo · experiencias de muestra · pagos con bitcoin de prueba</p>
+      <p class="aviso">Modo demo: experiencias de muestra y pagos de prueba.</p>
       <div class="barra">
         <header class="cabecera contenedor">
           <a href="/" aria-label="Cacao Travel, inicio"><Logo /></a>
-          <nav aria-label="Principal">
+          <button type="button" class="menu__boton" aria-expanded="false" aria-controls="menu-principal" data-menu>Menú</button>
+          <nav id="menu-principal" aria-label="Principal" data-menu-panel>
             <a href="/#experiencias">Experiencias</a>
             <a href="/mapa/">Mapa</a>
             <a href="/reservas/">Mis reservas</a>
@@ -82,7 +83,7 @@ const canonica = new URL(Astro.url.pathname, Astro.site);
           <a href="https://cacao-grupo.vercel.app/legal.html">Términos y privacidad</a>
         </nav>
       </div>
-      <p class="dato pie__nota">Parte de Cacao Media · precios en sats · catálogo de muestra</p>
+      <p class="pie__nota">Parte de Cacao Media · precios en sats · catálogo de muestra</p>
       <GrupoCacao actual="travel" />
     </footer>
   </body>
@@ -107,27 +108,69 @@ const canonica = new URL(Astro.url.pathname, Astro.site);
 
   main:focus { outline: none; }
 
-  .aviso { margin: 0; padding: 8px var(--canal); background: var(--mazorca); color: var(--tostado); text-align: center; }
+  /* Quiet demo notice: one small line, no banner. */
+  .aviso { margin: 0; padding: 8px var(--canal) 0; font-size: 0.75rem; line-height: 1.4; color: var(--tinta-suave); }
 
+  /* Phone: the logo and a Menú button on one line; the links open below the bar. */
   .cabecera {
+    position: relative;
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 12px 24px;
-    padding-block: 16px;
+    gap: 12px;
+    padding-block: 10px;
     border-bottom: 1.5px solid var(--tostado);
   }
   .cabecera > a { text-decoration: none; }
   .cabecera > a :global(.logo) { color: var(--tostado); }
-  .cabecera nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
+  .menu__boton {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 1.1em;
+    border: 1.5px solid var(--chocolate);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--tostado);
+    font: 600 1rem/1 var(--fuente);
+    cursor: pointer;
+  }
+  .menu__boton:hover, .menu__boton[aria-expanded='true'] { border-color: var(--mazorca); color: var(--mazorca); }
+  .cabecera nav {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 6;
+    display: none;
+    flex-direction: column;
+    padding: 4px var(--canal) 16px;
+    background: var(--pulpa);
+    border-bottom: 1.5px solid var(--tostado);
+  }
+  .cabecera nav[data-abierto] { display: flex; }
+  .cabecera nav a, .cabecera nav :global(.cabecera__entrar button) { min-height: 48px; justify-content: flex-start; }
   .cabecera nav a {
     display: inline-flex;
     align-items: center;
-    min-height: 36px;
     text-decoration: none;
     font-weight: 600;
-    font-size: 1rem;
+    font-size: 1.0625rem;
+  }
+  @media (min-width: 861px) {
+    .menu__boton { display: none; }
+    .cabecera { padding-block: 16px; gap: 24px; }
+    .cabecera nav {
+      position: static;
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 6px 22px;
+      padding: 0;
+      background: none;
+      border: 0;
+    }
+    .cabecera nav a { min-height: 36px; }
   }
   .cabecera nav a:hover { color: var(--mazorca); }
   /* The sign-in button is a button, so it takes the same size and label as the links in the bar. */
@@ -166,7 +209,7 @@ const canonica = new URL(Astro.url.pathname, Astro.site);
   .pie__fila { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 32px; }
   .pie nav { display: flex; flex-wrap: wrap; gap: 8px 22px; }
   .pie a:hover { color: var(--mazorca); }
-  .pie__nota { color: var(--arena-oscura); }
+  .pie__nota { font-size: 0.875rem; color: var(--arena-oscura); }
 </style>
 
 <script>
@@ -174,4 +217,22 @@ const canonica = new URL(Astro.url.pathname, Astro.site);
 
   // Approximate dollar values next to the sats prices. Pages without a rate keep the sats alone.
   void pintarUsd();
+
+  // Phone menu: opens under the bar, closes on Escape, on a choice, and on a second press.
+  const boton = document.querySelector<HTMLButtonElement>('[data-menu]');
+  const menu = document.querySelector<HTMLElement>('[data-menu-panel]');
+  const cambiar = (abierto: boolean) => {
+    if (!boton || !menu) return;
+    boton.setAttribute('aria-expanded', String(abierto));
+    menu.toggleAttribute('data-abierto', abierto);
+  };
+  boton?.addEventListener('click', () => cambiar(boton.getAttribute('aria-expanded') !== 'true'));
+  menu?.addEventListener('click', (e) => {
+    if ((e.target as HTMLElement).closest('a, button')) cambiar(false);
+  });
+  addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || boton?.getAttribute('aria-expanded') !== 'true') return;
+    cambiar(false);
+    boton.focus();
+  });
 </script>

@@ -72,7 +72,7 @@ export const metadata: Metadata = {
     template: '%s · CacaoMarket',
   },
   description:
-    'Productores de El Salvador venden directo a sus vecinos. Pagás en sats y el dinero llega a la billetera del productor.',
+    'Productores de El Salvador venden directo a sus vecinos. Los precios van en dólares y cada vendedor tiene su propia tienda.',
   applicationName: 'CacaoMarket',
   // Demo build: keep it out of search results.
   robots: { index: false },
@@ -99,7 +99,7 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
             Saltar al contenido
           </a>
           <div className="hoja">
-            <div className="cinta">Demo: pagos por Lightning con bitcoin de prueba</div>
+            <p className="cinta">Demo: los pagos usan bitcoin de prueba.</p>
             <Cabecera />
             <main id="contenido" tabIndex={-1} className="principal">
               <div className="contenedor">{children}</div>

@@ -170,7 +170,7 @@ test.describe("dueño", () => {
     if (Number(total[0]) > 0) {
       const libroConsumidor = page.locator("section[aria-labelledby=titulo-consumidor]");
       await expect(libroConsumidor.getByText(`Total del mes: ${total[0]} documento`)).toBeVisible();
-      await expect(libroConsumidor.getByText(formatoUsd(Number(total[1])), { exact: true })).toBeVisible();
+      await expect(libroConsumidor.getByText(formatoUsd(Number(total[1])), { exact: true }).first()).toBeVisible();
     }
 
     for (const libro of ["consumidor", "contribuyentes", "anexo1", "anexo2"]) {

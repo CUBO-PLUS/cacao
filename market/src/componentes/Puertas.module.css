@@ -3,7 +3,7 @@
 /* The same 20px under the switch on every page that shows it. */
 .nav {
   width: 100%;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .lista {
@@ -53,7 +53,9 @@
   line-height: 1.2;
 }
 
-@media (max-width: 359px) {
+/* Phones: the switch is one row of names, so it takes about one tab's height. The small line
+   under each name shows from 640px. */
+@media (max-width: 639px) {
   .linea {
     display: none;
   }

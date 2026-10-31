@@ -167,13 +167,16 @@ main:focus {
 }
 
 .cinta {
-  padding: 6px var(--canal);
-  background: var(--tostado);
-  color: var(--pulpa);
+  padding: 4px var(--canal);
+  background: var(--arena);
+  color: var(--tostado);
   font-family: var(--mono);
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   line-height: 1.4;
   text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Header */
@@ -201,7 +204,7 @@ main:focus {
   border-radius: 6px;
 }
 
-/* The wordmark is smaller below 360px so the logo, account and cart share one 320px row. */
+/* The wordmark is smaller below 400px so the logo, account and cart share one row at 320 to 399px. */
 .logo {
   display: inline-flex;
   align-items: center;
@@ -212,7 +215,7 @@ main:focus {
   white-space: nowrap;
 }
 
-@media (min-width: 360px) {
+@media (min-width: 400px) {
   .logo {
     font-size: 21px;
     gap: 0.22em;
@@ -243,8 +246,8 @@ main:focus {
   text-decoration: none;
 }
 
-/* Under 360px the cart shows only its count pill. The name stays for screen readers. */
-@media (max-width: 359px) {
+/* Under 420px the cart shows only its count pill, so an open session fits the row. The bottom bar names it, and the name stays for screen readers. */
+@media (max-width: 419px) {
   .carrito-enlace__texto {
     position: absolute;
     width: 1px;
@@ -431,6 +434,27 @@ main:focus {
   gap: 8px;
 }
 
+/* Home: the categories run on one line and scroll sideways. The next pill is cut at the edge,
+   which shows there is more. The row bleeds to the screen edge but starts at the usual gutter. */
+.inicio nav {
+  min-width: 0;
+}
+
+.inicio .chips {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  margin-block: -6px;
+  margin-inline: calc(-1 * var(--canal));
+  /* Room for the focus ring, which would otherwise be clipped by the scroll box. */
+  padding: 6px var(--canal);
+  scroll-padding-inline: var(--canal);
+  scrollbar-width: thin;
+}
+
+.inicio .chips > li {
+  flex: none;
+}
+
 .chip {
   display: inline-flex;
   align-items: center;
@@ -457,6 +481,20 @@ main:focus {
 .encabezado p {
   font-size: 1.0625rem;
   max-width: 36em;
+}
+
+/* Home: one short headline line on phones, then the explanation. */
+.inicio .encabezado {
+  gap: 4px;
+  margin-bottom: 14px;
+}
+
+.inicio .encabezado h1 {
+  font-size: 1.5rem;
+}
+
+.inicio .encabezado p {
+  font-size: 0.9375rem;
 }
 
 .buscador {
@@ -491,8 +529,8 @@ main:focus {
 
 .filtros {
   display: grid;
-  gap: 16px;
-  margin-bottom: 24px;
+  gap: 12px;
+  margin-bottom: 20px;
 }
 
 .conteo {
@@ -525,6 +563,17 @@ main:focus {
   .cuadricula {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 20px;
+  }
+}
+
+/* Home at desktop width: the grid takes a wider container and five columns. */
+@media (min-width: 1100px) {
+  .contenedor:has(> .inicio) {
+    --ancho: 1240px;
+  }
+
+  .inicio .cuadricula {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }
 
@@ -922,6 +971,18 @@ main:focus {
 @media (min-width: 900px) {
   .logo {
     font-size: 26px;
+  }
+
+  .inicio .encabezado {
+    margin-bottom: 20px;
+  }
+
+  .inicio .encabezado h1 {
+    font-size: clamp(2rem, 3.2vw, 2.75rem);
+  }
+
+  .inicio .encabezado p {
+    font-size: 1.0625rem;
   }
 
   .barra-inferior {

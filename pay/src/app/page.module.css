@@ -1,81 +1,71 @@
-/* Home page blocks. Colours come from the brand variables only. */
+/* Home: one column on a phone with the calculator right after the headline. From 900px the headline
+   and the facts sit left of the calculator, which keeps its phone width. */
 .inicio {
-  display: grid;
-  gap: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
   min-width: 0;
 }
 
-.bloque {
-  display: grid;
-  gap: 16px;
+/* On a phone the headline and facts are separate blocks in the column; the order puts the calculator second. */
+.texto {
+  display: contents;
+}
+
+.titulo {
+  order: 1;
   min-width: 0;
 }
 
-.bloque h2 {
-  font-size: clamp(1.25rem, 3.5vw, 1.5rem);
+.calculo {
+  order: 2;
+  min-width: 0;
 }
 
-.puntos {
+.datos {
+  order: 3;
   display: grid;
-  gap: 10px;
+  gap: 14px;
+  min-width: 0;
+}
+
+.datos h2 {
+  font-size: clamp(1.1rem, 3vw, 1.35rem);
+}
+
+.hechos {
+  display: grid;
+  gap: 8px;
   padding-left: 1.25em;
   list-style: disc;
 }
 
-.puntos li {
-  padding-left: 0.25em;
-}
-
-.pie {
+.enlaces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
   font-size: 0.9375rem;
   font-weight: 600;
 }
 
-/* How it works: three numbered steps, one per row on a phone, the same row on wide screens. */
-.pasos {
-  display: grid;
-  gap: 16px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
+@media (min-width: 900px) {
+  .inicio {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 420px);
+    grid-template-areas: 'texto calculo';
+    column-gap: 56px;
+    align-items: start;
+    padding-top: 16px;
+  }
 
-.pasos li {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 12px;
-  align-items: start;
-}
+  .texto {
+    display: grid;
+    grid-area: texto;
+    gap: 36px;
+    min-width: 0;
+  }
 
-.pasos p {
-  margin: 4px 0 0;
-}
-
-.numero {
-  display: inline-grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--tostado);
-  color: var(--pulpa);
-  font-family: var(--mono);
-  font-weight: 700;
-}
-
-.comparacion {
-  margin: 0;
-  font-size: 0.9375rem;
-  font-weight: 600;
-}
-
-.nota {
-  margin: 0;
-  font-size: 0.9375rem;
-}
-
-@media (min-width: 720px) {
-  .pasos {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .calculo {
+    grid-area: calculo;
   }
 }

@@ -1,0 +1,40 @@
+---
+// One price marker for every story card: a filled "Gratis" or an outlined "120 sats".
+// The same look on every surface, so a reader sees free from paid without reading.
+import { precio as formatear } from '../lib/formato';
+
+interface Props {
+  gratis: boolean;
+  precio: number;
+}
+const { gratis, precio } = Astro.props;
+---
+
+<span class:list={['precio', gratis ? 'precio--gratis' : 'precio--paga']}>
+  {gratis ? 'Gratis' : formatear(precio)}
+</span>
+
+<style>
+  .precio {
+    display: inline-flex;
+    align-items: center;
+    align-self: start;
+    justify-self: start;
+    min-height: 32px;
+    padding: 0.3em 0.9em;
+    border: 1.5px solid currentColor;
+    border-radius: 999px;
+    font-family: var(--mono);
+    font-size: var(--t-etiqueta);
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .precio--gratis {
+    background: var(--mazorca);
+    border-color: var(--mazorca);
+    color: var(--tostado);
+  }
+  .precio--paga { background: transparent; }
+</style>

@@ -26,10 +26,7 @@ const rieles = SECCIONES.map((seccion) => ({
 ---
 
 <Base>
-  <div class="lema contenedor">
-    <h1>Historias de El Salvador, grano a grano.</h1>
-    <p>Sin suscripciones: pagás solo lo que leés.</p>
-  </div>
+  <p class="lema contenedor">Sin suscripciones: pagás solo lo que leés.</p>
 
   {principal && <Portada historia={principal} />}
 
@@ -49,18 +46,11 @@ const rieles = SECCIONES.map((seccion) => ({
 </Base>
 
 <style>
-  .lema {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 4px 24px;
-    padding-top: 20px;
-  }
-  .lema h1 { font-size: var(--t-h2); font-weight: 800; letter-spacing: -0.02em; }
-  .lema p { color: var(--tinta-suave); }
+  .lema { margin-top: 12px; color: var(--tinta-suave); font-size: 1rem; line-height: 1.4; }
+  @media (min-width: 900px) { .lema { margin-top: 20px; } }
 
-  .recientes { margin-top: clamp(28px, 5vw, 56px); }
+  .recientes { margin-top: 20px; }
+  @media (min-width: 800px) { .recientes { margin-top: clamp(28px, 5vw, 56px); } }
   .promo { margin-top: clamp(48px, 8vw, 104px); }
   .mas { margin-top: clamp(40px, 6vw, 72px); text-align: center; }
 </style>

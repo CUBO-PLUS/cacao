@@ -2,38 +2,74 @@
 import Base from '../layouts/Base.astro';
 import Boleto from '../components/Boleto.astro';
 import { CATEGORIAS, ZONAS } from '../content.config';
-import { todosLosTours } from '../lib/tours';
+import { todosLosTours, urlTour } from '../lib/tours';
 
 const tours = await todosLosTours();
 const categorias = CATEGORIAS.filter((c) => tours.some((t) => t.data.categoria === c));
 const zonas = ZONAS.filter((z) => tours.some((t) => t.data.zona === z));
 const NIVELES = ['Fácil', 'Moderado', 'Exigente'].filter((n) => tours.some((t) => t.data.nivel === n));
+// The hero photo is the cover of a real experience, so its alt text, credit and link come from the catalogue.
+const foto = tours.find((t) => t.id === 'amanecer-en-el-volcan-de-santa-ana') ?? tours[0];
 ---
 
 <Base>
-  <section class="buscar contenedor">
-    <h1>¿Qué querés hacer en El Salvador?</h1>
+  <section class="inicio contenedor">
+    <div class="inicio__caja">
+      {
+        foto && (
+          <figure class="inicio__foto">
+            <img src={foto.data.portada} alt={foto.data.alt} width="1600" height="1000" fetchpriority="high" />
+            <figcaption>
+              <a href={urlTour(foto)}>{foto.data.titulo}</a>
+              {foto.data.credito && (
+                <>
+                  {' · Foto: '}
+                  {foto.data.creditoUrl ? <a href={foto.data.creditoUrl} rel="noopener">{foto.data.credito}</a> : foto.data.credito}
+                  {foto.data.licencia && ` · ${foto.data.licencia}`}
+                </>
+              )}
+            </figcaption>
+          </figure>
+        )
+      }
+      <h1>¿Qué querés hacer en El Salvador?</h1>
+    </div>
+
     <form class="buscador" data-buscador role="search">
-      <label class="campo campo--texto">
-        <span>Actividad o lugar</span>
-        <input type="search" name="q" placeholder="Volcán, surf, café, Suchitoto" autocomplete="off" />
-      </label>
-      <label class="campo">
-        <span>Zona</span>
-        <select name="zona">
-          <option value="">Todo el país</option>
-          {zonas.map((z) => <option value={z}>{z}</option>)}
-        </select>
-      </label>
-      <label class="campo">
-        <span>Fecha</span>
-        <input type="date" name="fecha" />
-      </label>
-      <label class="campo campo--chico">
-        <span>Personas</span>
-        <input type="number" name="personas" min="1" max="20" value="2" inputmode="numeric" />
-      </label>
-      <button class="buscador__boton" type="submit">Buscar</button>
+      <div class="buscador__fila">
+        <label class="campo campo--texto">
+          <span>Actividad o lugar</span>
+          <input type="search" name="q" placeholder="Volcán, surf, café, Suchitoto" autocomplete="off" />
+        </label>
+        <button class="buscador__boton" type="submit">Buscar</button>
+        <button class="buscador__filtros" type="button" aria-expanded="false" aria-controls="filtros" data-filtros-boton>
+          Filtros <span class="buscador__n" data-filtros-n hidden>0</span>
+        </button>
+      </div>
+      <div class="filtros" id="filtros" data-filtros hidden>
+        <label class="campo">
+          <span>Zona</span>
+          <select name="zona">
+            <option value="">Todo el país</option>
+            {zonas.map((z) => <option value={z}>{z}</option>)}
+          </select>
+        </label>
+        <label class="campo">
+          <span>Fecha</span>
+          <input type="date" name="fecha" />
+        </label>
+        <label class="campo campo--chico">
+          <span>Personas</span>
+          <input type="number" name="personas" min="1" max="20" value="2" inputmode="numeric" />
+        </label>
+        <label class="campo">
+          <span>Nivel</span>
+          <select data-nivel>
+            <option value="">Cualquiera</option>
+            {NIVELES.map((n) => <option value={n}>{n}</option>)}
+          </select>
+        </label>
+      </div>
     </form>
   </section>
 
@@ -46,17 +82,10 @@ const NIVELES = ['Fácil', 'Moderado', 'Exigente'].filter((n) => tours.some((t) 
 
     <div class="barra">
       <p class="barra__cuenta" aria-live="polite">
-        <strong data-cuenta>{tours.length}</strong> experiencias
+        <strong data-cuenta>{tours.length}</strong> experiencias{' '}
         <span data-para></span>
       </p>
       <div class="barra__controles">
-        <label>
-          <span>Nivel</span>
-          <select data-nivel>
-            <option value="">Cualquiera</option>
-            {NIVELES.map((n) => <option value={n}>{n}</option>)}
-          </select>
-        </label>
         <label>
           <span>Ordenar</span>
           <select data-orden>
@@ -102,20 +131,54 @@ const NIVELES = ['Fácil', 'Moderado', 'Exigente'].filter((n) => tours.some((t) 
 </Base>
 
 <style>
-  .buscar { padding-block: clamp(24px, 5vw, 64px) clamp(20px, 3vw, 36px); display: grid; gap: clamp(18px, 3vw, 32px); }
-  h1 { font-size: clamp(2rem, 5.2vw, 4rem); line-height: 0.98; letter-spacing: -0.035em; max-width: 18ch; }
-
-  /* One bar on desktop, stacked fields on phones. */
-  .buscador {
-    display: grid;
-    gap: 8px;
-    padding: 10px;
-    background: var(--pulpa);
-    color: var(--tostado);
-    border-radius: var(--radio);
+  /* Phone first. The hero photo sits at the top, the search card under it, and the first cards follow inside the first screen. */
+  .inicio { padding-top: 8px; display: grid; gap: 14px; }
+  .inicio__caja { position: relative; height: 224px; border-radius: var(--radio); overflow: hidden; background: var(--chocolate); }
+  .inicio__foto { position: absolute; inset: 0; margin: 0; }
+  .inicio__foto img { width: 100%; height: 100%; object-fit: cover; }
+  /* Scrim for legibility only: the bottom of the photo darkens so the headline and credit can be read. */
+  .inicio__foto::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(42, 25, 18, 0.88) 0%, rgba(42, 25, 18, 0) 62%); }
+  .inicio__foto figcaption {
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    bottom: 12px;
+    z-index: 1;
+    font-size: 0.75rem;
+    line-height: 1.35;
+    color: var(--pulpa);
+    overflow-wrap: anywhere;
   }
+  .inicio__foto figcaption a { color: var(--pulpa); }
+  .inicio h1 {
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    bottom: 44px;
+    z-index: 1;
+    font-size: clamp(1.75rem, 8vw, 2.5rem);
+    line-height: 1.02;
+    letter-spacing: -0.035em;
+    color: var(--pulpa);
+    max-width: 16ch;
+  }
+
+  /* One search card: the field and Buscar on the first row, Filtros under them. */
+  .buscador {
+    position: relative;
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+    background: var(--blanco-calido);
+    border: 1.5px solid var(--arena);
+    border-radius: var(--radio-chico);
+    color: var(--tostado);
+  }
+  .buscador__fila { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: stretch; }
+  /* Phone: Buscar stays the submit button for the keyboard, but the live filter makes it visually redundant. */
+  .buscador__boton { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .campo { display: grid; gap: 2px; padding: 8px 14px; border-radius: var(--radio-chico); background: var(--arena); min-width: 0; }
-  .campo span { font-size: 0.75rem; font-weight: 600; color: var(--tinta-suave); }
+  .campo span { font-size: 0.8125rem; font-weight: 600; color: var(--chocolate); }
   .campo input, .campo select {
     width: 100%;
     min-width: 0;
@@ -130,8 +193,8 @@ const NIVELES = ['Fácil', 'Moderado', 'Exigente'].filter((n) => tours.some((t) 
   .campo:focus-within { outline: 3px solid var(--mazorca); outline-offset: 0; }
   .campo input:focus-visible, .campo select:focus-visible { outline: none; }
   .buscador__boton {
-    padding: 0 2em;
-    min-height: 56px;
+    min-height: 52px;
+    padding: 0 1.4em;
     border: 0;
     border-radius: var(--radio-chico);
     background: var(--mazorca);
@@ -140,9 +203,36 @@ const NIVELES = ['Fácil', 'Moderado', 'Exigente'].filter((n) => tours.some((t) 
     cursor: pointer;
   }
   .buscador__boton:hover { background: var(--tostado); color: var(--pulpa); }
-  @media (min-width: 900px) {
-    .buscador { grid-template-columns: minmax(0, 2.2fr) minmax(0, 1.1fr) minmax(0, 1.1fr) minmax(0, 0.7fr) auto; border-radius: 22px; }
+  .buscador__filtros {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 52px;
+    padding: 0 1em;
+    border: 1.5px solid var(--chocolate);
+    border-radius: var(--radio-chico);
+    background: transparent;
+    color: var(--tostado);
+    font: 600 1rem/1 var(--fuente);
+    cursor: pointer;
   }
+  .buscador__filtros:hover { border-color: var(--mazorca); color: var(--mazorca); }
+  .buscador__filtros[aria-expanded='true'] { background: var(--tostado); color: var(--pulpa); border-color: var(--tostado); }
+  .buscador__n {
+    display: inline-grid;
+    place-items: center;
+    min-width: 1.5em;
+    height: 1.5em;
+    padding: 0 0.4em;
+    border-radius: 999px;
+    background: var(--mazorca);
+    color: var(--tostado);
+    font-size: 0.8125rem;
+  }
+  .buscador__n[hidden] { display: none; }
+  .filtros { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .filtros[hidden] { display: none; }
 
   .categorias { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
   .categorias::-webkit-scrollbar { display: none; }
@@ -151,7 +241,7 @@ const NIVELES = ['Fácil', 'Moderado', 'Exigente'].filter((n) => tours.some((t) 
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 36px;
+    min-height: 40px;
     padding: 0.6em 1.15em;
     border: 1.5px solid var(--chocolate);
     border-radius: 999px;
@@ -167,28 +257,24 @@ const NIVELES = ['Fácil', 'Moderado', 'Exigente'].filter((n) => tours.some((t) 
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
-    align-items: end;
-    gap: 12px 24px;
-    margin-block: clamp(18px, 3vw, 28px);
+    align-items: center;
+    gap: 8px 16px;
+    margin-block: 12px 6px;
   }
-  .barra__cuenta { font-size: 1.0625rem; color: var(--tinta-suave); }
+  .barra__cuenta { font-size: 1rem; color: var(--tinta-suave); }
   .barra__cuenta strong { color: var(--tostado); font-weight: 800; }
   .barra__controles { display: flex; flex-wrap: wrap; gap: 10px 16px; }
-  .barra__controles label { display: flex; align-items: center; gap: 8px; font-size: 0.875rem; color: var(--tinta-suave); }
+  .barra__controles label { display: flex; align-items: center; gap: 8px; font-size: 0.875rem; color: var(--chocolate); }
   .barra__controles select {
     padding: 0.5em 0.8em;
     border: 1.5px solid var(--chocolate);
     border-radius: 999px;
-    background: var(--tostado);
-    color: var(--pulpa);
+    background: var(--blanco-calido);
+    color: var(--tostado);
     font: 600 0.9375rem/1.2 var(--fuente);
   }
 
-  .celdas {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
-    gap: clamp(16px, 2vw, 24px);
-  }
+  .celdas { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
   .vacio { display: grid; gap: 16px; justify-items: start; padding: clamp(24px, 4vw, 48px); background: var(--chocolate); border-radius: var(--radio-chico); color: var(--pulpa); }
   .vacio[hidden] { display: none; }
 
@@ -216,6 +302,24 @@ const NIVELES = ['Fácil', 'Moderado', 'Exigente'].filter((n) => tours.some((t) 
   .pasos li::before { content: counter(paso); font-family: var(--mono); font-size: 2rem; line-height: 1; color: var(--mazorca); }
   .pasos h3 { font-size: var(--t-h2); }
   .pasos p { font-size: 1rem; color: var(--arena); }
+
+  /* Tablet and desktop: the photo and the cards use the full width. */
+  @media (min-width: 640px) {
+    .celdas { grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: clamp(16px, 2vw, 24px); }
+  }
+  @media (min-width: 861px) {
+    .inicio { padding-top: 24px; gap: 20px; }
+    .inicio__caja { height: clamp(280px, 40vh, 420px); border-radius: var(--radio); }
+    .inicio__foto figcaption { left: 28px; right: 28px; bottom: 16px; font-size: 0.8125rem; }
+    .inicio h1 { left: 40px; bottom: 64px; font-size: clamp(2.75rem, 5vw, 4.25rem); max-width: 16ch; }
+    .buscador { padding: 12px 12px 14px; }
+    .buscador__fila { grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; }
+    .buscador__boton { position: static; width: auto; height: auto; overflow: visible; clip-path: none; white-space: normal; }
+    .buscador__filtros { min-height: 52px; padding: 0 1.2em; }
+    .filtros { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .categorias { flex-wrap: wrap; overflow: visible; }
+    .barra { margin-block: clamp(18px, 3vw, 28px); }
+  }
 </style>
 
 <script>
@@ -233,12 +337,16 @@ const NIVELES = ['Fácil', 'Moderado', 'Exigente'].filter((n) => tours.some((t) 
   const cuenta = document.querySelector<HTMLElement>('[data-cuenta]');
   const para = document.querySelector<HTMLElement>('[data-para]');
   const vacio = document.querySelector<HTMLElement>('[data-vacio]');
+  const botonFiltros = document.querySelector<HTMLButtonElement>('[data-filtros-boton]');
+  const panelFiltros = document.querySelector<HTMLElement>('[data-filtros]');
+  const contadorFiltros = document.querySelector<HTMLElement>('[data-filtros-n]');
   let categoria = '';
 
   // Weekday codes in Date.getUTCDay() order: 0 is Sunday.
   const CODIGOS_DIA = ['dom', 'lun', 'mar', 'mie', 'jue', 'vie', 'sab'];
   const campoFecha = form?.querySelector<HTMLInputElement>('input[name="fecha"]') ?? null;
   const campoPersonas = form?.querySelector<HTMLInputElement>('input[name="personas"]') ?? null;
+  const campoZona = form?.querySelector<HTMLSelectElement>('select[name="zona"]') ?? null;
   // No past days: the earliest date that can be picked is tomorrow in El Salvador.
   if (campoFecha) campoFecha.min = mananaEnElSalvador();
 
@@ -246,6 +354,15 @@ const NIVELES = ['Fácil', 'Moderado', 'Exigente'].filter((n) => tours.some((t) 
   function personasElegidas(): number {
     const n = Number.parseInt(campoPersonas?.value ?? '', 10);
     return n >= 1 ? n : 0;
+  }
+
+  // Filtros stays closed, so its count says what is applied inside it. The default party of 2 is not counted.
+  function contarFiltros() {
+    if (!contadorFiltros) return;
+    const n = [campoZona?.value, campoFecha?.value, nivel?.value, campoPersonas && campoPersonas.value !== '2' ? 'x' : '']
+      .filter(Boolean).length;
+    contadorFiltros.textContent = String(n);
+    contadorFiltros.hidden = n === 0;
   }
 
   function aplicar() {
@@ -273,9 +390,9 @@ const NIVELES = ['Fácil', 'Moderado', 'Exigente'].filter((n) => tours.some((t) 
       return ver;
     });
 
-    [...boletos]
-      .sort((a, b) => (Number(a.dataset[campo]) - Number(b.dataset[campo])) * (sentido === 'desc' ? -1 : 1))
-      .forEach((b) => catalogo.append(b));
+    // Move cards only when the order changes: moving a card under a tap cancels that tap.
+    const ordenados = [...boletos].sort((a, b) => (Number(a.dataset[campo]) - Number(b.dataset[campo])) * (sentido === 'desc' ? -1 : 1));
+    if (ordenados.some((b, i) => catalogo.children[i] !== b)) ordenados.forEach((b) => catalogo.append(b));
 
     // Say what the listing is filtered by.
     const partes: string[] = [];
@@ -292,7 +409,15 @@ const NIVELES = ['Fácil', 'Moderado', 'Exigente'].filter((n) => tours.some((t) 
     if (cuenta) cuenta.textContent = String(visibles.length);
     if (para) para.textContent = partes.map((p) => `· ${p}`).join(' ');
     if (vacio) vacio.hidden = visibles.length > 0;
+    contarFiltros();
   }
+
+  // Filtros opens and closes the zone, date, people and level fields.
+  botonFiltros?.addEventListener('click', () => {
+    const abierto = botonFiltros.getAttribute('aria-expanded') === 'true';
+    botonFiltros.setAttribute('aria-expanded', String(!abierto));
+    if (panelFiltros) panelFiltros.hidden = abierto;
+  });
 
   form?.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -319,7 +444,7 @@ const NIVELES = ['Fácil', 'Moderado', 'Exigente'].filter((n) => tours.some((t) 
     aplicar();
   });
 
-  // The date and group size travel with the visitor to the listing page.
+  // The date and group size chosen on home travel to the experience page.
   catalogo?.addEventListener('click', (e) => {
     const enlace = (e.target as HTMLElement).closest<HTMLAnchorElement>('a[href^="/experiencias/"]');
     if (!enlace || !form) return;

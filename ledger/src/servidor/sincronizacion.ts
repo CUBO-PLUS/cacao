@@ -4,6 +4,7 @@ import { sincronizarBtcpay, type ConfigSincronizacion, type RegistroSincronizaci
 import { createAlmacenSupabase } from "../almacen/supabase.ts";
 import { createAlmacenDtesSupabase } from "../almacen/dtes.ts";
 import { emitirPagados, LIMITE_EMISION_POR_SYNC } from "../emitir.ts";
+import { haceCuanto } from "../tiempo.ts";
 import { btcpayDeEntorno, supabaseDeEntorno, type ConfigSupabaseWeb } from "./configuracion.ts";
 import { soltarCandado, tomarCandado } from "./candado.ts";
 
@@ -11,9 +12,11 @@ import { soltarCandado, tomarCandado } from "./candado.ts";
 // ledger_sincronizaciones: a row is written when a run starts (termino null) and completed when it ends.
 // At most one run at a time holds the lease "sincronizar" (ledger_candados). After the import, the run emits the
 // tax documents of the tickets still pagado (src/emitir.ts). Nothing here throws to the page.
+//
+// The tablero does not wait for this. It reads the state with leerEstadoSincronizacion (stored rows only) and
+// schedules sincronizarSiHaceFalta with after(). Only the owner's button and the cron route wait for the result.
 
 export const UMBRAL_DEFECTO_MS = 60_000;
-export const LIMITE_PAGINA_MS = 6_000;
 // The lease outlives a normal run; a run that stops leaves it to expire.
 export const SEGUNDOS_CANDADO = 120;
 const NOMBRE_CANDADO = "sincronizar";
@@ -41,11 +44,19 @@ export type EstadoSincronizacion = {
   enCurso: boolean;
 };
 
+// What the tablero reads from the stored rows. Reading never calls BTCPay.
+export type LecturaSincronizacion = {
+  ultima: Date | null;
+  error: string | null;
+  detalle: string | null;
+  enCurso: boolean;
+  // True when a run is due: no run yet, or the last one started at least umbralMs ago, and no run is in progress.
+  debeCorrer: boolean;
+};
+
 export type OpcionesSincronizacion = {
   // Minimum age of the last run before BTCPay is read again. 0 always runs.
   umbralMs?: number;
-  // Time allowed before the page stops waiting. null waits for the sync to finish (used by the cron route).
-  limiteMs?: number | null;
   ahora?: Date;
   // Replaced in tests.
   supabase?: ConfigSupabaseWeb | null;
@@ -191,31 +202,73 @@ function sinCorrer(ultima: Date | null, error: string | null, detalle: string | 
   return { ultima, error, detalle, nuevas: 0, emitidos: 0, rechazados: 0, corrio: false, enCurso };
 }
 
-export async function sincronizarSiHaceFalta(opciones: OpcionesSincronizacion = {}): Promise<EstadoSincronizacion> {
+function lecturaSinCorrer(ultima: Date | null, error: string | null, detalle: string | null, enCurso: boolean): LecturaSincronizacion {
+  return { ultima, error, detalle, enCurso, debeCorrer: false };
+}
+
+// The state for the tablero, from the stored rows only. Never calls BTCPay and never throws.
+export async function leerEstadoSincronizacion(opciones: OpcionesSincronizacion = {}): Promise<LecturaSincronizacion> {
   const ahora = opciones.ahora ?? new Date();
   const umbralMs = opciones.umbralMs ?? UMBRAL_DEFECTO_MS;
-  const limiteMs = opciones.limiteMs === undefined ? LIMITE_PAGINA_MS : opciones.limiteMs;
   const f = opciones.fetch ?? fetch;
   let anterior: Date | null = null;
   try {
     const sb = opciones.supabase === undefined ? supabaseDeEntorno() : opciones.supabase;
     if (sb === null) {
-      return sinCorrer(null, MENSAJE_PUBLICO_ERROR, "Falta la configuración de la base de datos en el servidor.", false);
+      return lecturaSinCorrer(null, MENSAJE_PUBLICO_ERROR, "Falta la configuración de la base de datos en el servidor.", false);
     }
     anterior = await ultimaOk(sb, f);
     const ultimo = await filaDeRegistro(sb, f, false);
-    if (ultimo !== null && ahora.getTime() - new Date(ultimo.empezo).getTime() < umbralMs) {
-      // A run still open (no termino) that started within the lease window is in progress, not finished.
-      if (ultimo.termino === null && ahora.getTime() - new Date(ultimo.empezo).getTime() < SEGUNDOS_CANDADO * 1000) {
-        return sinCorrer(anterior, null, null, true);
-      }
-      const ultima = ultimo.termino !== null && ultimo.error === null ? new Date(ultimo.termino) : anterior;
-      return sinCorrer(ultima, ultimo.error === null ? null : MENSAJE_PUBLICO_ERROR, ultimo.error, false);
+    const edadMs = ultimo === null ? Number.POSITIVE_INFINITY : ahora.getTime() - new Date(ultimo.empezo).getTime();
+    // A run still open (no termino) inside the lease window is in progress, not finished.
+    if (ultimo !== null && ultimo.termino === null && edadMs < SEGUNDOS_CANDADO * 1000) {
+      return lecturaSinCorrer(anterior, null, null, true);
     }
+    const ultima = ultimo !== null && ultimo.termino !== null && ultimo.error === null ? new Date(ultimo.termino) : anterior;
+    const fallo = ultimo !== null && ultimo.error !== null;
     const btc = opciones.btcpay === undefined ? await btcpayDeEntorno() : opciones.btcpay;
     if (btc === null) {
-      return sinCorrer(anterior, MENSAJE_PUBLICO_ERROR, "Falta la configuración de BTCPay en el servidor.", false);
+      return lecturaSinCorrer(ultima, MENSAJE_PUBLICO_ERROR, "Falta la configuración de BTCPay en el servidor.", false);
     }
+    return {
+      ultima,
+      error: fallo ? MENSAJE_PUBLICO_ERROR : null,
+      detalle: fallo ? ultimo.error : null,
+      enCurso: false,
+      debeCorrer: edadMs >= umbralMs,
+    };
+  } catch (e) {
+    console.error("Sincronización con BTCPay:", detalleDeError(e));
+    return lecturaSinCorrer(anterior, MENSAJE_PUBLICO_ERROR, detalleDeError(e), false);
+  }
+}
+
+// The line under the tablero figures. Visitors only ever read "Actualizado hace X". The owner also sees the cause
+// when the last run failed, in plain words, with the time of the last good run.
+export function lineaSincronizacion(lectura: LecturaSincronizacion, ahora: Date, dueno: boolean): string {
+  const hace = lectura.ultima ? haceCuanto(lectura.ultima, ahora) : null;
+  if (dueno && lectura.error !== null) {
+    const motivo = lectura.detalle ? ` Motivo: ${lectura.detalle}` : "";
+    const ultimoExito = hace ? ` Último éxito ${hace}.` : " Todavía no hubo una sincronización correcta.";
+    return `La última sincronización con BTCPay falló.${motivo}${ultimoExito}`;
+  }
+  if (hace) return `Actualizado ${hace}`;
+  return "Todavía no se actualizó con BTCPay.";
+}
+
+// Runs the sync now and waits for it, if a run is due. No time limit here: the caller's platform limit applies.
+export async function sincronizarSiHaceFalta(opciones: OpcionesSincronizacion = {}): Promise<EstadoSincronizacion> {
+  const ahora = opciones.ahora ?? new Date();
+  const f = opciones.fetch ?? fetch;
+  let anterior: Date | null = null;
+  try {
+    const lectura = await leerEstadoSincronizacion(opciones);
+    anterior = lectura.ultima;
+    if (!lectura.debeCorrer) return sinCorrer(lectura.ultima, lectura.error, lectura.detalle, lectura.enCurso);
+
+    const sb = opciones.supabase === undefined ? supabaseDeEntorno() : opciones.supabase;
+    const btc = opciones.btcpay === undefined ? await btcpayDeEntorno() : opciones.btcpay;
+    if (sb === null || btc === null) return sinCorrer(anterior, MENSAJE_PUBLICO_ERROR, "Falta la configuración del servidor.", false);
 
     const dueno = randomUUID();
     const tomado = await tomarCandado({ url: sb.url, clave: sb.clave, fetch: f }, NOMBRE_CANDADO, dueno, SEGUNDOS_CANDADO);
@@ -236,30 +289,7 @@ export async function sincronizarSiHaceFalta(opciones: OpcionesSincronizacion = 
       throw e;
     }
 
-    const trabajo = correrSincronizacion(sb, btc, f, ahora, anterior, idRegistro).finally(soltar);
-    if (limiteMs === null) return await trabajo;
-    let temporizador: ReturnType<typeof setTimeout> | undefined;
-    const limite = new Promise<EstadoSincronizacion>((resolver) => {
-      temporizador = setTimeout(
-        () =>
-          resolver({
-            ultima: anterior,
-            error: MENSAJE_PUBLICO_ERROR,
-            detalle: `BTCPay tardó más de ${Math.round(limiteMs / 1000)} segundos. Se vuelve a intentar en la próxima visita.`,
-            nuevas: 0,
-            emitidos: 0,
-            rechazados: 0,
-            corrio: true,
-            enCurso: false,
-          }),
-        limiteMs,
-      );
-    });
-    try {
-      return await Promise.race([trabajo, limite]);
-    } finally {
-      clearTimeout(temporizador);
-    }
+    return await correrSincronizacion(sb, btc, f, ahora, anterior, idRegistro).finally(soltar);
   } catch (e) {
     console.error("Sincronización con BTCPay:", detalleDeError(e));
     return sinCorrer(anterior, MENSAJE_PUBLICO_ERROR, detalleDeError(e), false);

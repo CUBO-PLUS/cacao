@@ -26,11 +26,10 @@
 
 .titulo {
   font-family: var(--mono);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 500;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   line-height: 1.2;
-  text-transform: uppercase;
 }
 
 .lista {
@@ -101,7 +100,6 @@ a.enlace:hover {
   font-weight: 500;
   letter-spacing: 0.04em;
   line-height: 1.4;
-  text-transform: uppercase;
 }
 
 .frase {

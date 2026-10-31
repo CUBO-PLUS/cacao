@@ -27,3 +27,13 @@ export function fechaHoraSalvador(ahora: Date): FechaHoraSv {
     ymd: fecEmi.replaceAll("-", ""),
   };
 }
+
+// "hace 4 min", "hace 2 h", "hace 3 días"; "hace menos de 1 min" under a minute.
+export function haceCuanto(desde: Date, ahora: Date): string {
+  const minutos = Math.floor((ahora.getTime() - desde.getTime()) / 60_000);
+  if (minutos < 1) return "hace menos de 1 min";
+  if (minutos < 60) return `hace ${minutos} min`;
+  const horas = Math.floor(minutos / 60);
+  if (horas < 48) return `hace ${horas} h`;
+  return `hace ${Math.floor(horas / 24)} días`;
+}

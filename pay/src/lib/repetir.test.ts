@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { idDeRepetir, montoTextoDesdeCentavos } from './repetir';
+import { idDeRepetir, inicioDesdeQuery, montoTextoDesdeCentavos, rutaEnviarCon } from './repetir';
 
 describe('idDeRepetir', () => {
   it('acepta un identificador con forma de UUID', () => {
@@ -23,5 +23,38 @@ describe('montoTextoDesdeCentavos', () => {
     expect(montoTextoDesdeCentavos(10050)).toBe('100.50');
     expect(montoTextoDesdeCentavos(705)).toBe('7.05');
     expect(montoTextoDesdeCentavos(100)).toBe('1');
+  });
+});
+
+describe('inicioDesdeQuery', () => {
+  it('lee monto, moneda y entrega de la cotización de inicio', () => {
+    expect(inicioDesdeQuery({ monto: '50,5', moneda: 'EUR', entrega: 'cuenta' })).toEqual({
+      montoTexto: '50.50',
+      moneda: 'EUR',
+      entrega: 'cuenta',
+    });
+  });
+
+  it('no prefila sin monto válido ni fuera de los límites', () => {
+    expect(inicioDesdeQuery({})).toBeNull();
+    expect(inicioDesdeQuery({ monto: 'abc' })).toBeNull();
+    expect(inicioDesdeQuery({ monto: '0.50' })).toBeNull();
+    expect(inicioDesdeQuery({ monto: '5000' })).toBeNull();
+  });
+
+  it('usa los valores por omisión cuando moneda o entrega no son conocidas', () => {
+    expect(inicioDesdeQuery({ monto: '20', moneda: 'XYZ', entrega: 'drone' })).toEqual({
+      montoTexto: '20',
+      moneda: 'USD',
+      entrega: 'efectivo',
+    });
+  });
+});
+
+describe('rutaEnviarCon', () => {
+  it('vuelve a /enviar con el prefill, sin copiar valores que no se leyeron', () => {
+    const inicio = { montoTexto: '20.5', moneda: 'USD' as const, entrega: 'lightning' as const };
+    expect(rutaEnviarCon(inicio, null)).toBe('/enviar?monto=20.5&moneda=USD&entrega=lightning');
+    expect(rutaEnviarCon(null, null)).toBe('/enviar');
   });
 });

@@ -4,13 +4,17 @@ import { useId, useState } from 'react';
 
 import { formatoUsd } from '@/lib/dinero';
 import { cotizar, type Cotizacion, type Entrega, formatoMonto, TARIFAS, TASA_EUR_USD } from '@/lib/cotizacion';
+import { montoTextoDesdeCentavos, rutaEnviarCon } from '@/lib/repetir';
 
+import { Boton } from './Boton';
+import { tipoDeCambio } from './formatoEnvio';
 import estilos from './Cotizador.module.css';
 
-const ENTREGAS: { valor: Entrega; etiqueta: string }[] = [
-  { valor: 'efectivo', etiqueta: 'Efectivo' },
-  { valor: 'cuenta', etiqueta: 'Cuenta bancaria' },
-  { valor: 'lightning', etiqueta: 'Bitcoin por Lightning (sats)' },
+// Each way of delivery: the name, and what it means in a few words.
+const ENTREGAS: { valor: Entrega; titulo: string; detalle: string }[] = [
+  { valor: 'efectivo', titulo: 'Efectivo', detalle: 'Retira en un punto de pago' },
+  { valor: 'cuenta', titulo: 'Cuenta bancaria', detalle: 'Llega en una hora' },
+  { valor: 'lightning', titulo: 'Bitcoin', detalle: 'Red Lightning, llega en un minuto' },
 ];
 
 // "50", "50.5" and "50,25" are amounts; anything else is not, and the field says so.
@@ -20,14 +24,10 @@ function aCentavos(texto: string): number | null {
   return Number(m[1]) * 100 + Number((m[2] ?? '').padEnd(2, '0'));
 }
 
-// Thousands separators and at most two decimals, as the rest of the app shows numbers.
-function numero(valor: number): string {
-  return valor.toLocaleString('en-US', { maximumFractionDigits: 2 });
-}
-
 /**
  * Quote preview for the home page. Works without signing in: the BTC price comes from the server
- * (usdBtc), and every line is computed here by cotizar().
+ * (usdBtc), and every line is computed here by cotizar(). The primary button carries the amount,
+ * currency and delivery into /enviar, so the sender does not type them again.
  */
 export function Cotizador({ usdBtc, fuenteBtc }: { usdBtc: number | null; fuenteBtc: string }) {
   const id = useId();
@@ -56,16 +56,21 @@ export function Cotizador({ usdBtc, fuenteBtc }: { usdBtc: number | null; fuente
         : null;
   const cotizacion: Cotizacion | null = resultado && !('error' in resultado) ? resultado : null;
 
+  const enviarHref =
+    cotizacion && centavos !== null
+      ? rutaEnviarCon({ montoTexto: montoTextoDesdeCentavos(centavos), moneda, entrega }, null)
+      : null;
+
   return (
     <div className={estilos.cotizador}>
-      <form className={estilos.formulario} onSubmit={(e) => e.preventDefault()}>
+      <div className={estilos.montos}>
         <div className={estilos.grupo}>
           <label htmlFor={`${id}-monto`} className="campo-etiqueta">
-            Monto a enviar
+            Vos mandás
           </label>
           <input
             id={`${id}-monto`}
-            className="campo dato"
+            className={`campo ${estilos.montoCampo}`}
             type="text"
             inputMode="decimal"
             autoComplete="off"
@@ -75,49 +80,21 @@ export function Cotizador({ usdBtc, fuenteBtc }: { usdBtc: number | null; fuente
             aria-invalid={error ? true : undefined}
           />
         </div>
-
-        <div className={estilos.fila}>
-          <div className={estilos.grupo}>
-            <label htmlFor={`${id}-moneda`} className="campo-etiqueta">
-              Moneda que enviás
-            </label>
-            <select
-              id={`${id}-moneda`}
-              className="campo"
-              value={moneda}
-              onChange={(e) => setMoneda(e.target.value as 'USD' | 'EUR')}
-            >
-              <option value="USD">Dólares (USD)</option>
-              <option value="EUR">Euros (EUR)</option>
-            </select>
-          </div>
-
-          <div className={estilos.grupo}>
-            <label htmlFor={`${id}-entrega`} className="campo-etiqueta">
-              Cómo recibe el dinero
-            </label>
-            <select
-              id={`${id}-entrega`}
-              className="campo"
-              value={entrega}
-              onChange={(e) => setEntrega(e.target.value as Entrega)}
-            >
-              {ENTREGAS.map((o) => (
-                <option key={o.valor} value={o.valor} disabled={o.valor === 'lightning' && usdBtc === null}>
-                  {o.etiqueta}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className={estilos.grupo}>
+          <label htmlFor={`${id}-moneda`} className="campo-etiqueta">
+            Moneda
+          </label>
+          <select
+            id={`${id}-moneda`}
+            className={`campo ${estilos.moneda}`}
+            value={moneda}
+            onChange={(e) => setMoneda(e.target.value as 'USD' | 'EUR')}
+          >
+            <option value="USD">Dólares</option>
+            <option value="EUR">Euros</option>
+          </select>
         </div>
-
-        {usdBtc === null && (
-          <p className={estilos.aviso}>
-            No tenemos el precio de bitcoin ahora, así que el envío por Lightning no está disponible. Efectivo y
-            cuenta bancaria sí.
-          </p>
-        )}
-      </form>
+      </div>
 
       {error && (
         <p id={`${id}-error`} role="alert" className={estilos.error}>
@@ -125,50 +102,81 @@ export function Cotizador({ usdBtc, fuenteBtc }: { usdBtc: number | null; fuente
         </p>
       )}
 
-      {cotizacion && <Lineas cotizacion={cotizacion} usdBtc={usdBtc} />}
+      <Recibe cotizacion={cotizacion} usdBtc={usdBtc} />
+
+      <fieldset className={estilos.entregas}>
+        <legend className="campo-etiqueta">Cómo recibe el dinero</legend>
+        {ENTREGAS.map((o) => {
+          const sinBtc = o.valor === 'lightning' && usdBtc === null;
+          return (
+            <label key={o.valor} className={`${estilos.opcion} ${sinBtc ? estilos.opcionOff : ''}`}>
+              <input
+                type="radio"
+                name={`${id}-entrega`}
+                value={o.valor}
+                checked={entrega === o.valor}
+                disabled={sinBtc}
+                onChange={() => setEntrega(o.valor)}
+              />
+              <strong>{o.titulo}</strong>
+              <small>{o.detalle}</small>
+            </label>
+          );
+        })}
+      </fieldset>
+
+      {usdBtc === null && (
+        <p className={estilos.aviso}>
+          No tenemos el precio de bitcoin ahora, así que la opción de bitcoin no está disponible. Efectivo y cuenta
+          bancaria sí.
+        </p>
+      )}
+
+      {enviarHref ? (
+        <Boton href={enviarHref}>Enviar dinero</Boton>
+      ) : (
+        <Boton disabled>Enviar dinero</Boton>
+      )}
+      <p className={estilos.demo}>Demo: el bitcoin es de prueba y no tiene valor real.</p>
     </div>
   );
 }
 
-function Lineas({ cotizacion: c, usdBtc }: { cotizacion: Cotizacion; usdBtc: number | null }) {
+// The amount that arrives, the fee and the rate on one line, and how long it takes.
+function Recibe({ cotizacion: c, usdBtc }: { cotizacion: Cotizacion | null; usdBtc: number | null }) {
+  if (!c) {
+    return (
+      <div className={estilos.recibe}>
+        <span className={estilos.recibeEtiqueta}>Recibe</span>
+        <span className={estilos.recibeMonto}>—</span>
+      </div>
+    );
+  }
+
   const enSats = c.monedaDestino === 'SATS';
-
-  let tipo: string;
-  if (enSats) tipo = `1 ${c.monedaOrigen} = ${numero(c.tasa)} sats`;
-  else if (c.monedaOrigen === 'EUR') tipo = `1 EUR = ${numero(c.tasa)} USD`;
-  else tipo = '1 USD = 1 USD';
-
   // A sats amount is shown with its dollar value next to it, as the price is shown everywhere else.
   const aproximado =
     enSats && usdBtc !== null ? `aprox. ${formatoUsd(Math.floor((c.montoDestino * usdBtc) / 1_000_000))}` : null;
-
   const minutos = c.minutosEstimados === 1 ? 'Llega en un minuto.' : `Llega en unos ${c.minutosEstimados} minutos.`;
 
+  let tipo: string | null = null;
+  if (enSats || c.monedaOrigen === 'EUR') {
+    const { principal } = tipoDeCambio(c);
+    tipo = enSats ? `${principal} (sats son pedacitos de bitcoin)` : principal;
+  }
+
   return (
-    <dl className={estilos.lineas} aria-live="polite">
-      <div>
-        <dt>Enviás</dt>
-        <dd className="dato">{formatoMonto(c.montoOrigenCentavos, c.monedaOrigen)}</dd>
+    <>
+      <div className={estilos.recibe} aria-live="polite">
+        <span className={estilos.recibeEtiqueta}>Recibe</span>
+        <span className={estilos.recibeMonto}>{formatoMonto(c.montoDestino, c.monedaDestino)}</span>
+        {enSats && <small className={estilos.nota}>Sats: pedacitos de bitcoin{aproximado ? `, ${aproximado}` : ''}</small>}
+        <small className={estilos.nota}>{minutos}</small>
       </div>
-      <div>
-        <dt>Comisión</dt>
-        <dd className="dato">{formatoMonto(c.comisionCentavos, c.monedaOrigen)}</dd>
-      </div>
-      <div>
-        <dt>Tipo de cambio</dt>
-        <dd>
-          <span className="dato">{tipo}</span>
-          <small className={estilos.nota}>{c.tasaFuente}</small>
-        </dd>
-      </div>
-      <div className={estilos.recibe}>
-        <dt>Recibe</dt>
-        <dd>
-          <span className={`dato ${estilos.grande}`}>{formatoMonto(c.montoDestino, c.monedaDestino)}</span>
-          {aproximado && <small className={estilos.nota}>{aproximado}</small>}
-          <small className={estilos.nota}>{minutos}</small>
-        </dd>
-      </div>
-    </dl>
+      <p className={estilos.linea} aria-live="polite">
+        Comisión {formatoMonto(c.comisionCentavos, c.monedaOrigen)}
+        {tipo ? ` · ${tipo}` : ''}
+      </p>
+    </>
   );
 }

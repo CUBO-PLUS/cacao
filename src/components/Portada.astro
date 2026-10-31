@@ -1,9 +1,11 @@
 ---
-// Lead story. Two halves with a thin gap between them, like the split bean in the logo:
-// the photo is one half, the story in its section colour is the other.
-import { fechaCorta, fechaIso, precio } from '../lib/formato';
+// Lead story: the first thing on the home page. Photo, then the story in its section colour.
+// On a phone the photo sits on top, the title right under it; on a wide screen the two halves
+// sit side by side, like the split bean in the logo.
+import { fechaCorta, fechaIso } from '../lib/formato';
 import { urlHistoria, type Historia } from '../lib/historias';
 import { seccionPorId } from '../lib/secciones';
+import Precio from './Precio.astro';
 
 interface Props {
   historia: Historia;
@@ -19,16 +21,14 @@ const url = urlHistoria(historia);
     <img src={d.portada} alt="" width="1600" height="1000" fetchpriority="high" />
   </a>
   <div class="portada__texto">
-    <p class="etiqueta">
-      <a href={`/${seccion.ruta}/`}>{seccion.singular}</a> · {d.lugar}
-    </p>
-    <h2><a href={url}>{d.titulo}</a></h2>
+    <p class="portada__seccion"><a href={`/${seccion.ruta}/`}>{seccion.singular}</a> · {d.lugar}</p>
+    <h1 class="portada__titulo"><a href={url}>{d.titulo}</a></h1>
     <p class="portada__bajada">{d.bajada}</p>
-    <p class="etiqueta">
-      <time datetime={fechaIso(d.fecha)}>{fechaCorta(d.fecha)}</time> · {d.minutos} min · {
-        d.gratis ? 'Gratis' : precio(d.precio)
-      }
-    </p>
+    <div class="portada__datos">
+      <Precio gratis={d.gratis} precio={d.precio} />
+      <time class="etiqueta" datetime={fechaIso(d.fecha)}>{fechaCorta(d.fecha).toLowerCase()}</time>
+      <span class="etiqueta">{d.minutos} min</span>
+    </div>
     <a class="portada__boton" href={url} tabindex="-1" aria-hidden="true">Leer historia</a>
   </div>
 </article>
@@ -39,7 +39,7 @@ const url = urlHistoria(historia);
     --filo: 6px;
     display: grid;
     gap: var(--corte);
-    margin-top: 20px;
+    margin-top: 16px;
   }
   .portada__foto {
     display: block;
@@ -49,31 +49,34 @@ const url = urlHistoria(historia);
   }
   .portada__foto img {
     width: 100%;
-    height: 100%;
-    aspect-ratio: 16 / 10;
+    aspect-ratio: 16 / 9;
     object-fit: cover;
   }
   .portada__texto {
     display: grid;
-    align-content: end;
+    align-content: start;
     justify-items: start;
-    gap: 16px;
+    gap: 12px;
     min-width: 0;
-    padding: clamp(24px, 4vw, 48px);
+    padding: 22px 20px 24px;
     background: var(--acento);
     color: var(--sobre-acento);
     border-radius: var(--filo) var(--filo) var(--radio) var(--radio);
   }
-  h2 {
-    font-size: clamp(2.25rem, 4.4vw, 4rem);
+  .portada__seccion { font-family: var(--mono); font-size: var(--t-etiqueta); letter-spacing: 0.01em; }
+  .portada__datos .etiqueta { text-transform: none; letter-spacing: 0.01em; }
+  .portada__texto a { color: inherit; text-decoration: none; }
+  .portada__texto a:hover { text-decoration: underline; }
+  .portada__titulo {
+    font-size: clamp(2rem, 4.4vw, 4rem);
     font-weight: 800;
-    line-height: 0.95;
+    line-height: 0.98;
     letter-spacing: -0.03em;
     overflow-wrap: anywhere;
   }
-  .portada__texto a { color: inherit; text-decoration: none; }
-  .portada__texto a:hover { text-decoration: underline; }
-  .portada__bajada { font-size: 1.25rem; line-height: 1.4; max-width: 30ch; }
+  /* On a phone the summary waits for the story page, so the next stories show in the first view. */
+  .portada__bajada { display: none; }
+  .portada__datos { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
   .portada__boton {
     display: inline-flex;
     padding: 0.8em 1.4em;
@@ -87,10 +90,16 @@ const url = urlHistoria(historia);
   .portada__boton:hover { background: var(--tostado); color: var(--pulpa) !important; text-decoration: none !important; }
 
   @media (min-width: 900px) {
-    .portada { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); }
+    .portada { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); margin-top: 20px; }
     .portada__foto { border-radius: var(--radio) var(--filo) var(--filo) var(--radio); }
-    .portada__foto img { aspect-ratio: auto; min-height: min(68vh, 620px); }
-    .portada__texto { border-radius: var(--filo) var(--radio) var(--radio) var(--filo); }
+    .portada__foto img { aspect-ratio: auto; min-height: min(62vh, 600px); }
+    .portada__texto {
+      align-content: end;
+      padding: clamp(28px, 4vw, 52px);
+      border-radius: var(--filo) var(--radio) var(--radio) var(--filo);
+    }
+    .portada__titulo { font-size: clamp(2.5rem, 4.2vw, 4rem); }
+    .portada__bajada { display: block; font-size: 1.25rem; line-height: 1.4; max-width: 30ch; }
   }
 
   @media (prefers-reduced-motion: no-preference) {

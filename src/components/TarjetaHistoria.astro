@@ -1,6 +1,7 @@
 ---
 // Compact card for grids: photo on top, kicker, headline, data line.
-import { fechaCorta, fechaIso, precio } from '../lib/formato';
+import { fechaCorta, fechaIso } from '../lib/formato';
+import Precio from './Precio.astro';
 import { urlHistoria, type Historia } from '../lib/historias';
 import { seccionPorId } from '../lib/secciones';
 
@@ -19,11 +20,10 @@ const url = urlHistoria(historia);
   </a>
   <a class="pastilla" href={`/${seccion.ruta}/`}>{seccion.singular} · {d.lugar}</a>
   <h3><a href={url}>{d.titulo}</a></h3>
-  <p class="etiqueta">
-    <time datetime={fechaIso(d.fecha)}>{fechaCorta(d.fecha)}</time> · {d.minutos} min · {
-      d.gratis ? 'Gratis' : precio(d.precio)
-    }
-  </p>
+  <div class="tarjeta__datos">
+    <Precio gratis={d.gratis} precio={d.precio} />
+    <time class="etiqueta" datetime={fechaIso(d.fecha)}>{fechaCorta(d.fecha).toLowerCase()} · {d.minutos} min</time>
+  </div>
 </article>
 
 <style>
@@ -35,8 +35,10 @@ const url = urlHistoria(historia);
     .tarjeta:hover .tarjeta__foto img { transform: scale(1.04); }
   }
   .pastilla { white-space: normal; }
+  .tarjeta .pastilla, .tarjeta .etiqueta { text-transform: none; letter-spacing: 0.01em; }
   h3 { font-size: var(--t-h2); font-weight: 800; overflow-wrap: anywhere; }
   h3 a { text-decoration: none; }
   h3 a:hover { color: inherit; text-decoration: underline; }
+  .tarjeta__datos { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
   .etiqueta { color: var(--tinta-suave); }
 </style>

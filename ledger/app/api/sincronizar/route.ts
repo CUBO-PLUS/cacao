@@ -15,7 +15,7 @@ export async function GET(request: Request) {
     return Response.json({ error: "No autorizado." }, { status: 401 });
   }
 
-  const estado = await sincronizarSiHaceFalta({ umbralMs: 0, limiteMs: null });
+  const estado = await sincronizarSiHaceFalta({ umbralMs: 0 });
   return Response.json(
     {
       ok: estado.error === null && !estado.enCurso,

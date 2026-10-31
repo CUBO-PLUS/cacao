@@ -77,6 +77,12 @@ function coincide(t: Tour, consulta: string): boolean {
 
 const porTitulo = (tours: Tour[]): string[] => tours.map((t) => t.titulo).sort();
 
+/** Opens Filtros: the zone, date, people and level fields sit behind it on the home page. */
+async function abrirFiltros(page: Page): Promise<void> {
+  const boton = page.locator('[data-filtros-boton]');
+  if ((await boton.getAttribute('aria-expanded')) !== 'true') await boton.click();
+}
+
 /** Titles of the cards that are shown, sorted. */
 async function titulosVisibles(page: Page): Promise<string[]> {
   return (await page.locator('[data-boleto]:visible h3 a').allTextContents()).map((s) => s.trim()).sort();
@@ -127,6 +133,7 @@ test('choosing a date shows only the experiences that run on that weekday', asyn
   });
   if (!dia) throw new Error('no weekday splits the catalogue');
   await page.goto('/');
+  await abrirFiltros(page);
   await page.locator('[data-buscador] input[name="fecha"]').fill(proximaFecha(dia));
   await expectVisibles(page, tours.filter((t) => t.salidas.includes(dia)));
 });
@@ -134,6 +141,7 @@ test('choosing a date shows only the experiences that run on that weekday', asyn
 test('people filter hides experiences whose largest group is smaller than the party', async ({ page, request }) => {
   const { tours } = await catalogo(request);
   await page.goto('/');
+  await abrirFiltros(page);
   const personas = page.locator('[data-buscador] input[name="personas"]');
 
   await personas.fill('9');
@@ -157,6 +165,7 @@ test('a category chip, the level select and the zone select each show only their
   await page.locator('button[data-categoria=""]').click();
   await expectVisibles(page, tours);
 
+  await abrirFiltros(page);
   await page.locator('select[data-nivel]').selectOption(nivel);
   await expectVisibles(page, tours.filter((t) => t.nivel === nivel));
   await page.locator('select[data-nivel]').selectOption('');
@@ -193,6 +202,7 @@ test('the date and group size chosen on home travel to the experience page', asy
   const personas = Math.min(t.grupo.max, Math.max(t.grupo.min, 3));
 
   await page.goto('/');
+  await abrirFiltros(page);
   await page.locator('[data-buscador] input[name="fecha"]').fill(fecha);
   await page.locator('[data-buscador] input[name="personas"]').fill(String(personas));
   await page.getByRole('link', { name: t.titulo, exact: true }).click();

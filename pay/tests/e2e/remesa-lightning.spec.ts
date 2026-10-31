@@ -61,7 +61,7 @@ test('1. cotizador, tres pasos con Lightning, chips y Repetir envío', async ({ 
   const pagina = await contexto.newPage();
 
   await pagina.goto('/');
-  await pagina.getByLabel('Monto a enviar').fill('100');
+  await pagina.getByLabel('Vos mandás').fill('100');
   await expect(pagina.getByText('Recibe', { exact: true }).first()).toBeVisible();
 
   const creado = await nuevoEnvioLightning(pagina, '50');

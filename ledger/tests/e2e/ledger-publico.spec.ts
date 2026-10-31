@@ -17,9 +17,9 @@ test.describe("tablero público", () => {
     expect(texto).not.toMatch(/TK-\d{8}-[0-9A-F]{4}/);
     expect(texto).not.toMatch(/DTE-|NIT|NRC|Factura de BTCPay|Hash del pago/);
 
-    // The sync line is generic: no cause and no run details for a visitor.
+    // The sync line is calm: no cause and no run details for a visitor.
     const estado = page.getByRole("status").first();
-    await expect(estado).toContainText(/sincroniz/i);
+    await expect(estado).toContainText(/Actualizado|Todavía no se actualizó/);
     await expect(estado).not.toContainText("Motivo");
     await expect(page.getByRole("button", { name: "Sincronizar ahora" })).toHaveCount(0);
 

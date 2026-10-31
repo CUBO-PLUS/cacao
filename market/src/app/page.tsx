@@ -16,22 +16,21 @@ export default function Inicio(props: PageProps<'/'>) {
     <>
       <Puertas actual="supermercado" />
 
-      <section className="encabezado">
-        <h1>Del huerto a tu mesa, pagado en sats.</h1>
-        <p>
-          Comprá directo a productores de El Salvador. Pagás con bitcoin y el dinero llega a su
-          billetera.
+      <div className="inicio">
+        <section className="encabezado">
+          <h1>Comprá directo al productor.</h1>
+          <p>Precios en dólares. Cada vendedor tiene su propia tienda.</p>
+        </section>
+
+        <Suspense fallback={<CatalogoCargando />}>
+          <CatalogoInicio busqueda={props.searchParams} />
+        </Suspense>
+
+        <p className="aviso">
+          ¿Te mandan dinero del exterior? Seguí tu envío en{' '}
+          <a href={URL_PAY}>CacaoPay</a>
         </p>
-      </section>
-
-      <Suspense fallback={<CatalogoCargando />}>
-        <CatalogoInicio busqueda={props.searchParams} />
-      </Suspense>
-
-      <p className="aviso">
-        ¿Te mandan dinero del exterior? Seguí tu envío en{' '}
-        <a href={URL_PAY}>CacaoPay</a>
-      </p>
+      </div>
     </>
   );
 }
@@ -83,7 +82,7 @@ async function CatalogoInicio({ busqueda }: { busqueda: PageProps<'/'>['searchPa
     <>
       <div className="filtros">
         <form className="buscador" action="/" method="get" role="search">
-          <label className="campo-etiqueta" htmlFor="buscar">
+          <label className="solo-lectores" htmlFor="buscar">
             Buscar productos
           </label>
           <div className="buscador__fila">
@@ -92,6 +91,7 @@ async function CatalogoInicio({ busqueda }: { busqueda: PageProps<'/'>['searchPa
               className="campo"
               name="q"
               type="search"
+              placeholder="Buscar productos"
               defaultValue={texto}
               autoComplete="off"
             />

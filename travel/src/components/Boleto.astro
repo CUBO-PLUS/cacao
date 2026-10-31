@@ -119,6 +119,22 @@ const grupo = personas(d.grupo);
   }
   .boleto__ver:hover { background: var(--mazorca); color: var(--tostado); }
 
+  /* Phone: a compact row, photo on the left, so several experiences fit under the search. */
+  @media (max-width: 639px) {
+    .boleto { grid-template-columns: 112px minmax(0, 1fr); grid-template-rows: auto auto; }
+    .boleto__foto { grid-column: 1; grid-row: 1 / span 2; border-radius: var(--radio-chico) 0 0 var(--radio-chico); }
+    .boleto__foto img { height: 100%; min-height: 100%; aspect-ratio: auto; }
+    .boleto__categoria, .boleto__ficha, .boleto__ver { display: none; }
+    .boleto__cuerpo { grid-column: 2; grid-row: 1; gap: 2px; padding: 12px 14px 0; }
+    .boleto__lugar { font-size: 0.8125rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    h3 { font-size: 1.0625rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .boleto__talon { grid-column: 2; grid-row: 2; padding: 8px 14px 12px; }
+    .boleto__talon::before, .boleto__talon::after { display: none; }
+    .boleto__precio { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 6px; }
+    .boleto__precio strong { font-size: 1rem; }
+    .boleto__precio span { font-size: 0.8125rem; }
+  }
+
   @media (prefers-reduced-motion: no-preference) {
     .boleto__foto img { transition: transform 0.4s ease; }
     .boleto:hover .boleto__foto img { transform: scale(1.04); }

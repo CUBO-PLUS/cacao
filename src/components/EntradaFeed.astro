@@ -2,7 +2,8 @@
 import type { Historia } from '../lib/historias';
 import { urlHistoria } from '../lib/historias';
 import { seccionPorId } from '../lib/secciones';
-import { fechaCorta, fechaIso, precio } from '../lib/formato';
+import { fechaCorta, fechaIso } from '../lib/formato';
+import Precio from './Precio.astro';
 
 interface Props {
   historia: Historia;
@@ -27,11 +28,14 @@ const url = urlHistoria(historia);
     />
   </a>
   <div class="entrada__texto">
-    <time class="etiqueta entrada__fecha" datetime={fechaIso(fecha)}>{fechaCorta(fecha)}</time>
+    <time class="etiqueta entrada__fecha" datetime={fechaIso(fecha)}>{fechaCorta(fecha).toLowerCase()}</time>
     <a class="pastilla entrada__kicker" href={`/${seccion.ruta}/`}>{seccion.singular} · {lugar}</a>
     <h2 class="entrada__titulo"><a href={url}>{titulo}</a></h2>
     <p class="entrada__bajada">{bajada}</p>
-    <p class="etiqueta entrada__dato">{minutos} min · {gratis ? 'Gratis' : precio(historia.data.precio)}</p>
+    <div class="entrada__datos">
+      <Precio gratis={gratis} precio={historia.data.precio} />
+      <span class="etiqueta">{minutos} min</span>
+    </div>
     <a class="boton boton--oscuro entrada__boton" href={url} tabindex="-1" aria-hidden="true">Leer historia</a>
   </div>
 </article>
@@ -78,11 +82,17 @@ const url = urlHistoria(historia);
   }
 
   .entrada__fecha,
-  .entrada__dato,
+  .entrada__datos,
   .entrada__boton,
   .entrada__kicker {
     justify-self: start;
   }
+
+  /* Sentence case on the home page: no all-caps labels. */
+  .entrada .etiqueta,
+  .entrada__kicker { text-transform: none; letter-spacing: 0.01em; }
+
+  .entrada__datos { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
 
   .entrada__kicker {
     white-space: normal;

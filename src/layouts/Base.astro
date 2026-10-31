@@ -69,10 +69,11 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
             ))
           }
           <a class="pastilla cabecera__travel" href={`${TRAVEL_URL}/`}>Travel</a>
+          <a class="pastilla cabecera__archivo-movil" href="/archivo/">Archivo</a>
         </nav>
         <div class="cabecera__extra">
-          <a class="etiqueta" href="/archivo/">Archivo</a>
-          <a class="etiqueta" href="/acerca/">Acerca</a>
+          <a class="etiqueta cabecera__archivo-web" href="/archivo/">Archivo</a>
+          <a class="etiqueta cabecera__acerca" href="/acerca/">Acerca</a>
           <!-- isStatic: the pages are prerendered, so the state is read in the browser, not at build time. -->
           <Show when="signed-out" isStatic class="cabecera__entrar etiqueta">
             <SignInButton mode="modal">Entrar</SignInButton>
@@ -139,6 +140,7 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
   .cabecera__logo { grid-row: 1; grid-column: 2; text-decoration: none; justify-self: center; }
   .cabecera__nav { grid-row: 1; grid-column: 1; display: flex; flex-wrap: wrap; gap: 6px; }
   .cabecera__nav .pastilla { min-height: 36px; }
+  .cabecera__archivo-movil { display: none; }
   .cabecera__nav .pastilla[aria-current='page'] { background: var(--tostado); color: var(--pulpa); }
   .cabecera__travel { background: var(--tostado); color: var(--pulpa); }
   .cabecera__travel:hover { background: var(--mazorca) !important; color: var(--tostado) !important; }
@@ -168,15 +170,38 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
   }
   .cabecera__extra :global(.cabecera__entrar button:hover) { color: var(--mazorca-oscuro); }
 
+  /* Header labels are sentence case, not the all-caps mono used for kickers elsewhere. */
+  .cabecera__nav .pastilla,
+  .cabecera__extra .etiqueta { text-transform: none; letter-spacing: 0.01em; }
+
+  /* Phone: logo and Entrar on one row, the sections in one scrolling row under them. */
   @media (max-width: 860px) {
-    .cabecera { grid-template-columns: minmax(0, 1fr); }
-    .cabecera__logo { grid-row: 1; grid-column: 1; justify-self: start; }
-    .cabecera__nav { grid-row: 2; grid-column: 1; }
-    .cabecera__extra { grid-row: 3; grid-column: 1; justify-self: start; }
+    .cabecera {
+      grid-template-columns: minmax(0, 1fr) auto;
+      row-gap: 10px;
+      padding-block: 12px;
+    }
+    .cabecera__logo { grid-row: 1; grid-column: 1; justify-self: start; min-width: 0; }
+    .cabecera__extra { grid-row: 1; grid-column: 2; justify-self: end; gap: 6px; }
+    .cabecera .cabecera__acerca,
+    .cabecera .cabecera__archivo-web { display: none; }
+    .cabecera__nav .cabecera__archivo-movil { display: inline-flex; }
+    .cabecera__nav {
+      grid-row: 2;
+      grid-column: 1 / -1;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+      /* Bleeds to the screen edge so the row reads as scrollable, while the first pill still lines up with the page. */
+      margin-inline: calc(-1 * var(--canal));
+      padding-inline: var(--canal);
+      scroll-padding-inline: var(--canal);
+    }
+    .cabecera__nav::-webkit-scrollbar { display: none; }
+    .cabecera__nav .pastilla { flex: none; min-height: 40px; padding-inline: 1em; }
   }
   @media (max-width: 480px) {
-    .cabecera__logo :global(.logo) { font-size: 26px !important; }
-    .cabecera__extra { gap: 12px; }
+    .cabecera__logo :global(.logo) { font-size: 24px !important; }
   }
 
   .pie {

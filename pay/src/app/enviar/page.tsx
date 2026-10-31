@@ -3,7 +3,7 @@ import { connection } from 'next/server';
 import { Suspense } from 'react';
 
 import type { Entrega } from '@/lib/cotizacion';
-import { idDeRepetir, montoTextoDesdeCentavos } from '@/lib/repetir';
+import { idDeRepetir, inicioDesdeQuery, montoTextoDesdeCentavos, rutaEnviarCon } from '@/lib/repetir';
 import { cotizacionUsdBtc } from '@/lib/precio/fuente';
 import { exigirSesion } from '@/servidor/sesion';
 import { recientesDe } from '@/servidor/contactos';
@@ -29,13 +29,17 @@ export default function PaginaEnviar(props: PageProps<'/enviar'>) {
 async function Asistente({ busqueda }: { busqueda: PageProps<'/enviar'>['searchParams'] }) {
   await connection();
   const params = await busqueda;
-  const sesion = await exigirSesion('/enviar');
-  const [tarifas, precioDisponible, recientes, prefill] = await Promise.all([
+  // Sign-in returns here with the same amount, currency, delivery and repeat id, so nothing is retyped.
+  const inicio = inicioDesdeQuery(params);
+  const repetir = idDeRepetir(params.repetir);
+  const sesion = await exigirSesion(rutaEnviarCon(inicio, repetir));
+  const [tarifas, precioDisponible, recientes, prefillRepetir] = await Promise.all([
     tarifasDetalle(),
     precioBtcDisponible(),
     recientesDe(sesion.usuario.id),
     prefillDeRepetir(sesion.usuario, params.repetir),
   ]);
+  const prefill = prefillRepetir ?? prefillDeMonto(inicio);
   return (
     <AsistenteEnvio
       tarifas={tarifas}
@@ -63,6 +67,12 @@ async function prefillDeRepetir(
     nombre: envio.destinatarioNombre,
     contacto: envio.destinatarioContacto ?? '',
   };
+}
+
+// The amount, currency and delivery carried from the home quote. The recipient stays empty.
+function prefillDeMonto(inicio: ReturnType<typeof inicioDesdeQuery>): PrefillEnvio | null {
+  if (!inicio) return null;
+  return { monedaOrigen: inicio.moneda, montoTexto: inicio.montoTexto, entrega: inicio.entrega, nombre: '', contacto: '' };
 }
 
 // Lightning needs the BTC price. Its absence only switches Lightning off; cash and bank still work.

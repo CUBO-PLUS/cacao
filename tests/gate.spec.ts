@@ -106,6 +106,18 @@ test('paid story starts locked with its price and the unlock button', async ({ p
   await expect(muro(page)).toContainText('Modo demo');
 });
 
+test('the wall explains what a sat is and that the access stays in this browser', async ({ page, request }) => {
+  await requiereDemo(request);
+  await page.goto(PAGA);
+  await expect(page.locator('[data-gate-sat]')).toContainText('Un sat es la cienmillonésima parte de un bitcoin.');
+  await expect(muro(page)).toContainText('Si abrís la historia desde otro navegador o celular, hay que pagar otra factura.');
+  // The explanation stays on the wall while the invoice is open, next to the dollar value.
+  await page.locator('[data-gate-pedir]').click();
+  await expect(page.locator('[data-gate-pendiente]')).toBeVisible();
+  await expect(page.locator('[data-gate-sat]')).toBeVisible();
+  await expect(page.locator('[data-gate-monto]')).toHaveText(/^120 sats · \$\d+\.\d{2}$/);
+});
+
 test('the invoice shows a QR, the amount and a countdown', async ({ page, request }) => {
   await requiereDemo(request);
   await page.goto(PAGA);

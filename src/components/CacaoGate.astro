@@ -28,6 +28,7 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
     <span class="mono">{precio}</span>
     <span class="muro__usd mono" data-gate-usd hidden></span>
   </p>
+  <p class="muro__que muro__sat" data-gate-sat>Un sat es la cienmillonésima parte de un bitcoin. El valor en dólares es al precio de hoy.</p>
   <p class="muro__cerrado" data-gate-cerrado-texto>Lo que sigue está cerrado: el resto de esta {tipo}, hasta el final.</p>
 
   <div class="muro__pendiente" data-gate-pendiente hidden>
@@ -69,7 +70,7 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
     data-texto-fallida="Intentar de nuevo"
   >Desbloquear por {precio}</button>
 
-  <p class="muro__nota">Tu acceso queda guardado en este navegador. Sin cuenta ni suscripción.</p>
+  <p class="muro__nota">Tu acceso queda guardado en este navegador. Sin cuenta ni suscripción. Si abrís la historia desde otro navegador o celular, hay que pagar otra factura.</p>
   {demo && <p class="etiqueta muro__demo-nota">Modo demo · no se cobra nada</p>}
 </aside>
 
@@ -103,6 +104,7 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
   }
   .muro__titulo:focus { outline: none; }
   .muro__que { color: var(--arena-oscura); }
+  .muro__sat { font-size: 1rem; max-width: 40ch; }
   .muro__estado { font-weight: 600; max-width: 40ch; }
   .muro__error {
     background: var(--criollo);

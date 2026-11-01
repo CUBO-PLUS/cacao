@@ -48,15 +48,16 @@ export default async function PaginaEnvio(props: PageProps<'/envios/[id]'>) {
   if (!envio) notFound();
   if (envio.rol === 'destinatario') redirect(`/recibidos/${envio.id}`);
 
+  // The sender pays the invoice whatever the way of delivery, once BTCPay is set up on this server.
+  const pagoLightning = envio.rol === 'remitente' && envio.estado === 'creada' && (await pagoLightningActivo());
   const acciones = accionesPosibles(envio.estado, envio.rol, envio.entrega, {
     pagada: envio.pagadaEn !== null,
     facturaViva: envio.facturaViva,
+    pagoLightning,
   });
   const enCamino = envio.estado === 'procesando';
   const tributario = desgloseTributarioEnvio(envio);
   const cobro = envio.entrega === 'lightning' ? await cobroDeEnvio(envio.id) : null;
-  const pagoLightning =
-    envio.rol === 'remitente' && envio.entrega === 'lightning' && envio.estado === 'creada' && (await pagoLightningActivo());
   // The sender shares the claim link once the transfer is paid and until the recipient collects it. Before the
   // payment the link would only lead to a "waiting" page.
   // Once the claim window has closed the link would only lead to "expired": the sender gets the money back instead.

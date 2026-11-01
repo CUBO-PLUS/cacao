@@ -161,6 +161,46 @@ function DocumentoEmitido({ registro }: { registro: RegistroDte }) {
   );
 }
 
+// What the document cannot hold, for a Lightning payment: the bitcoin amount, the rate and where it came from, the
+// payment hash, and the document it belongs to. The hash chain of these records is kept by the CLI, not by the web.
+function AtestacionTasa({ ticket, registro }: { ticket: Ticket; registro: RegistroDte | null }) {
+  const p = ticket.pago;
+  if (p === null || p.rail !== "lightning") return null;
+  return (
+    <section className="bloque" aria-labelledby="titulo-atestacion">
+      <h2 id="titulo-atestacion">Atestación de tasa</h2>
+      <p className="nota">Lo que la factura no puede contener: cuántos bitcoin entraron y a qué tasa.</p>
+      <dl className="dl">
+        <Fila titulo="Bitcoin recibido">
+          <span className="num">{formatoSats(p.sats)}</span>
+        </Fila>
+        <Fila titulo="Monto en USD">
+          <span className="num">{formatoUsd(p.montoCentavos)}</span>
+        </Fila>
+        <Fila titulo="Tasa">
+          <span className="num">{`${p.tasaUsdPorBtc} USD/BTC`}</span>
+        </Fila>
+        <Fila titulo="Fuente de la tasa">{p.tasaFuente}</Fila>
+        <Fila titulo="Momento del pago">{fechaHoraSv(p.momento)}</Fila>
+        <Fila titulo="Hash del pago">
+          <span className="hash">{p.paymentHash}</span>
+        </Fila>
+        <Fila titulo="Documento al que pertenece">
+          {registro !== null ? (
+            <span className="num">{registro.codigoGeneracion}</span>
+          ) : (
+            "Todavía sin documento: la atestación se completa al emitirlo"
+          )}
+        </Fila>
+      </dl>
+      <p className="nota" style={{ marginTop: "0.5rem" }}>
+        La cadena de atestaciones (cada registro encadenado con el anterior) la guarda la CLI en su carpeta de datos y se
+        verifica con «atestacion verificar». La web todavía no guarda esa cadena.
+      </p>
+    </section>
+  );
+}
+
 export default async function PaginaTicket({ params }: PageProps<"/tickets/[id]">) {
   await connection();
   const { id } = await params;
@@ -315,6 +355,7 @@ export default async function PaginaTicket({ params }: PageProps<"/tickets/[id]"
         ) : null}
         {ticket.estado === "rechazado" ? <ReintentarEmision ticketId={ticket.id} /> : null}
       </section>
+      <AtestacionTasa ticket={ticket} registro={registro} />
     </>
   );
 }

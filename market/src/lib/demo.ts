@@ -71,3 +71,15 @@ export function datosDemo(btcmapId: number | null | undefined): NegocioDemo | nu
   if (!esDemo(btcmapId)) return null;
   return LISTA.find((n) => n.btcmapId === btcmapId) ?? null;
 }
+
+/**
+ * The payment adapter a shop's charges use. A demo seller with a test store charges there, in test bitcoin. One
+ * with no store has nowhere to charge, so its order uses the simulated provider instead of getting stuck.
+ */
+export function proveedorEfectivo<T extends string>(
+  tipo: T,
+  btcmapId: number | null | undefined,
+  tiendaBtcpay: string | null | undefined,
+): T | 'falso' {
+  return esDemo(btcmapId) && !tiendaBtcpay ? 'falso' : tipo;
+}

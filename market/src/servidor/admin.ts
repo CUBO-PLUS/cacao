@@ -998,3 +998,46 @@ export async function embudoAdmin(actorId: string, desde: string, hasta: string)
     valorUsdCentavos: numero(f.valor_usd_centavos),
   }));
 }
+
+/** One product as the admin inventory shows it. Stock is the theoretical count the database keeps. */
+export type ProductoInventarioAdmin = {
+  id: string;
+  nombre: string;
+  negocio: string;
+  unidad: string;
+  precioUsdCentavos: number;
+  stock: number;
+  activo: boolean;
+};
+
+type FilaInventarioBD = {
+  id: string;
+  nombre: string;
+  unidad: string;
+  precio_usd_centavos: number;
+  stock: number;
+  activo: boolean;
+  negocios: { nombre: string } | null;
+};
+
+/** The products of every shop, sold-out first. Stock falls when an order is placed and comes back when it lapses or is cancelled. */
+export async function inventarioAdmin(actorId: string): Promise<ProductoInventarioAdmin[]> {
+  await exigirAdminBD(actorId);
+  const { data, error } = await clienteServicio()
+    .from('productos')
+    .select('id, nombre, unidad, precio_usd_centavos, stock, activo, negocios(nombre)')
+    .order('stock', { ascending: true })
+    .order('nombre', { ascending: true })
+    .limit(1000);
+  if (error) throw new Error(`No pudimos leer el inventario: ${error.message}`);
+
+  return ((data ?? []) as unknown as FilaInventarioBD[]).map((f) => ({
+    id: f.id,
+    nombre: f.nombre,
+    negocio: f.negocios?.nombre ?? '',
+    unidad: f.unidad,
+    precioUsdCentavos: f.precio_usd_centavos,
+    stock: f.stock,
+    activo: f.activo,
+  }));
+}

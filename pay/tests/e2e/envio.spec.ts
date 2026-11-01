@@ -11,6 +11,9 @@ function aCentavos(texto: string): number {
 
 const CODIGO = /CP-[23456789A-HJ-NP-Z]{4}-[23456789A-HJ-NP-Z]{4}/;
 
+// The regtest test wallet of BTCPay, as the Lightning spec uses it.
+const BTCPAY = 'http://127.0.0.1:8088/billetera/api';
+
 test('Lucía envía $100.00 en efectivo y la transferencia llega a la página de Marta', async ({ browser }) => {
   const lucia = await sesionDe(browser, 'lucia');
   const ana = await sesionDe(browser, 'ana');
@@ -61,10 +64,23 @@ test('Lucía envía $100.00 en efectivo y la transferencia llega a la página de
     expect(fila.codigo).toBe(codigo);
     expect(fila.estado).toBe('creada');
 
-    // 4. The sender sends it now. The state moves to "En camino".
-    await lucia.getByRole('button', { name: 'Enviar ahora' }).click();
-    await lucia.getByRole('button', { name: 'Sí, enviar ahora' }).click();
-    await expect(encabezado.getByText('En camino', { exact: true })).toBeVisible();
+    // 4. With BTCPay on, the sender pays the invoice whatever the way of delivery. Without it, the sender
+    // sends it now. Either way the state moves to "En camino" (the invoice path waits for the payment).
+    const pagar = lucia.getByRole('button', { name: 'Pagar con Lightning' });
+    if (await pagar.count()) {
+      await pagar.click();
+      const factura = await lucia.getByLabel('Factura Lightning').inputValue();
+      const pago = await fetch(`${BTCPAY}/pagar`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ factura }),
+      });
+      expect(pago.ok).toBeTruthy();
+    } else {
+      await lucia.getByRole('button', { name: 'Enviar ahora' }).click();
+      await lucia.getByRole('button', { name: 'Sí, enviar ahora' }).click();
+    }
+    await expect(encabezado.getByText('En camino', { exact: true })).toBeVisible({ timeout: 60_000 });
 
     // 5. A visitor with no account follows the code, typed in lower case without dashes.
     const pv = await visitante.newPage();

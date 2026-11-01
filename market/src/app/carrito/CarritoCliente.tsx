@@ -399,7 +399,7 @@ function BloqueNegocio({
         )}
       </div>
 
-      {opcionesDeEntrega(grupo.demo).length > 0 && (
+      {hayDisponibles && opcionesDeEntrega(grupo.demo).length > 0 && (
         <fieldset className={styles.modo}>
           <legend>Cómo querés recibirlo</legend>
           {MODOS.map((opcion) => (

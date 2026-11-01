@@ -793,12 +793,17 @@ export async function procesarEnvio(usuarioId: string, envioId: string): Promise
     const fila = await cargarCambio(envioId);
     if (!fila || !(await puedeCambiar(usuarioId, fila))) return fallo('NO_ENCONTRADA', MENSAJE_NO_ENCONTRADA);
     // With BTCPay on, the sender starts the transfer by paying its invoice, not by this button.
-    if (fila.remitente_id === usuarioId && (await pagoLightningActivo())) {
+    const conBtcpay = await pagoLightningActivo();
+    if (fila.remitente_id === usuarioId && conBtcpay) {
       return fallo('NO_PERMITIDO', 'Pagá el envío con Lightning para que salga.');
     }
     // A Lightning transfer starts when its invoice is paid (pay_confirmar_btcpay), never by hand.
     if (fila.entrega === 'lightning') {
       return fallo('NO_PERMITIDO', 'Un envío por Lightning sale cuando quien envía paga la factura.');
+    }
+    // With BTCPay on, every transfer leaves only once its invoice is paid, whoever presses the button.
+    if (conBtcpay && fila.pagada_en === null) {
+      return fallo('ESTADO_INVALIDO', 'Todavía no está pagado. Sale cuando quien envía paga la factura.');
     }
 
     const { data, error } = await clienteServicio().rpc('pay_procesar', {

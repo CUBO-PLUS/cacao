@@ -77,3 +77,10 @@ export function periodoDe(params: Record<string, string | string[] | undefined>,
     aviso,
   };
 }
+
+const FORMATO_DIA_LARGO = new Intl.DateTimeFormat('es-SV', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+
+/** A day written for a person: "3 de octubre de 2026". The day is read at noon UTC, so no time zone moves it. */
+export function diaLargo(dia: string): string {
+  return FORMATO_DIA_LARGO.format(new Date(`${dia}T12:00:00Z`));
+}

@@ -8,6 +8,7 @@ const ENLACES = [
   { href: '/admin/negocios', texto: 'Negocios' },
   { href: '/admin/servicios', texto: 'Servicios' },
   { href: '/admin/ordenes', texto: 'Órdenes' },
+  { href: '/admin/inventario', texto: 'Inventario' },
   { href: '/admin/disputas', texto: 'Disputas' },
   { href: '/admin/embudo', texto: 'Embudo' },
   { href: '/admin/auditoria', texto: 'Auditoría' },

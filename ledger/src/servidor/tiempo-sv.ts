@@ -55,3 +55,10 @@ export async function todosEntre(almacen: AlmacenTickets, desde: Date, hasta: Da
   }
   return salida;
 }
+
+// The day n days after (or before) a YYYY-MM-DD day. Calendar arithmetic in UTC, so no clock offset applies.
+export function diaDesplazado(dia: string, n: number): string {
+  const [a, m, d] = dia.split("-").map(Number) as [number, number, number];
+  const f = new Date(Date.UTC(a, m - 1, d + n));
+  return `${f.getUTCFullYear()}-${String(f.getUTCMonth() + 1).padStart(2, "0")}-${String(f.getUTCDate()).padStart(2, "0")}`;
+}

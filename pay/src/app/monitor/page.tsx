@@ -11,7 +11,7 @@ import { resumenEnvios, type ResumenEstado } from '@/servidor/monitor';
 import { exigirAdmin } from '@/servidor/sesion';
 
 import { FiltroPeriodo } from './FiltroPeriodo';
-import { periodoDe } from './periodo';
+import { diaLargo, periodoDe } from './periodo';
 import estilos from './estilos.module.css';
 
 export const metadata: Metadata = {
@@ -41,7 +41,7 @@ async function Resumen({ busqueda }: { busqueda: PageProps<'/monitor'>['searchPa
       <div className={estilos.encabezadoSeccion}>
         <h2 id="titulo-resumen">Resumen del período</h2>
         <p className={estilos.leyenda}>
-          Cuenta los envíos creados desde el {periodo.desde} hasta el {periodo.hasta}, los dos días incluidos.
+          Cuenta los envíos creados desde el {diaLargo(periodo.desde)} hasta el {diaLargo(periodo.hasta)}, los dos días incluidos.
         </p>
       </div>
 

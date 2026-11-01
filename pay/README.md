@@ -98,7 +98,7 @@ Toma unos dos minutos desde el teléfono o en una ventana angosta:
 | Conversión con tasa definida y fuente | `src/lib/cotizacion.ts`, `pay_tasas` (`EUR/USD 1.08`) y oráculo `Coinbase + Kraken` para `BTC/USD` | Cumple |
 | Comisiones separadas del tipo de cambio | Línea de comisión independiente con su fórmula explícita | Cumple |
 | Monto final recibido por el destinatario | Línea **Recibe**, redondeada hacia abajo | Cumple |
-| Creación de transferencias simuladas con código único | `pay_crear_transferencia` y código `CP-XXXX-XXXX` | Cumple |
+| Creación de transferencias simuladas con código único | `pay_crear_transferencia` y código `CP-XXXX-XXXX` | Parcial: la unicidad del código no tiene prueba directa |
 | Máquina de estados (`Created`, `Processing`, `Completed`, `Failed`, `Cancelled`) | `creada`, `procesando`, `completada`, `fallida`, `cancelada` (`src/lib/transferencias.ts`) | Cumple |
 | Historial e inspección individual | `/envios`, `/recibidos`, `/envios/[id]` y `pay_historial` | Cumple |
 | Mecanismo simulado para completar o fallar envíos | Botones de modo demo y acciones del monitor administrativo | Cumple |
@@ -107,7 +107,7 @@ Toma unos dos minutos desde el teléfono o en una ventana angosta:
 | Documentación de arquitectura y conexión a Bitcoin y Lightning | [`docs/arquitectura-y-lightning.md`](docs/arquitectura-y-lightning.md) | Cumple |
 | Documentación de API, acciones y funciones de base de datos | [`docs/api.md`](docs/api.md) | Cumple |
 | Marco tributario de Hacienda (DGII), BCR y entregable estratégico | `/hacienda`, [`src/lib/hacienda.ts`](src/lib/hacienda.ts) y [`docs/hacienda-y-regulacion.md`](docs/hacienda-y-regulacion.md) | Cumple |
-| Pruebas de cálculo, base de datos y recorrido de punta a punta | `src/lib/*.test.ts`, `tests/db/*.test.ts` y `tests/e2e/*.spec.ts` | Cumple |
+| Pruebas de cálculo, base de datos y recorrido de punta a punta | `src/lib/*.test.ts`, `tests/db/*.test.ts` y `tests/e2e/*.spec.ts` | Parcial: `envio.spec.ts` no corre sin cuentas de prueba por celular; el resto del e2e se corrió sólo en parte |
 
 ## Variables de entorno
 

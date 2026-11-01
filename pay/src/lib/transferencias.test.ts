@@ -178,6 +178,26 @@ describe('contactos', () => {
   });
 });
 
+describe('pagar un envío en efectivo o cuenta con BTCPay', () => {
+  it('con BTCPay, quien envía paga la factura también en efectivo y en cuenta, sin "procesar" a mano', () => {
+    for (const entrega of ['efectivo', 'cuenta'] as const) {
+      const acciones = accionesPosibles('creada', 'remitente', entrega, { pagoLightning: true });
+      expect(acciones).not.toContain('procesar');
+      expect(acciones).toContain('cancelar');
+    }
+  });
+
+  it('el administrador tampoco pone en camino un envío sin pagar cuando BTCPay está activo', () => {
+    expect(accionesPosibles('creada', 'admin', 'efectivo', { pagoLightning: true })).toEqual(['fallar']);
+    expect(accionesPosibles('creada', 'admin', 'cuenta')).toEqual(['procesar', 'fallar']);
+  });
+
+  it('sin BTCPay, el envío en efectivo o cuenta sale con "procesar" como antes', () => {
+    expect(accionesPosibles('creada', 'remitente', 'efectivo', { pagoLightning: false })).toEqual(['procesar', 'cancelar']);
+    expect(accionesPosibles('creada', 'remitente', 'cuenta')).toEqual(['procesar', 'cancelar']);
+  });
+});
+
 describe('cancelar un envío', () => {
   it('se puede cancelar mientras no hay factura vigente ni pago', () => {
     expect(accionesPosibles('creada', 'remitente', 'lightning', { pagada: false, facturaViva: false })).toEqual([

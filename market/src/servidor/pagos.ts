@@ -1,6 +1,7 @@
 import 'server-only';
 
 import type { EstadoPago, ProveedorCobro } from '@/app/ordenes/[id]/pagar/tipos';
+import { proveedorEfectivo } from '@/lib/demo';
 import { usdCentavosASats } from '@/lib/dinero';
 import type { EstadoOrden } from '@/lib/estados';
 import { enlaceBilleteraDePrueba } from '@/lib/pagos/btcpay-api';
@@ -61,7 +62,7 @@ async function leerCobro(servicio: Servicio, ordenId: string) {
 async function leerNegocio(servicio: Servicio, negocioId: string) {
   const { data, error } = await servicio
     .from('negocios')
-    .select('nombre, tipo_proveedor_pago, lightning_address, btcpay_tienda_id')
+    .select('nombre, tipo_proveedor_pago, lightning_address, btcpay_tienda_id, btcmap_id')
     .eq('id', negocioId)
     .single();
   if (error) throw error;
@@ -114,7 +115,7 @@ export async function confirmarPagoEnBD(
 async function proveedorDe(negocio: NegocioLeido) {
   return proveedorPara(
     {
-      tipoProveedorPago: negocio.tipo_proveedor_pago,
+      tipoProveedorPago: proveedorEfectivo(negocio.tipo_proveedor_pago, negocio.btcmap_id, negocio.btcpay_tienda_id),
       lightningAddress: negocio.lightning_address,
       btcpayTiendaId: negocio.btcpay_tienda_id,
     },
@@ -197,7 +198,7 @@ async function asegurarCobroDeTrabajo(servicio: Servicio, orden: FilaOrdenCobro)
 
   const { error } = await servicio.rpc('registrar_cobro_servicio', {
     p_orden: ordenId,
-    p_proveedor: negocio.tipo_proveedor_pago,
+    p_proveedor: proveedorEfectivo(negocio.tipo_proveedor_pago, negocio.btcmap_id, negocio.btcpay_tienda_id),
     p_referencia: cobro.referencia ?? NULO,
     p_bolt11: cobro.bolt11 ?? NULO,
     p_destino: cobro.destino ?? NULO,
@@ -253,7 +254,7 @@ export async function asegurarCobro(ordenId: string): Promise<Resultado<null>> {
 
     const { error } = await servicio.rpc('registrar_cobro', {
       p_orden: ordenId,
-      p_proveedor: negocio.tipo_proveedor_pago,
+      p_proveedor: proveedorEfectivo(negocio.tipo_proveedor_pago, negocio.btcmap_id, negocio.btcpay_tienda_id),
       p_referencia: cobro.referencia ?? NULO,
       p_bolt11: cobro.bolt11 ?? NULO,
       p_destino: cobro.destino ?? NULO,

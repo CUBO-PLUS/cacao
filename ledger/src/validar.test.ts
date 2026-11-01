@@ -153,3 +153,17 @@ test("the cash rail gives code 01 and validates for both types", () => {
   assert.equal(r.formaPago.codigo, "01");
   assert.equal(validarDte2026(r.documento).ok, true);
 });
+
+test("the official 2026 01 schema has no pattern on the payment code: code 11 passes it, and the mirror v1 refuses it", () => {
+  // Read from the copy of the Ministry's package (esquemas/ministerio-2026, sha256 in esquemas/README.md).
+  const v2 = JSON.parse(readFileSync(join(raizLedger(), "esquemas", "ministerio-2026", "fe-f-v2.json"), "utf8")) as Doc;
+  const codigo = v2.properties.resumen.properties.pagos.items.properties.codigo;
+  assert.equal(codigo.pattern, undefined, "the 2026 schema restricts the code by length only");
+  assert.equal(codigo.maxLength, 2);
+  const doc = docValido01();
+  assert.equal(doc.resumen.pagos[0].codigo, "11", "the 2026 generation emits Bitcoin on a 01");
+  assert.equal(validarDte2026(doc).ok, true, "accepted by the official 2026 schema and the CacaoLedger rules");
+  const caso = validarDte(clonar(doc), { generacion: "caso" });
+  assert.equal(caso.ok, false, "the caso generation (community mirror of v1) refuses it");
+  assert.ok(rutasDe(caso.esquema).includes("resumen.pagos[0].codigo"));
+});

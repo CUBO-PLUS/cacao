@@ -10,6 +10,7 @@ import {
   modoDeEntrega,
   NEGOCIOS_DEMO,
   opcionesDeEntrega,
+  proveedorEfectivo,
 } from '@/lib/demo';
 
 import { AvisoDemo, AvisoPedidoDemo, EstadoNegocio, EtiquetaCerrado, EtiquetaEjemplo, PieDemo } from './Demo';
@@ -126,5 +127,17 @@ describe('lista de negocios de demostración', () => {
 
   it('leaves out chains and big brands', () => {
     expect(NEGOCIOS_DEMO.some((n) => /selectos|dollar/i.test(n.nombre))).toBe(false);
+  });
+});
+
+describe('demo sellers never charge a real provider', () => {
+  it('uses the simulated provider for a demo seller, even one set to manual with no address', () => {
+    expect(proveedorEfectivo('manual', 23673, null)).toBe('falso');
+    expect(proveedorEfectivo('btcpay', 1, 'TiendaDePrueba123')).toBe('btcpay');
+  });
+
+  it('keeps the shop provider for a normal seller', () => {
+    expect(proveedorEfectivo('manual', null, null)).toBe('manual');
+    expect(proveedorEfectivo('btcpay', null, 'TiendaDePrueba123')).toBe('btcpay');
   });
 });

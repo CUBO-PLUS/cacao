@@ -6,9 +6,10 @@ import { formatoSats, formatoUsd } from "../src/dinero.ts";
 import { URL_GRUPO } from "../src/grupo.ts";
 import { almacenDeEntorno } from "../src/servidor/configuracion.ts";
 import { mesActualSv, negociosDelMes } from "../src/servidor/api.ts";
+import { informeDelDia } from "../src/servidor/informe.ts";
 import { sesionActual } from "../src/servidor/sesion.ts";
 import { leerEstadoSincronizacion, lineaSincronizacion, sincronizarSiHaceFalta } from "../src/servidor/sincronizacion.ts";
-import { todosEntre } from "../src/servidor/tiempo-sv.ts";
+import { hoySv, todosEntre } from "../src/servidor/tiempo-sv.ts";
 import { fechaHoraSalvador } from "../src/tiempo.ts";
 import { resumen, type Cifras } from "../src/tablero.ts";
 import type { Ticket } from "../src/ticket.ts";
@@ -192,6 +193,28 @@ export default async function PaginaTablero() {
     );
   }
 
+  // Owner only: today's daily close in one line, with the link to the page that lists every ticket of the day.
+  let cierreHoy: ReactNode = null;
+  if (dueno) {
+    try {
+      const hoy = hoySv(ahora);
+      const c = await informeDelDia(almacenDeEntorno(), hoy, ahora);
+      cierreHoy = (
+        <section className="bloque" aria-labelledby="titulo-cierre-hoy">
+          <h2 id="titulo-cierre-hoy">Cierre de hoy</h2>
+          <p role="status" className={c.todosConSello ? "nota" : "aviso"}>
+            {c.respuesta}
+          </p>
+          <p>
+            <Link href={`/cierre/${hoy}`}>Ver el cierre de hoy, ticket por ticket</Link>
+          </p>
+        </section>
+      );
+    } catch (e) {
+      console.error("El tablero no pudo leer el cierre del día:", e);
+    }
+  }
+
   // Owner only: the business sales of the month, on a line of their own. They are not revenue of Grupo Cacao.
   let negocios: ReactNode = null;
   if (dueno) {
@@ -227,6 +250,7 @@ export default async function PaginaTablero() {
       </div>
 
       {atencion}
+      {cierreHoy}
       {estadoSincro}
       {negocios}
 

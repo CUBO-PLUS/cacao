@@ -498,7 +498,7 @@ ${dl([
 <h2>5. Reforma municipal (D.L. 762 · 44 municipios) y custodia de llaves (MTIST 2.0)</h2>
 ${dl([
     ["Reestructuración municipal (D.L. 762, mayo 2024; no verificado en esta revisión)", t("Redujo los 262 municipios a 44 municipios (agrupados como Norte, Centro, Sur, Este u Oeste de cada departamento) y convirtió los antiguos municipios en distritos. En los esquemas de la generación caso se exige la lista histórica de CAT-013 (por ejemplo 14 en San Salvador), mientras que el catálogo actualizado incorpora los nuevos códigos de municipio.")],
-    ["Custodia de llaves (MTIST 2.0 §6.4)", t("La Normativa de Cumplimiento de los Documentos Tributarios Electrónicos y el Manual Técnico de Integración (MTIST 2.0) prohíben compartir certificados de firma con terceros no autorizados. En CacaoLedger la llave privada RSA-4096 permanece en el servidor del propio comercio.")],
+    ["Custodia de llaves (MTIST 2.0 §6.4)", t("No pudimos recuperar MTIST 2.0 §6.4, así que este punto sigue sin verificar. En CacaoLedger las credenciales de cada comercio se guardan cifradas (AES-256-GCM) y solo se abren con la clave maestra; la firma sale del firmador configurado, cuando lo hay.")],
     ["Límite ante la CNAD (Ley de Emisión de Activos Digitales)", t("CacaoLedger es software contable y de facturación: no recibe, custodia ni transfiere satoshis ni dólares de terceros. El comercio conecta su propio servidor BTCPay con una llave de solo lectura de facturas, nunca de pagos, por lo que CacaoLedger no requiere registro como Proveedor de Servicios de Activos Digitales (PSAD) ante la CNAD.")],
   ])}
 </section>

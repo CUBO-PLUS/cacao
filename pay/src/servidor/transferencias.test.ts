@@ -253,6 +253,16 @@ describe('cancelarEnvio', () => {
 });
 
 describe('procesar y fallar un envío por Lightning', () => {
+  it('con BTCPay, ni un administrador pone en camino un envío en efectivo sin pagar', async () => {
+    tablas.pay_transferencias = envio({ entrega: 'efectivo', pagada_en: null });
+    tablas.usuarios = { es_admin: true };
+
+    const r = await procesarEnvio(ADMIN, ENVIO);
+
+    expect(r).toMatchObject({ ok: false, codigo: 'ESTADO_INVALIDO' });
+    expect(llamadas('pay_procesar')).toHaveLength(0);
+  });
+
   it('never starts a Lightning transfer by hand, not even as an administrator', async () => {
     tablas.pay_transferencias = envio();
     tablas.usuarios = { es_admin: true };

@@ -110,14 +110,15 @@ export function accionesPosibles(
   rol: RolEnvio,
   entrega?: Entrega,
   /** A paid transfer, or one with a live Lightning invoice, cannot be cancelled by its sender. */
-  opciones: { pagada?: boolean; facturaViva?: boolean } = {},
+  opciones: { pagada?: boolean; facturaViva?: boolean; pagoLightning?: boolean } = {},
 ): AccionEnvio[] {
   if (rol === 'destinatario') return [];
   const lightning = entrega === 'lightning';
   if (rol === 'remitente') {
     if (estado === 'creada') {
       const cancelable = !opciones.pagada && !opciones.facturaViva;
-      const acciones: AccionEnvio[] = lightning ? [] : ['procesar'];
+      // With BTCPay on, the sender pays the invoice for every way of delivery, so "procesar" is never offered.
+      const acciones: AccionEnvio[] = lightning || opciones.pagoLightning ? [] : ['procesar'];
       if (cancelable) acciones.push('cancelar');
       if (esDemo() && !opciones.pagada) acciones.push('fallar');
       return acciones;
@@ -125,7 +126,7 @@ export function accionesPosibles(
     if (estado === 'procesando') return esDemo() && !lightning ? ['completar', 'fallar'] : [];
     return [];
   }
-  if (estado === 'creada') return lightning ? ['fallar'] : ['procesar', 'fallar'];
+  if (estado === 'creada') return lightning || opciones.pagoLightning ? ['fallar'] : ['procesar', 'fallar'];
   if (estado === 'procesando') return lightning ? ['fallar'] : ['completar', 'fallar'];
   return [];
 }

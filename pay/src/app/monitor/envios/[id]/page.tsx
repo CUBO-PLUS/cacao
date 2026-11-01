@@ -9,7 +9,7 @@ import { formatoMonto } from '@/lib/cotizacion';
 import { accionesPosibles, ETIQUETA_ENTREGA, ETIQUETA_MONEDA } from '@/lib/transferencias';
 import { cobroDeEnvio, type EstadoCobroEnvio } from '@/servidor/cobro';
 import { exigirAdmin } from '@/servidor/sesion';
-import { envioPara } from '@/servidor/transferencias';
+import { envioPara, pagoLightningActivo } from '@/servidor/transferencias';
 
 import estilos from '../../estilos.module.css';
 
@@ -38,6 +38,8 @@ export default async function PaginaDetalleEnvio(props: PageProps<'/monitor/envi
   if (!envio) notFound();
   // A lightning transfer is collected by its recipient; the admin only sees how that claim went.
   const cobro = envio.entrega === 'lightning' ? await cobroDeEnvio(envio.id) : null;
+  // With BTCPay on, nobody puts a transfer on its way by hand before the sender has paid it.
+  const conBtcpay = await pagoLightningActivo();
 
   const tasa = envio.tasa.toLocaleString('en-US', { maximumFractionDigits: 8 });
 
@@ -152,7 +154,10 @@ export default async function PaginaDetalleEnvio(props: PageProps<'/monitor/envi
 
       {cobro?.estado === 'pagando' && <AccionesCobroAdmin envioId={envio.id} />}
 
-      <AccionesEnvioAdmin envioId={envio.id} acciones={accionesPosibles(envio.estado, 'admin', envio.entrega)} />
+      <AccionesEnvioAdmin
+        envioId={envio.id}
+        acciones={accionesPosibles(envio.estado, 'admin', envio.entrega, { pagoLightning: conBtcpay })}
+      />
     </article>
   );
 }

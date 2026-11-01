@@ -10,7 +10,7 @@
   },
   "scripts": {
     "test": "node --test \"src/**/*.test.ts\"",
-    "check": "next typegen && tsc --noEmit",
+    "check": "next typegen && tsc --noEmit --incremental false",
     "ledger": "node src/cli.ts",
     "demo": "node src/cli.ts demo",
     "sitio": "node src/sitio.ts",

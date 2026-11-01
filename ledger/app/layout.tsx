@@ -98,6 +98,7 @@ async function NavegacionSesion() {
       {sesion.usuario.esAdmin ? (
         <>
           <Link href="/tickets">Tickets</Link>
+          <Link href="/cierre">Cierre</Link>
           <Link href="/mes">Mes</Link>
         </>
       ) : null}

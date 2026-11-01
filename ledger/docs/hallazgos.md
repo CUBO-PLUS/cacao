@@ -249,9 +249,10 @@ proveedor del pago, el hash completo (no cabe), el monto en dólares (ya está e
 
 ## 11. Límites del entorno de demostración
 
-- **Firma JWS local y contenedor del Ministerio.** CacaoLedger incluye tanto la firma JWS (`RS512`,
-  llave RSA-4096 por comercio en `src/firma/`) como el cliente HTTP para `svfe-api-firmador`. La
-  transmisión del ciclo de demostración usa recepción simulada (`SIMULADO-...`) para no enviar datos de
+- **Firma JWS.** CacaoLedger no firma en local. Tiene el cliente HTTP para `svfe-api-firmador`
+  (`src/firma/svfe-firmador.ts`), probado contra un servidor falso. Sin firmador configurado, el documento
+  queda sin JWS y `dte transmitir --simulado` sigue igual. No se corrió el firmador real del Ministerio.
+  La transmisión del ciclo de demostración usa recepción simulada (`SIMULADO-...`) para no enviar datos de
   prueba a los servidores reales del Ministerio de Hacienda.
 - **Municipios del esquema `caso`.** Ver la sección 4 (D.L. 762).
 - **Catálogo de municipios vigente (CAT-013) en `2026`.** La herramienta valida el formato, no el par
@@ -262,9 +263,9 @@ proveedor del pago, el hash completo (no cabe), el monto en dólares (ya está e
   CAT-015, CAT-016, CAT-017 y CAT-019, y CAT-009 (`02` casa matriz, para `tipoEstablecimiento`).
 - **Receptor de consumidor de USD 200 o más en `caso`, y datos de entrega de USD 20,000 o más en 03.**
   El constructor exige esos bloques según los esquemas v1/v3 (Art. 114 CT, no verificado).
-- **MTIST 2.0, §6.4 y custodia de certificados.** Documentado en `docs/firma-y-comercios.md` y
-  `docs/estrategia-y-hacienda.md`: cada comercio custodia su propio certificado sin entregarlo a un
-  tercero multiinquilino.
+- **MTIST 2.0, §6.4 y custodia de certificados.** No pudimos recuperar el manual: esto sigue sin
+  verificar. El diseño en `docs/firma-y-comercios.md` y `docs/estrategia-y-hacienda.md` asume, por
+  prudencia, que cada comercio custodia su propio certificado.
 - **Pagos simulados.** Los eventos de Blink en `fixtures/` son deterministas y no mueven fondos reales.
 
 ## 12. Libros de IVA, Anexos de F-07 y Declaración F-14 v17

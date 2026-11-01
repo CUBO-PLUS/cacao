@@ -11,7 +11,7 @@ CacaoLedger es software de punto de venta, facturación electrónica y libros au
 
 1. **Pagos en efectivo (`01`)**: el comercio recibe los dólares directamente en su caja.
 2. **Pagos por Lightning (`11` / `99`)**: el pago entra directamente a la billetera de **Blink** perteneciente al propio comercio. Cuando el comercio configura una llave de API de Blink para verificar cobros o suscribir el webhook `receive.lightning`, el alcance de permisos exigido es exclusivamente de **lectura y recepción (`READ` y `RECEIVE`)**, nunca de envío (`WRITE`).
-3. **Certificado de firma electrónica (`MTIST 2.0 §6.4`)**: la llave privada RSA-4096 emitida por el Ministerio de Hacienda permanece bajo control exclusivo del comercio contribuyente.
+3. **Certificado de firma electrónica**: la llave privada del certificado de Hacienda permanece bajo control exclusivo del comercio contribuyente. Es una decisión de diseño. No pudimos recuperar el texto de MTIST 2.0 §6.4, así que no afirmamos que ese manual lo exija.
 
 ### 1.2 Exclusión del registro como PSAD ante la CNAD y como Proveedor de Servicios Bitcoin
 - **Ley de Emisión de Activos Digitales (Comisión Nacional de Activos Digitales · CNAD)**: el registro de Proveedores de Servicios de Activos Digitales (PSAD) aplica a quienes realizan custodia, intercambio, transferencia o administración de activos digitales por cuenta de terceros. Al no tocar llaves de gasto ni fondos de clientes ni de comercios, CacaoLedger es un proveedor de software contable/tributario y **no constituye un PSAD**.
@@ -26,7 +26,7 @@ Si en el futuro CacaoLedger recibiera los satoshis de varios comercios en una bi
 
 ## 2. Arquitectura de custodia de certificados para múltiples comercios (§4.2)
 
-El **Manual Técnico de Integración del Sistema de Transmisión (MTIST 2.0, §6.4)** y la Ley de Firma Electrónica establecen que el certificado electrónico y la clave privada de firma de los DTE son personales e intransferibles del contribuyente emisor.
+**No verificado:** no pudimos recuperar el Manual Técnico de Integración del Sistema de Transmisión (MTIST 2.0, §6.4), el mismo punto que el caso de estudio deja abierto. Por prudencia diseñamos como si el certificado y la clave privada fueran del contribuyente emisor, sin que un tercero multiinquilino los retenga. Confirmar ese texto sigue pendiente.
 
 CacaoLedger ofrece tres modalidades de despliegue para una cooperativa o red de comercios (como los puestos de CacaoMarket), detalladas técnicamente en [`docs/firma-y-comercios.md`](./firma-y-comercios.md):
 

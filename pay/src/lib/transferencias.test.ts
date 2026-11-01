@@ -44,7 +44,7 @@ describe('textos de estado', () => {
 
   it('la devolución dice en una frase que el dinero volvió, para quien envió y para quien recibe', () => {
     expect(descripcionDeEstado('devuelta', 'remitente')).toBe(
-      'Nadie cobró el envío a tiempo, así que te devolvimos el dinero por Lightning.',
+      'Nadie cobró el envío a tiempo, así que te devolvimos el dinero.',
     );
     expect(descripcionDeEstado('devuelta', 'destinatario')).toBe(
       'El envío se devolvió a quien lo mandó porque no se cobró a tiempo.',

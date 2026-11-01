@@ -66,10 +66,10 @@ test('Lucía envía $100.00 en efectivo y la transferencia llega a la página de
 
     // 4. With BTCPay on, the sender pays the invoice whatever the way of delivery. Without it, the sender
     // sends it now. Either way the state moves to "En camino" (the invoice path waits for the payment).
-    const pagar = lucia.getByRole('button', { name: 'Pagar con Lightning' });
+    const pagar = lucia.getByRole('button', { name: 'Preparar el pago' });
     if (await pagar.count()) {
       await pagar.click();
-      const factura = await lucia.getByLabel('Factura Lightning').inputValue();
+      const factura = await lucia.getByLabel('Código de pago').inputValue();
       const pago = await fetch(`${BTCPAY}/pagar`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },

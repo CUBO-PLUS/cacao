@@ -7,6 +7,7 @@ import { fechaHoraSalvador } from "../tiempo.ts";
 import { supabaseDeEntorno, type ConfigSupabaseWeb } from "./configuracion.ts";
 import { informeDelMes } from "./informe.ts";
 import { registrarVenta, resumenNegocios, type FilaVenta, type PuertoVentas, type ResultadoVenta } from "../ventas-api.ts";
+import { opcionesDeEmision } from "./simulacion.ts";
 
 // The API v1 on the server: the clients and their keys, the rate limit, and the sales. Every call goes to Supabase
 // through PostgREST with the service role key. The browser never sees it, and the key of a client never leaves here
@@ -146,7 +147,8 @@ export function claveDeCabecera(valor: string | null): string {
 
 // Registers a sale for the client. The sale is the one the key names; see registrarVenta.
 export async function registrarVentaApi(cliente: ClienteApi, clave: string, cuerpo: unknown): Promise<ResultadoVenta> {
-  return registrarVenta(puertoVentas(), cliente.id, clave, cuerpo, { ahora: new Date() });
+  const ahora = new Date();
+  return registrarVenta(puertoVentas(), cliente.id, clave, cuerpo, await opcionesDeEmision(ahora));
 }
 
 // The sale of this client, or null. Only the client that made it can read it.

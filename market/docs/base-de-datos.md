@@ -23,6 +23,30 @@ Tres reglas gobiernan el esquema:
 | `20261014000003_media.sql` | Tablas y funciones de Cacao Media. |
 | `20261014000004_cancelar_orden.sql` | El comprador cancela una orden de productos antes de pagar. Reemplaza `cancelar_orden`. |
 | `20261014000005_pay.sql` | Tablas y funciones de CacaoPay. |
+| `20261014000006_eventos_trabajos.sql` | Pasos del embudo de trabajos (`vio_pago_trabajo`, `pago_trabajo`). |
+| `20261019000001_media_cerrado.sql` | Texto cerrado de las historias pagas de Cacao Media. |
+| `20261019000002_clerk.sql` | Entrada con Clerk: `usuarios.clerk_id`, `vincular_clerk` y `usuario_actual()`. |
+| `20261019000003_clerk_endurecer.sql` | Endurece el vínculo con Clerk. |
+| `20261020000001_media_btcpay.sql` | Facturas Lightning reales de BTCPay para Cacao Media. |
+| `20261020000002_pay_btcpay.sql` | CacaoPay: el envío se paga por Lightning con BTCPay. |
+| `20261020000003_market_btcpay.sql` | Agrega `btcpay` a `tipo_proveedor` y la tienda de BTCPay por negocio (`btcpay_tienda_id`, sin permiso de lectura para sesiones). |
+| `20261021000001_pay_cobro.sql` | CacaoPay: cobro de un envío con enlace. |
+| `20261021000002_ledger.sql` | CacaoLedger en la web: tickets, correlativos y registro de sincronización con BTCPay. |
+| `20261021000003_pay_destinatario.sql` | CacaoPay: el destinatario encuentra sus envíos; un envío pagado no se cancela. |
+| `20261021000004_ledger_dte.sql` | CacaoLedger: documentos tributarios de tickets pagados. |
+| `20261021000005_ledger_seguridad.sql` | CacaoLedger: correcciones de seguridad y de numeración. |
+| `20261021000006_pay_seguridad.sql` | CacaoPay: reglas de seguridad del dinero. |
+| `20261029000001_config_btcpay.sql` | La dirección pública de BTCPay se lee de la base en tiempo de ejecución. |
+| `20261030000001_pay_devolucion.sql` | CacaoPay: devolución al remitente cuando nadie reclama un envío pagado. |
+| `20261030000002_btcmap.sql` | Negocios de demostración: `negocios.btcmap_id` (un vendedor con id es un perfil de demostración). |
+| `20261031000001_pay_api.sql` | CacaoPay: API de cobros (v1). Media, Travel y Market cobran por Pay. |
+| `20261031000050_pay_avisos.sql` | CacaoPay: avisos en una cola durable (`pay_avisos`). |
+| `20261101000001_pay_api_producto.sql` | CacaoPay: el producto de un cliente de la API queda ligado al cliente. |
+| `20261101000002_pay_negocios.sql` | CacaoPay para negocios: cobros en mostrador, además de la API. |
+| `20261102000001_ledger_api.sql` | API de CacaoLedger (v1) y los avisos de Pay a Ledger. |
+| `20261103000001_pay_datos.sql` | CacaoPay: datos que el cliente guarda con su cobro para reconstruir su registro. Pay no los lee. |
+| `20261104000001_ledger_atestaciones_contingencia.sql` | CacaoLedger: cadena de atestaciones de tasa, interruptor de contingencia simulado y estado de contingencia de un documento. Lo agregó otra sesión de trabajo sobre Ledger; no pertenece a la función de demostración. |
+| `20261104000010_demo_entrega.sql` | `simular_entrega_demo`: el comprador de un pedido de un negocio de demostración lo pasa a `entregada`. |
 
 Las migraciones que agregan valores a un enum (`alter type ... add value`) están en su propio archivo, y los valores se usan en uno posterior. Postgres no deja usar un valor nuevo en la misma transacción que lo agrega.
 
@@ -33,7 +57,7 @@ Las migraciones que agregan valores a un enum (`alter type ... add value`) está
 | `estado_negocio` | `pendiente`, `aprobado`, `suspendido` |
 | `estado_orden` | `creada`, `esperando_pago`, `pagada`, `lista`, `entregada`, `cerrada`, `expirada`, `disputada`, `resuelta`, `acordada`, `hecha`, `cancelada` |
 | `modo_entrega` | `recogida`, `entrega_vendedor` |
-| `tipo_proveedor` | `manual`, `falso`, `nwc`, `blink` |
+| `tipo_proveedor` | `manual`, `falso`, `nwc`, `blink`, `btcpay` |
 | `estado_cobro` | `pendiente`, `pagado`, `expirado`, `cancelado` |
 | `estado_disputa` | `abierta`, `resuelta` |
 | `resultado_disputa` | `reembolso_total`, `reembolso_parcial`, `sin_reembolso`, `corresponde_pagar`, `no_corresponde_pagar` |
@@ -370,6 +394,7 @@ Ningún rol los ejecuta, ni siquiera `service_role`. Solo los llaman otras funci
 - `expirar_ordenes() returns integer`: vence los cobros pendientes que pasaron de plazo. Los pedidos de productos pasan a `expirada` y devuelven el stock. Los trabajos vuelven a `hecha`. Los pedidos `creada` sin cobro después de 10 minutos también expiran. Al final llama a `vencer_necesidades`. Devuelve cuántas órdenes movió.
 - `marcar_lista(p_orden uuid, p_actor uuid) returns ordenes`: el vendedor pasa un pedido de `pagada` a `lista`.
 - `marcar_entregada(p_orden uuid, p_actor uuid, p_codigo text) returns ordenes`: pasa de `lista` a `entregada`. El comprador no necesita código. El vendedor debe enviar el código de entrega, y se compara con el guardado.
+- `simular_entrega_demo(p_orden uuid, p_actor uuid) returns ordenes`: solo el comprador, solo en un pedido de productos cuyo negocio tiene `btcmap_id`, y solo desde `pagada` o `lista`. Lo pasa a `entregada` sin código. Cualquier otro caso da `NO_PERMITIDO` o `ESTADO_INVALIDO`. Solo `service_role` la ejecuta.
 - `cerrar_ordenes() returns integer`: pasa a `cerrada` las órdenes entregadas hace más de 48 horas que no tienen disputa.
 - `crear_resena(p_orden uuid, p_actor uuid, p_puntuacion integer, p_comentario text) returns resenas`: el comprador deja una reseña, una sola, cuando la orden está `entregada` o `cerrada`. Si estaba `entregada`, la pasa a `cerrada`.
 - `abrir_disputa(p_orden uuid, p_actor uuid, p_motivo text, p_evidencia text) returns disputas`: el comprador abre una disputa en `pagada`, `lista`, `entregada` (dentro de 48 horas) o `hecha` (en un trabajo). La orden pasa a `disputada`.

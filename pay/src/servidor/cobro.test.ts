@@ -93,7 +93,7 @@ describe('vencimientoDeFactura and leerFacturaDePago', () => {
 
   it('refuses an expired invoice', () => {
     const r = leerFacturaDePago(armar('lnbcrt50u', HASH, ahoraSeg() - 7200));
-    expect(r).toEqual({ ok: false, codigo: 'DATOS_INVALIDOS', mensaje: 'Esa factura ya venció. Pedí otra factura a tu billetera.' });
+    expect(r).toEqual({ ok: false, codigo: 'DATOS_INVALIDOS', mensaje: 'Ese código ya venció. Pedí otro código a tu billetera.' });
   });
 });
 

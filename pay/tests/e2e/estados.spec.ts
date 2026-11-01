@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 import { OPCIONES_CONTEXTO, avanzarDb, crearEnvioDb, filaEnvioDb, sesionDe } from './ayuda';
 
 // The buttons that move a transfer. None of them may show once the transfer has ended.
-const ACCIONES = /Enviar ahora|Cancelar envío|Simular que llegó|Simular que falló|Marcar como/;
+const ACCIONES = /Enviar ahora|Cancelar envío|Simular que retiró el dinero|Simular depósito|Simular que falló|Marcar como/;
 
 test('cancelar antes de enviar: queda Cancelado sin más acciones, y el rastreo dice que no llega', async ({ browser }) => {
   const { codigo, id } = await crearEnvioDb({ remitente: 'lucia', nombre: 'Marta Hernández' });
@@ -75,7 +75,7 @@ test('en modo demo el remitente simula la llegada y el fallo de su propio envío
     await lucia.goto(`/envios/${llego.id}`);
     const encabezado = lucia.locator('article header').first();
     await expect(encabezado.getByText('En camino', { exact: true })).toBeVisible();
-    await lucia.getByRole('button', { name: 'Simular que llegó' }).click();
+    await lucia.getByRole('button', { name: 'Simular que retiró el dinero' }).click();
     await expect(encabezado.getByText('Entregado', { exact: true })).toBeVisible();
     await expect(lucia.getByText('Simulamos que llegó. El envío quedó entregado.')).toBeVisible();
 

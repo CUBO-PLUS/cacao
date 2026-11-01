@@ -4,6 +4,7 @@ import { connection } from 'next/server';
 
 import { ChipEstado } from '@/componentes/ChipEstado';
 import { CodigoQr } from '@/componentes/CodigoQr';
+import { ComoSeRecoge } from '@/componentes/ComoSeRecoge';
 import { fechaEnvio, fraseDeLaSuma } from '@/componentes/formatoEnvio';
 import { LineasDinero } from '@/componentes/LineasDinero';
 import { Logo } from '@/componentes/Logo';
@@ -123,8 +124,11 @@ export default async function PaginaEnvio(props: PageProps<'/envios/[id]'>) {
         envioId={envio.id}
         acciones={acciones}
         pagoLightning={pagoLightning}
+        entrega={envio.entrega}
+        sinBitcoin={envio.rol === 'remitente' && envio.entrega === 'lightning' && envio.estado === 'creada' && !pagoLightning}
       />
       {enCamino && <SeguimientoEnCamino envioId={envio.id} />}
+      <ComoSeRecoge entrega={envio.entrega} codigo={envio.codigo} estado={envio.estado} />
 
       <section className={estilos.bloque} aria-labelledby="titulo-camino">
         <h2 id="titulo-camino">Cómo va el envío</h2>
@@ -159,25 +163,29 @@ export default async function PaginaEnvio(props: PageProps<'/envios/[id]'>) {
 
       <section className={estilos.bloque} aria-labelledby="titulo-hacienda">
         <h2 id="titulo-hacienda">Impuestos del envío</h2>
-        <dl className={estilos.datos}>
-          <div>
-            <dt>Principal</dt>{' '}
-            <dd>Remesa familiar recibida del exterior. Referencia: Art. 3 núm. 4 LISR (alcance por confirmar con tu contador).</dd>
-          </div>
-          <div>
-            <dt>Comisión</dt>{' '}
-            <dd className="dato">
-              Desglose estimado: base sin IVA {formatoUsd(tributario.baseSinIvaUsdCentavos)} + IVA 13% {formatoUsd(tributario.ivaUsdCentavos)} ·
-              Pago a cuenta 1.75% {formatoUsd(tributario.pagoACuentaUsdCentavos)}
-            </dd>
-          </div>
-          <div>
-            <dt>Forma de pago</dt> <dd className="dato">{tributario.etiquetaCat017}</dd>
-          </div>
-        </dl>
-        <p className={estilos.nota}>
-          <Link href="/hacienda">Ver el marco tributario y regulatorio completo</Link>.
-        </p>
+        <p>Cacao Pay calcula los impuestos de este envío y los deja registrados.</p>
+        <details className={estilos.detalle}>
+          <summary>Ver detalle</summary>
+          <dl className={estilos.datos}>
+            <div>
+              <dt>Tipo de envío</dt>{' '}
+              <dd>Remesa familiar recibida del exterior. Referencia: Art. 3 núm. 4 LISR (alcance por confirmar con tu contador).</dd>
+            </div>
+            <div>
+              <dt>Desglose</dt>{' '}
+              <dd className="dato">
+                Base sin IVA {formatoUsd(tributario.baseSinIvaUsdCentavos)} + IVA 13% {formatoUsd(tributario.ivaUsdCentavos)} ·
+                Pago a cuenta 1.75% {formatoUsd(tributario.pagoACuentaUsdCentavos)}
+              </dd>
+            </div>
+            <div>
+              <dt>Forma de pago</dt> <dd className="dato">{tributario.etiquetaCat017}</dd>
+            </div>
+          </dl>
+          <p className={estilos.nota}>
+            <Link href="/hacienda">Ver el marco tributario y regulatorio completo</Link>.
+          </p>
+        </details>
       </section>
 
       {completada && (
@@ -211,12 +219,15 @@ export default async function PaginaEnvio(props: PageProps<'/envios/[id]'>) {
             <div>
               <dt>Entrega</dt> <dd>{ETIQUETA_ENTREGA[envio.entrega]}</dd>
             </div>
-            {envio.entrega === 'lightning' && cobro?.hash && (
-              <div>
-                <dt>Hash del pago</dt> <dd className="dato">{hashCorto(cobro.hash)}</dd>
-              </div>
-            )}
           </dl>
+          {envio.entrega === 'lightning' && cobro?.hash && (
+            <details className={estilos.detalle}>
+              <summary>Ver detalle</summary>
+              <p>
+                Código del pago en bitcoin: <span className="dato">{hashCorto(cobro.hash)}</span>
+              </p>
+            </details>
+          )}
           <div className={estilos.qr}>
             <CodigoQr texto={rastreo} titulo={`Escaneá para ver el envío ${envio.codigo}`} />
           </div>

@@ -49,13 +49,28 @@ export default async function PaginaCobrar(props: { params: Promise<{ token: str
     contenido = (
       <div className={estilos.bloque}>
         <p role="status" className={estilos.exito}>
-          Listo. Recibiste {cifra}.
+          Listo. Cobraste {dolares ?? cifra}.
         </p>
+        <dl className={estilos.recibo}>
+          <div>
+            <dt>Código del envío</dt>
+            <dd className="dato">{datos.codigo}</dd>
+          </div>
+          <div>
+            <dt>Te lo mandó</dt>
+            <dd>{datos.remitenteNombre ?? 'Quien envió'}</dd>
+          </div>
+          <div>
+            <dt>Cobraste</dt>
+            <dd className="dato">{dolares ?? cifra}</dd>
+          </div>
+        </dl>
         {datos.cobroHash && (
           <details className={estilos.detalles}>
-            <summary>Detalles técnicos</summary>
+            <summary>Ver detalle</summary>
             <p>
-              Hash del pago: <span className="dato">{datos.cobroHash}</span>
+              Código del pago: <span className="dato">{datos.cobroHash}</span>. El monto exacto en bitcoin es{' '}
+              <span className="dato">{cifra}</span>.
             </p>
           </details>
         )}
@@ -63,8 +78,8 @@ export default async function PaginaCobrar(props: { params: Promise<{ token: str
           Ver el envío
         </Link>
         <p className={estilos.texto}>
-          El bitcoin de prueba de esta demo no lo acepta nadie: no tiene valor. La lista muestra dónde podría gastarse
-          bitcoin real.
+          Esto es bitcoin de prueba: no tiene valor real. La página Dónde gastar muestra dónde se podría gastar bitcoin
+          de verdad.
         </p>
         <Link href="/donde-gastar" className="boton boton--secundario">
           Dónde gastar bitcoin
@@ -83,7 +98,7 @@ export default async function PaginaCobrar(props: { params: Promise<{ token: str
   } else if (datos.cobroEstado === 'pagando') {
     contenido = (
       <div className={estilos.bloque}>
-        <p className={estilos.texto}>Estamos pagando tu factura. Esta página se actualiza sola.</p>
+        <p className={estilos.texto}>Estamos cobrando tu dinero. Esta página se actualiza sola.</p>
         <SeguimientoCobro token={token} />
       </div>
     );
@@ -102,7 +117,7 @@ export default async function PaginaCobrar(props: { params: Promise<{ token: str
       <div className={estilos.bloque}>
         {datos.cobroEstado === 'fallido' && (
           <p role="alert" className={estilos.error}>
-            {datos.cobroMotivo ?? 'No se pudo pagar la factura. Pedí otra factura.'}
+            {datos.cobroMotivo ?? 'No pudimos cobrar con ese código. Pegá un código nuevo y probá de nuevo.'}
           </p>
         )}
         <FormularioCobro token={token} monto={cifra} enlaceFacturaDePrueba={await enlaceFacturaDePrueba(datos.sats)} />
@@ -116,11 +131,9 @@ export default async function PaginaCobrar(props: { params: Promise<{ token: str
         <p className={estilos.codigo}>
           Código <span className="dato">{datos.codigo}</span>
         </p>
-        <h1>Te mandaron {cifra}</h1>
-        {dolares && <p className={estilos.dolares}>Unos {dolares} en dólares.</p>}
-        <p className={estilos.texto}>
-          {de}Cobralo por Lightning con una factura de tu billetera.
-        </p>
+        <h1>Te mandaron {dolares ?? cifra}</h1>
+        {dolares && <p className={estilos.dolares}>En dólares, aproximado. Se cobra en bitcoin.</p>}
+        <p className={estilos.texto}>{de}Cobralo con tu billetera de bitcoin.</p>
       </header>
       <section className={estilos.bloque} aria-live="polite">
         {contenido}

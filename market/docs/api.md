@@ -6,12 +6,14 @@ Para el modelo de datos ver [base-de-datos.md](base-de-datos.md). Para la regla 
 
 ## Rutas HTTP
 
-Hay tres route handlers. Todos viven en `src/app`.
+Hay cuatro route handlers. Todos viven en `src/app`.
 
 | Método | Ruta | Archivo | Quién la llama |
 |---|---|---|---|
 | POST | `/api/fotos` | `src/app/api/fotos/route.ts` | Formularios de producto y de servicio, con sesión y negocio. |
 | POST | `/api/evento` | `src/app/api/evento/route.ts` | Cualquier visitante. Lo llama el navegador al ver un producto o agregarlo al carrito. |
+| POST | `/api/pagos/btcpay` | `src/app/api/pagos/btcpay/route.ts` | BTCPay Server, con la cabecera `btcpay-sig`. |
+| POST | `/api/pagos/pay` | `src/app/api/pagos/pay/route.ts` | CacaoPay, con la cabecera `Cacao-Firma`. |
 
 Las respuestas de error de `/api/fotos` tienen forma JSON: `{ "codigo": "...", "mensaje": "..." }`. Las de `/api/evento` no tienen cuerpo.
 
@@ -95,6 +97,31 @@ Set-Cookie: cm_sesion=<valor>; Path=/; Max-Age=31536000; HttpOnly; SameSite=lax
 ```
 
 El `Set-Cookie` solo aparece la primera vez que el navegador envía un evento.
+
+### `POST /api/pagos/btcpay`
+
+Aviso de BTCPay Server por cada evento de una tienda. Solo `InvoiceSettled` cuenta. La firma (`btcpay-sig`, HMAC-SHA256 del cuerpo crudo con `BTCPAY_WEBHOOK_SECRET`) solo prueba que BTCPay envió el cuerpo: la factura se vuelve a leer en BTCPay antes de pagar, y si está `Settled` se confirma con `confirmarPagoEnBD`.
+
+| Respuesta | Cuándo |
+|---|---|
+| 200 | Pagado ahora, o ya resuelto (`ESTADO_INVALIDO` o `FUERA_DE_PLAZO`), o un evento que no hace nada, o una factura que no es de Market. |
+| 400 | El cuerpo no es un aviso válido. |
+| 401 | La firma no coincide. |
+| 503 | Falta `BTCPAY_URL` o `BTCPAY_API_KEY`. |
+| 500 | La base no pudo leer el cobro, o `confirmar_pago` falló por otra causa. BTCPay vuelve a enviar. |
+| 502 | BTCPay no respondió al leer la factura. BTCPay vuelve a enviar. |
+
+### `POST /api/pagos/pay`
+
+Aviso de CacaoPay sobre un cobro de un cliente de Market. La firma (`Cacao-Firma`: `t=<segundos>,v1=<hex>`, HMAC-SHA256 de `t.cuerpo` con `CACAO_PAY_AVISO_SECRET`, con menos de cinco minutos) es obligatoria; la cabecera `Cacao-Aviso-Id` debe coincidir con el cuerpo. El cobro se vuelve a leer en CacaoPay antes de pagar, y los avisos repetidos se ignoran.
+
+| Respuesta | Cuándo |
+|---|---|
+| 200 | Procesado, o ya resuelto. |
+| 400 | El aviso no coincide o no es válido. |
+| 401 | La firma no es válida. |
+| 502 | CacaoPay o la base no respondieron. CacaoPay vuelve a enviar. |
+| 503 | Falta `CACAO_PAY_URL`, `CACAO_PAY_API_KEY` o `CACAO_PAY_AVISO_SECRET`. |
 
 ### Acceso con Clerk
 
@@ -278,6 +305,7 @@ Los cobros. Detalle en [pagos.md](pagos.md).
 | `cancelarOrden(ordenId, usuarioId, motivo): Promise<Resultado<null>>` | Cancela un trabajo acordado (cualquiera) o un pedido antes de pagar (el comprador). El motivo tiene de 4 a 300 caracteres. | `cancelarTrabajo`, `cancelarPedido`. | `NO_ENCONTRADA`, `DATOS_INVALIDOS`, y los de `cancelar_orden`. |
 | `referenciaDeCobro(ordenId): Promise<string \| null>` | Referencia del proveedor, para el recibo. Servicio. Solo después de revisar el rol. | `/ordenes/[id]/recibo`. | Lanza `Error`. |
 | `marcarEntregada(ordenId, usuarioId): Promise<Resultado<null>>` | El comprador confirma que recibió el pedido. | `confirmarEntregaComprador`. | `NO_ENCONTRADA`, y los de `marcar_entregada`. |
+| `simularEntregaDemo(ordenId, usuarioId): Promise<Resultado<null>>` | El comprador simula la entrega de un pedido de un negocio de demostración. | `simularEntregaDeDemo`. | `NO_ENCONTRADA`, `NO_PERMITIDO` (no es el comprador, o el negocio no es de demostración), `ESTADO_INVALIDO` (no está pagado ni listo). |
 | `entregarConCodigo(ordenId, usuarioId, codigo): Promise<Resultado<null>>` | El vendedor confirma la entrega con los seis dígitos. Ignora los espacios. | `entregarConCodigoVendedor`. | `CODIGO_INCORRECTO` (formato), `NO_ENCONTRADA`, y los de `marcar_entregada` (código que no coincide). |
 | `crearResena(ordenId, usuarioId, puntuacion, comentario): Promise<Resultado<null>>` | El comprador deja una reseña. Puntuación de 1 a 5; comentario de hasta 500 caracteres en la capa de servidor (la base permite 600). | `enviarResena`. | `DATOS_INVALIDOS`, `NO_ENCONTRADA`, y los de `crear_resena`. |
 
@@ -370,6 +398,7 @@ Cada acción vive en un `acciones.ts` de su pantalla. Todas revisan la sesión p
 | Orden | | `cancelarTrabajo(ordenId, motivo)` | `cancelarOrden` → `cancelar_orden`. |
 | Orden | | `cancelarPedido(ordenId, motivo)` | `cancelarOrden` → `cancelar_orden`. |
 | Orden | | `confirmarEntregaComprador(ordenId)` | `marcarEntregada` → `marcar_entregada`. |
+| Orden | | `simularEntregaDeDemo(ordenId)` | `simularEntregaDemo` → `simular_entrega_demo`. Solo el botón "Simular entrega" de un pedido de demostración. |
 | Orden | | `entregarConCodigoVendedor(ordenId, codigo)` | `entregarConCodigo` → `marcar_entregada`. |
 | Orden | | `enviarResena(ordenId, puntuacion, comentario)` | `crearResena` → `crear_resena`. |
 | Orden | | `abrirDisputaComprador(ordenId, motivo, evidencia)` | `abrirDisputa` → `abrir_disputa`. |

@@ -346,3 +346,14 @@
   flex-wrap: wrap;
   gap: 12px;
 }
+
+.detalle {
+  margin-top: 8px;
+  font-size: 0.9375rem;
+}
+
+.detalle summary {
+  cursor: pointer;
+  font-weight: 600;
+  text-decoration: underline;
+}

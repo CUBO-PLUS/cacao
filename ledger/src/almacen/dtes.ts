@@ -6,7 +6,7 @@ import { ErrorLedger } from "../errores.ts";
 // Emission in two steps: reservar() writes a placeholder row ("reservado") and takes the control number in the
 // same database transaction; completar() writes the document into that row. A ticket has at most one row.
 
-export type EstadoDte = "reservado" | "aceptado" | "rechazado";
+export type EstadoDte = "reservado" | "aceptado" | "rechazado" | "contingencia";
 
 export type RegistroDte = {
   codigoGeneracion: string;
@@ -46,6 +46,10 @@ export type AlmacenDtes = {
   completar(registro: RegistroDte): Promise<boolean>;
   // Puts a refused row back to reservado, with the number it already holds. False when the row is not refused any more.
   reabrir(ticketId: string, codigoGeneracion: string): Promise<boolean>;
+  // Documents issued in simulated contingency that wait to be sent (estado "contingencia").
+  contingencias(): Promise<RegistroDte[]>;
+  // Takes a waiting document: it becomes "aceptado" with the simulated seal. False when it is not waiting any more.
+  transmitirContingencia(codigoGeneracion: string, sello: string, momento: string): Promise<boolean>;
 };
 
 export type ConfigDtesSupabase = { url: string; clave: string; fetch?: typeof fetch };
@@ -177,6 +181,30 @@ export function createAlmacenDtesSupabase(config: ConfigDtesSupabase): AlmacenDt
       if (!r.ok) throw new ErrorLedger(`No se pudo reabrir el documento del ticket ${ticketId} (HTTP ${r.status}).`);
       const filas = (await r.json()) as unknown[];
       return filas.length > 0;
+    },
+
+    async contingencias(): Promise<RegistroDte[]> {
+      const q = new URLSearchParams({ select: "*", estado: "eq.contingencia", order: "creado_en.asc", limit: "500" });
+      const r = await pedir(`/ledger_dtes?${q}`, {}, "contingencias");
+      if (!r.ok) throw new ErrorLedger(`No se pudieron leer los documentos en contingencia (HTTP ${r.status}).`);
+      return ((await r.json()) as FilaDte[]).map(desdeFila);
+    },
+
+    async transmitirContingencia(codigoGeneracion: string, sello: string, momento: string): Promise<boolean> {
+      if (!CODIGO.test(codigoGeneracion)) throw new ErrorLedger("El código de generación no es válido.");
+      // Only a waiting row is taken: a second transmission matches no row.
+      const q = new URLSearchParams({ codigo_generacion: `eq.${codigoGeneracion}`, estado: "eq.contingencia" });
+      const r = await pedir(
+        `/ledger_dtes?${q}`,
+        {
+          method: "PATCH",
+          headers: { "content-type": "application/json", prefer: "return=representation" },
+          body: JSON.stringify({ estado: "aceptado", sello, motivo: null, creado_en: momento }),
+        },
+        "transmitir",
+      );
+      if (!r.ok) throw new ErrorLedger(`No se pudo transmitir el documento ${codigoGeneracion} (HTTP ${r.status}).`);
+      return ((await r.json()) as unknown[]).length > 0;
     },
   };
 }

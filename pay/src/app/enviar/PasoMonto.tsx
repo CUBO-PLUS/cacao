@@ -11,7 +11,7 @@ import { VigenciaCotizacion } from './VigenciaCotizacion';
 
 // The three ways the recipient gets the money, each in one plain line.
 const OPCIONES: { valor: Entrega; titulo: string; detalle: string }[] = [
-  { valor: 'lightning', titulo: 'Bitcoin por Lightning:', detalle: 'llega en un minuto, lo recibe en su billetera' },
+  { valor: 'lightning', titulo: 'Billetera de bitcoin:', detalle: 'llega en un minuto, quien recibe lo cobra con su billetera' },
   { valor: 'efectivo', titulo: 'Efectivo:', detalle: 'lo recoge con su DUI en un punto de pago' },
   { valor: 'cuenta', titulo: 'Cuenta bancaria:', detalle: 'llega a su cuenta en una hora' },
 ];

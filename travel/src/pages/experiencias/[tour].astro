@@ -146,6 +146,7 @@ const datos = [
         <div class="reserva__lista" data-confirmada hidden tabindex="-1">
           <p class="reserva__sello" data-sello>Reserva de muestra confirmada</p>
           <p class="reserva__codigo" data-codigo></p>
+          <p class="reserva__paso">Siguiente paso: guardá este código y revisá Mis reservas, que queda en este navegador. <span class="demo-etiqueta">Demo:</span> no hay operador que confirme el punto de encuentro.</p>
           <p data-resumen></p>
           <div data-lecturas-reserva hidden>
             <p class="reserva__abre">Estas historias sobre el lugar están gratis en Cacao Media:</p>
@@ -192,15 +193,15 @@ const datos = [
           <dl class="condiciones">
             <div>
               <dt>Punto de encuentro</dt>
-              <dd>En {d.lugar}. En la demo no hay punto de encuentro real: no hay un operador detrás.</dd>
+              <dd>En {d.lugar}, en el punto que el operador confirma por correo 48 horas antes. <span class="demo-etiqueta">Demo:</span> no hay operador detrás, así que ese correo no se envía.</dd>
             </div>
             <div>
               <dt>Clima</dt>
-              <dd>Las experiencias reales dependen del clima. En la demo nadie mueve la fecha.</dd>
+              <dd>Si el clima o el estado del sitio no permiten la salida, el operador cambia la fecha sin costo y te avisa. <span class="demo-etiqueta">Demo:</span> la fecha no se mueve.</dd>
             </div>
             <div>
               <dt>Cancelación</dt>
-              <dd>La reserva es de muestra y se paga con bitcoin de prueba, sin valor: no hay nada que devolver.</dd>
+              <dd>Cancelación gratis hasta 48 horas antes de la salida; después, se devuelve el 50 %. <span class="demo-etiqueta">Demo:</span> la política es de muestra y se paga con bitcoin de prueba, sin valor, así que no hay nada que devolver.</dd>
             </div>
           </dl>
         </section>
@@ -379,6 +380,7 @@ const datos = [
   .reserva .boton:hover:not(:disabled) { background: var(--tostado); color: var(--pulpa); }
   .reserva .boton:disabled { opacity: 0.6; cursor: progress; }
   .reserva__nota { font-size: 0.8125rem; color: var(--tinta-suave); }
+  .reserva__paso { font-weight: 600; max-width: 46ch; }
   .reserva__usd { margin: -4px 0 0; text-align: right; font-family: var(--mono); font-size: 0.875rem; color: var(--tinta-suave); }
 
   .reserva__pago { display: grid; gap: 12px; padding: 22px 24px 24px; }

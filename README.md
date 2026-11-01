@@ -33,7 +33,7 @@ Para retomar el trabajo en otra computadora (instalar, correr, probar, publicar 
 ## Estado actual: demo
 
 - Los cinco productos cobran por BTCPay, solo por Lightning, con bitcoin de prueba (regtest). Ese bitcoin no tiene valor y no se mueve dinero real.
-- Cacao Media cobra cada historia de pago con una factura de BTCPay, y la confirmación llega de BTCPay. Los botones de pago simulado solo existen con `PUBLIC_DEMO=1`.
+- Cacao Media cobra cada historia de pago con una factura Lightning. Si el servidor tiene CacaoPay configurado (`CACAO_PAY_URL` y `CACAO_PAY_API_KEY`), la factura la crea CacaoPay. Si no, la crea BTCPay directamente. La confirmación llega del proveedor que creó la factura. Los botones de pago simulado solo existen con `PUBLIC_DEMO=1`.
 - Cacao Travel cobra cada reserva con una factura de BTCPay cuando el servidor tiene BTCPay configurado. Sin BTCPay, la reserva se confirma sin pago y queda marcada como demo.
 - Las historias de Media y las 13 experiencias de Travel son de muestra: no pasaron por verificación editorial y no tienen un operador real.
 - Los dos sitios piden a los buscadores que no los indexen: Cacao Media con una etiqueta `noindex` y `robots.txt`, Cacao Travel con `noindex`.
@@ -81,7 +81,12 @@ Si no hay base de datos configurada, el muro dice "Los pagos no están disponibl
 
 **Acceso.** Pagar crea una fila en `media_accesos`: un acceso sin vencimiento por lector y por historia. Como el acceso está ligado a la cookie, volver al mismo navegador abre la historia sin pagar de nuevo, aunque se haya borrado el token guardado. El token firmado de 7 días (el mismo formato de siempre, `src/lib/firma.ts`) se guarda en `localStorage`, con la clave `cacao-gate:<slug>`. Ahí lo lee el widget de Cacao Travel para dar el descuento. Si el token vence, `POST /api/desbloquear/` emite uno nuevo solo a un lector que ya tiene acceso; si no, responde 402.
 
-**Cómo se cobra.** La factura la crea BTCPay y la confirmación llega de BTCPay: por un webhook firmado y, al consultar el estado, leyendo otra vez la factura. Un pago cuenta solo cuando BTCPay la reporta como pagada. Hoy es bitcoin de prueba (regtest), sin valor.
+**Cómo se crea la factura.** La ruta `POST /api/cobro/` elige el proveedor en este orden, fuera del modo demo:
+
+1. **CacaoPay**, cuando el servidor tiene `CACAO_PAY_URL` y `CACAO_PAY_API_KEY`. CacaoPay crea la factura en BTCPay y avisa cuando se paga por `POST /api/pagos/pay/`, firmado con `CACAO_PAY_AVISO_SECRET`. Al consultar el estado, Media vuelve a preguntarle a CacaoPay.
+2. **BTCPay directamente**, cuando no hay CacaoPay pero sí `BTCPAY_URL`, `BTCPAY_API_KEY` y `BTCPAY_STORE_ID`. La factura la crea BTCPay y la confirmación llega por su webhook firmado (`BTCPAY_WEBHOOK_SECRET`) y, al consultar, leyendo otra vez la factura.
+
+Si ninguno está configurado, la historia de pago responde "Los pagos no están disponibles en este momento." Un pago cuenta solo cuando el proveedor lo reporta como pagado. Hoy es bitcoin de prueba (regtest), sin valor.
 
 **Qué es simulado.** Con `PUBLIC_DEMO=1` existen además dos rutas de demostración; sin esa variable responden 403:
 
@@ -90,7 +95,9 @@ Si no hay base de datos configurada, el muro dice "Los pagos no están disponibl
 
 Ninguna de las dos mueve dinero. Las dos sirven solo para el lector dueño de la factura.
 
-**Eventos del embudo.** `POST /api/evento/` recibe `vista_historia` (al abrir una historia de pago), `vio_muro` (cuando el muro entra en pantalla) y `leyo_completa` (cuando llega al final del texto abierto). El servidor agrega `creo_cobro` y `pago`. Se guardan en `eventos` con el sitio `media` y el embudo se lee con `embudo`. La ruta siempre responde 204 y nunca rompe la página.
+**Código de acceso.** Al desbloquear una historia, el texto abierto empieza con una caja "Tu código de acceso". El código es el token firmado de 7 días que el servidor entregó al pagar (`src/lib/firma.ts`): nombra una sola historia y tiene vencimiento. Se puede copiar o guardar en un archivo `.txt`. En otro navegador o celular, el muro tiene "Ya pagué, tengo un código": se pega el código y el servidor lo verifica (firma, vencimiento y historia). Un código alterado, vencido o de otra historia se rechaza con 401; el mismo código no abre ninguna otra historia. Los intentos se cuentan por cliente en la memoria de cada servidor, así que el límite es por instancia. La lógica pura y sus pruebas están en `src/lib/codigo.ts` y `tests/unit/codigo-acceso.test.ts`.
+
+**Eventos del embudo.** `POST /api/evento/` recibe `vista_historia` (al abrir una historia de pago), `vio_muro` (cuando el muro entra en pantalla) y `leyo_completa` (cuando el lector hace scroll y el marcador del final del texto entra en pantalla). Los observadores se guardan en el componente: antes, el observador del final se perdía y el evento nunca llegaba. El servidor agrega `creo_cobro` y `pago`. Se guardan en `eventos` con el sitio `media` y el embudo se lee con `embudo`. La ruta siempre responde 204 y nunca rompe la página.
 
 **Variables de entorno.** Están listadas en `.env.example`:
 
@@ -109,6 +116,7 @@ Las rutas de Cacao Media están en `src/pages/api/` y las de Cacao Travel en `tr
 | Cacao Media | GET | `/api/historias.json` | Índice público de las historias: título, bajada, lugar, precio y URL. CORS abierto. Cacao Travel lo usa para mostrar la lectura de cada experiencia. |
 | Cacao Media | POST | `/api/desbloquear/` | Emite un token de 7 días para una historia de pago, solo a un lector que ya la pagó (cookie). Cuerpo: `{ "slug": "..." }`. Si no tiene acceso, responde 402 con el precio. |
 | Cacao Media | POST | `/api/cobro/` | Crea una factura para una historia de pago, o devuelve el acceso si ya la tiene. Cuerpo: `{ "slug": "..." }`. Responde la factura: `id`, `factura`, `precioSats`, `precioUsdCentavos`, `estado`, `expiraEn`, `segundosRestantes`. |
+| Cacao Media | POST | `/api/codigo/` | Restaura el acceso a una historia en este navegador con el código de acceso. Cuerpo: `{ "slug": "...", "codigo": "..." }`. Responde `{ "token", "expira" }` o 401 si el código es falso, venció o es de otra historia. Máximo 10 intentos por cliente cada 15 minutos (429). |
 | Cacao Media | GET | `/api/cobro/<id>/` | Estado de una factura del lector de la cookie: `pendiente`, `pagada` (con token), `vencida` o `fallida`. Otro lector recibe 404. |
 | Cacao Media | POST | `/api/cobro/<id>/pagar/` | Pago simulado. Solo con `PUBLIC_DEMO=1`; si no, 403. Responde `{ "estado": "pagada", "token": "..." }`. |
 | Cacao Media | POST | `/api/cobro/<id>/fallar/` | Pago simulado fallido. Solo con `PUBLIC_DEMO=1`. Responde `{ "estado": "fallida", "motivo": "..." }`. |

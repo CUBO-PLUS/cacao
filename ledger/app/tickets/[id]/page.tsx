@@ -6,7 +6,8 @@ import * as QRCode from "qrcode";
 
 import { formatoSats, formatoUsd } from "../../../src/dinero.ts";
 import type { RegistroDte } from "../../../src/almacen/dtes.ts";
-import { almacenDeEntorno, almacenDtesDeEntorno } from "../../../src/servidor/configuracion.ts";
+import { almacenAtestacionesDeEntorno, almacenDeEntorno, almacenDtesDeEntorno } from "../../../src/servidor/configuracion.ts";
+import type { FilaAtestacion } from "../../../src/almacen/atestaciones.ts";
 import { accesoDeDueno } from "../../../src/servidor/sesion.ts";
 import { vistaDte } from "../../../src/servidor/vista-dte.ts";
 import { modalidadDe, productoDeTicket, totalDeTicket, type Ticket } from "../../../src/ticket.ts";
@@ -16,6 +17,7 @@ import { etiquetaProducto, fechaHoraSv, acortar } from "../../_componentes/forma
 import { ImprimirBoton } from "./ImprimirBoton.tsx";
 import { ReintentarEmision } from "./ReintentarEmision.tsx";
 import { URL_CONSULTA, VersionLegible } from "./VersionLegible.tsx";
+import { VerificarCadena } from "./VerificarCadena.tsx";
 
 const FORMATO_ID = /^TK-\d{8}-[0-9A-F]{4}$/;
 
@@ -113,6 +115,29 @@ function DocumentoEmitido({ registro }: { registro: RegistroDte }) {
       </p>
     );
   }
+  if (registro.estado === "contingencia") {
+    return (
+      <>
+        <dl className="dl">
+          <Fila titulo="Estado">
+            <span className="chip">En contingencia</span> <span className="aviso-simulado">SIMULADO</span>
+          </Fila>
+          <Fila titulo="Tipo de documento">{registro.tipoDte === "01" ? "Factura (01)" : "Comprobante de crédito fiscal (03)"}</Fila>
+          <Fila titulo="Número de control">
+            <span className="num">{registro.numeroControl}</span>
+          </Fila>
+          <Fila titulo="Código de generación">
+            <span className="num">{registro.codigoGeneracion}</span>
+          </Fila>
+          <Fila titulo="Sello de recepción">Todavía no: espera la transmisión simulada</Fila>
+        </dl>
+        <p className="nota" style={{ marginTop: "0.5rem" }}>
+          Emitido durante una caída simulada de Hacienda (tipo de transmisión 2). Se transmite cuando la recepción vuelva, dentro de
+          24 horas. Ningún servicio del Ministerio lo recibió.
+        </p>
+      </>
+    );
+  }
   const aceptado = registro.estado === "aceptado";
   const conDocumento = Object.keys(registro.documento as object).length > 0;
   return (
@@ -162,8 +187,9 @@ function DocumentoEmitido({ registro }: { registro: RegistroDte }) {
 }
 
 // What the document cannot hold, for a Lightning payment: the bitcoin amount, the rate and where it came from, the
-// payment hash, and the document it belongs to. The hash chain of these records is kept by the CLI, not by the web.
-function AtestacionTasa({ ticket, registro }: { ticket: Ticket; registro: RegistroDte | null }) {
+// payment hash, and the document it belongs to. Each record carries the hash of the one before it; "Verificar cadena"
+// recomputes every hash of the whole chain on the server.
+function AtestacionTasa({ ticket, registro, fila }: { ticket: Ticket; registro: RegistroDte | null; fila: FilaAtestacion | null }) {
   const p = ticket.pago;
   if (p === null || p.rail !== "lightning") return null;
   return (
@@ -193,9 +219,29 @@ function AtestacionTasa({ ticket, registro }: { ticket: Ticket; registro: Regist
           )}
         </Fila>
       </dl>
+      {fila !== null ? (
+        <>
+          <h3 style={{ marginTop: "0.75rem" }}>Cadena de atestaciones</h3>
+          <dl className="dl">
+            <Fila titulo="Posición en la cadena">
+              <span className="num">{fila.orden}</span>
+            </Fila>
+            <Fila titulo="Hash de este registro">
+              <span className="hash">{fila.hash}</span>
+            </Fila>
+            <Fila titulo="Hash del registro anterior">
+              <span className="hash">{fila.anterior}</span>
+            </Fila>
+          </dl>
+          <VerificarCadena />
+        </>
+      ) : (
+        <p className="nota" style={{ marginTop: "0.5rem" }}>
+          Este ticket todavía no tiene registro en la cadena de atestaciones.
+        </p>
+      )}
       <p className="nota" style={{ marginTop: "0.5rem" }}>
-        La cadena de atestaciones (cada registro encadenado con el anterior) la guarda la CLI en su carpeta de datos y se
-        verifica con «atestacion verificar». La web todavía no guarda esa cadena.
+        Cada registro lleva el hash del anterior. Si alguien cambia un número de un registro, la verificación lo marca.
       </p>
     </section>
   );
@@ -223,6 +269,13 @@ export default async function PaginaTicket({ params }: PageProps<"/tickets/[id]"
     );
   }
   if (ticket === null) notFound();
+
+  let fila: FilaAtestacion | null = null;
+  try {
+    fila = await almacenAtestacionesDeEntorno().porTicket(id);
+  } catch (e) {
+    console.error(`La atestación del ticket ${id} no pudo leerse:`, e);
+  }
 
   // A stored document wins over the preview. If the documents table cannot be read, the page shows the preview.
   let registro: RegistroDte | null = null;
@@ -266,6 +319,14 @@ export default async function PaginaTicket({ params }: PageProps<"/tickets/[id]"
           {origen?.plataforma === "cacaomarket" ? (
             <Fila titulo="Pedido de CacaoMarket">
               <span className="num">{origen.numero}</span>
+            </Fila>
+          ) : null}
+          {ticket.contingencia ? (
+            <Fila titulo="Contingencia (simulada)">
+              <span className="aviso-simulado">SIMULADO</span>{" "}
+              {ticket.contingencia.transmitida
+                ? `Emitida durante la caída simulada de Hacienda; transmitida (simulada) el ${fechaHoraSv(ticket.contingencia.transmitida.momento)}.`
+                : `Emitida durante la caída simulada de Hacienda el ${fechaHoraSv(ticket.contingencia.desde)}; espera la transmisión.`}
             </Fila>
           ) : null}
           {ticket.receptor ? (
@@ -355,7 +416,7 @@ export default async function PaginaTicket({ params }: PageProps<"/tickets/[id]"
         ) : null}
         {ticket.estado === "rechazado" ? <ReintentarEmision ticketId={ticket.id} /> : null}
       </section>
-      <AtestacionTasa ticket={ticket} registro={registro} />
+      <AtestacionTasa ticket={ticket} registro={registro} fila={fila} />
     </>
   );
 }

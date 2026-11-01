@@ -229,7 +229,7 @@ export async function crearCobro(
   }
 
   const config = await configParaProducto(cliente.producto);
-  if (!config) return fallo('NO_DISPONIBLE', 'El cobro por Lightning no está disponible ahora. Probá más tarde.');
+  if (!config) return fallo('NO_DISPONIBLE', 'El cobro con bitcoin no está disponible ahora. Probá más tarde.');
 
   let usdBtc: number;
   try {
@@ -302,11 +302,11 @@ export async function crearCobro(
       // BTCPay refused: no invoice exists, so the reservation is dropped and the same key may try again.
       await liberarReserva(cobro.id);
       console.error('BTCPay refusó la factura del cobro:', error.message);
-      return fallo('BTCPAY', 'BTCPay no aceptó la factura. Revisá la tienda y probá de nuevo.');
+      return fallo('BTCPAY', 'No pudimos preparar el cobro en bitcoin ahora. Probá de nuevo en un minuto.');
     }
     // Unknown outcome (no answer, or a server error): the reservation stays, and a retry finds the invoice.
     console.error('BTCPay al crear la factura del cobro:', error instanceof Error ? error.message : error);
-    return fallo('NO_DISPONIBLE', 'No pudimos crear la factura ahora. Repetí la misma petición en un minuto.');
+    return fallo('NO_DISPONIBLE', 'No pudimos preparar el cobro ahora. Repetí la misma petición en un minuto.');
   }
 }
 
@@ -330,16 +330,15 @@ async function aplicarEstadoBtcpay(factura: Factura): Promise<FilaCobro> {
     p_hash: hash ?? NULO_TEXTO,
   });
   if (error) throw new Error(`No pudimos aplicar el estado de BTCPay: ${error.message}`);
-  const { cambio, cobro, aviso_id, aviso_ledger_id } = data as unknown as {
+  const { cobro, aviso_id, aviso_ledger_id } = data as unknown as {
     cambio: boolean;
     cobro: FilaCobro;
     aviso_id: string | null;
     aviso_ledger_id: string | null;
   };
-  // The client's notice and, for a paid business charge, the notice to CacaoLedger. Each is sent now, or by the queue.
-  if (cambio) {
-    for (const id of [aviso_id, aviso_ledger_id]) if (id) programarAviso(id);
-  }
+  // The client's notice and, for a paid business charge (or a late payment of one), the notice to CacaoLedger. Each
+  // is sent now, or by the queue. A late payment changes no state, so its notice is sent whatever `cambio` says.
+  for (const id of [aviso_id, aviso_ledger_id]) if (id) programarAviso(id);
   return cobro;
 }
 
@@ -395,7 +394,7 @@ export async function cancelarCobro(
 
   const tienda = cobro.tienda_btcpay;
   const facturaId = cobro.btcpay_factura_id;
-  const noSePudo = fallo('NO_DISPONIBLE', 'No pudimos cancelar el cobro ahora en BTCPay. Probá de nuevo en un momento.');
+  const noSePudo = fallo('NO_DISPONIBLE', 'No pudimos cancelar el cobro ahora. Probá de nuevo en un momento.');
   const cerrado = (estado: string) => fallo('ESTADO_INVALIDO', estado === 'Settled' ? MSG_PAGADO : MSG_VENCIDO);
 
   try {

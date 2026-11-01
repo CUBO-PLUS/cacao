@@ -2,6 +2,7 @@
 
 import { type FormEvent, useState, useTransition } from 'react';
 
+import type { Entrega } from '@/lib/cotizacion';
 import type { AccionEnvio } from '@/lib/transferencias';
 
 import {
@@ -27,11 +28,16 @@ export function AccionesEnvio({
   envioId,
   acciones,
   pagoLightning,
+  entrega,
+  sinBitcoin,
 }: {
   envioId: string;
   acciones: AccionEnvio[];
   /** BTCPay is set up and the viewer is the sender: "Enviar ahora" becomes a Lightning payment. */
   pagoLightning: boolean;
+  entrega: Entrega;
+  /** The sender chose bitcoin but it is not available now: the screen says so and offers to cancel. */
+  sinBitcoin: boolean;
 }) {
   const [confirmando, setConfirmando] = useState<Confirmacion>(null);
   const [enCurso, setEnCurso] = useState<AccionEnvio | null>(null);
@@ -73,6 +79,18 @@ export function AccionesEnvio({
   return (
     <div className={estilos.acciones}>
       {puedePagar && <PagoLightning envioId={envioId} />}
+
+      {sinBitcoin && (
+        <section className={estilos.bloqueAcciones} aria-labelledby="titulo-sin-bitcoin">
+          <h2 id="titulo-sin-bitcoin" className="solo-lectores">
+            Bitcoin no disponible
+          </h2>
+          <p className="aviso">
+            El pago con bitcoin no está disponible ahora mismo. No se movió dinero: podés cancelar este envío y
+            mandarlo en efectivo o a una cuenta bancaria.
+          </p>
+        </section>
+      )}
 
       {(puedeProcesar || puedeCancelar) && (
         <section className={estilos.bloqueAcciones} aria-labelledby="titulo-acciones">
@@ -157,7 +175,11 @@ export function AccionesEnvio({
               disabled={pendiente}
               onClick={() => ejecutar('completar', () => simularCompletarAccion(envioId))}
             >
-              {enCurso === 'completar' ? 'Simulando…' : 'Simular que llegó'}
+              {enCurso === 'completar'
+                ? 'Simulando…'
+                : entrega === 'cuenta'
+                  ? 'Simular depósito'
+                  : 'Simular que retiró el dinero'}
             </button>
           )}
 

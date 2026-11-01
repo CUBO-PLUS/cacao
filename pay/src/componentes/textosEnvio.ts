@@ -22,8 +22,11 @@ export function fechaSv(iso: string): string {
 export const TEXTO_ENTREGA_DESTINATARIO: Record<Entrega, string> = {
   efectivo: 'En efectivo: llevá tu DUI al punto de pago',
   cuenta: 'A tu cuenta bancaria: no tenés que hacer nada',
-  lightning: 'Por Lightning: llega a tu billetera de bitcoin',
+  lightning: 'En tu billetera de bitcoin: la cobrás con tu billetera',
 };
+
+/** Where cash is picked up in the demo. A demonstration place, not a real branch. */
+export const LUGAR_RETIRO_DEMO = 'Punto de pago Cacao Pay, San Salvador centro (dato de demostración)';
 
 /** "cerca de un minuto", "cerca de 30 minutos", "cerca de una hora". */
 export function tiempoEstimado(minutos: number): string {

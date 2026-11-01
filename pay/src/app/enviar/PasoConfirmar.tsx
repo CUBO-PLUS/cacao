@@ -90,7 +90,9 @@ export function PasoConfirmar({
         )}
       </dl>
 
-      <p className={estilos.recordatorio}>Después de confirmar pagás por Lightning. En esta demo es bitcoin de prueba, sin valor.</p>
+      <p className={estilos.recordatorio}>
+        Después de confirmar, pagás desde tu billetera de bitcoin. En esta demo el bitcoin es de prueba, sin valor real.
+      </p>
 
       {estado.error && (
         <p role="alert" className={estilos.error}>

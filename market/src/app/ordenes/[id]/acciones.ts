@@ -13,6 +13,7 @@ import {
   marcarEntregada,
   marcarHecha,
   marcarLista,
+  simularEntregaDemo,
 } from '@/servidor/pedidos';
 import { fallo, type Resultado } from '@/servidor/resultado';
 import { sesionActual } from '@/servidor/sesion';
@@ -65,6 +66,10 @@ export async function cancelarPedido(ordenId: string, motivo: string): Promise<R
 
 export async function confirmarEntregaComprador(ordenId: string): Promise<Resultado<null>> {
   return transicion(ordenId, (usuarioId) => marcarEntregada(ordenId, usuarioId));
+}
+
+export async function simularEntregaDeDemo(ordenId: string): Promise<Resultado<null>> {
+  return transicion(ordenId, (usuarioId) => simularEntregaDemo(ordenId, usuarioId));
 }
 
 export async function entregarConCodigoVendedor(ordenId: string, codigo: string): Promise<Resultado<null>> {

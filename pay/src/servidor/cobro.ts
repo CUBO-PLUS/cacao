@@ -169,17 +169,17 @@ export function vencimientoDeFactura(bolt11: string): number | null {
 export function leerFacturaDePago(facturaCruda: string): Resultado<{ factura: string; sats: number; hash: string }> {
   const factura = facturaCruda.trim().toLowerCase();
   if (factura.length > 2000 || !FACTURA.test(factura)) {
-    return fallo('DATOS_INVALIDOS', 'Esa no parece una factura Lightning. Copiala completa: empieza con "lnbc".');
+    return fallo('DATOS_INVALIDOS', 'Ese código no parece de pago de bitcoin. Copialo completo: empieza con "lnbc".');
   }
   const sats = satsDeFactura(factura);
   if (sats === null) {
-    return fallo('DATOS_INVALIDOS', 'La factura tiene que ser por una cantidad exacta de sats, sin decimales. Pedí otra factura a tu billetera.');
+    return fallo('DATOS_INVALIDOS', 'El código tiene que ser por una cantidad exacta, sin centavos de bitcoin. Pedí otro código a tu billetera.');
   }
   const hash = hashDeFactura(factura);
-  if (!hash) return fallo('DATOS_INVALIDOS', 'Esa factura no sirve para cobrar. Pedí otra factura a tu billetera.');
+  if (!hash) return fallo('DATOS_INVALIDOS', 'Ese código no sirve para cobrar. Pedí otro código a tu billetera.');
   const vence = vencimientoDeFactura(factura);
   if (vence === null || vence * 1000 <= Date.now()) {
-    return fallo('DATOS_INVALIDOS', 'Esa factura ya venció. Pedí otra factura a tu billetera.');
+    return fallo('DATOS_INVALIDOS', 'Ese código ya venció. Pedí otro código a tu billetera.');
   }
   return exito({ factura, sats, hash });
 }
@@ -481,14 +481,14 @@ export async function marcarCobroFallido(token: string, motivo: string): Promise
     if (hash) {
       const pago = await configDePago();
       if (!pago) {
-        return fallo('NO_DISPONIBLE', 'BTCPay no está configurado: no podemos revisar el pago antes de marcarlo como fallido.');
+        return fallo('NO_DISPONIBLE', 'El cobro con bitcoin no está disponible ahora. Probá más tarde.');
       }
       let resultado: ResultadoPago | null;
       try {
         resultado = await consultarPago(pago.config, pago.tienda, hash);
       } catch (e) {
         console.error('BTCPay al marcar el cobro:', e instanceof Error ? e.message : e);
-        return fallo('BTCPAY', 'No pudimos consultar BTCPay, así que no marcamos el cobro como fallido. Probá de nuevo en un momento.');
+        return fallo('BTCPAY', 'No pudimos revisar el pago con la billetera, así que no lo damos por fallido. Probá de nuevo en un momento.');
       }
       if (resultado?.estado === 'pagado') {
         return await cerrarCobro(token, resultado);

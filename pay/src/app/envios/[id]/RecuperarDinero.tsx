@@ -104,8 +104,8 @@ export function RecuperarDinero({
     <section className={estilos.recuperar} aria-labelledby="titulo-recuperar">
       <h2 id="titulo-recuperar">Recuperar mi dinero</h2>
       <p className={estilos.texto}>
-        Nadie cobró este envío a tiempo. Pegá una factura Lightning por exactamente {sats} de tu billetera y te devolvemos
-        el dinero.
+        Nadie cobró este envío a tiempo. Copiá un código de pago de tu billetera de bitcoin por el mismo monto que pagaste
+        y te devolvemos el dinero.
       </p>
 
       {motivo && (
@@ -116,7 +116,7 @@ export function RecuperarDinero({
 
       <form className={estilos.formulario} onSubmit={devolver}>
         <label htmlFor="factura-devolucion" className="campo-etiqueta">
-          Pegá tu factura
+          Pegá el código de pago
         </label>
         <textarea
           id="factura-devolucion"
@@ -128,10 +128,10 @@ export function RecuperarDinero({
           spellCheck={false}
           autoComplete="off"
           aria-describedby="ayuda-devolucion"
-          placeholder="lnbc…"
+          placeholder="Pegá aquí el código de pago"
         />
         <p id="ayuda-devolucion" className={estilos.nota}>
-          La factura tiene que ser por {sats}. Empieza con &quot;lnbc&quot;.
+          El código tiene que ser por el mismo monto que pagaste: {sats} en bitcoin. Empieza con &quot;lnbc&quot;.
         </p>
         <p className={estilos.regtest}>
           <strong>Es bitcoin de prueba: no tiene valor real.</strong>

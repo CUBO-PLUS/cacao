@@ -23,7 +23,7 @@ export default function PaginaServicios(props: PageProps<'/servicios'>) {
 
       <section className="encabezado">
         <h1>Servicios</h1>
-        <p>Contratá a gente de tu zona y pagá en sats cuando el trabajo esté hecho.</p>
+        <p>Contratá a gente de tu zona y pagá en bitcoin cuando el trabajo esté hecho. Cada precio se muestra en dólares.</p>
       </section>
 
       <Suspense fallback={<CatalogoCargando />}>

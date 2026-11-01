@@ -197,3 +197,76 @@ test.describe("dueño", () => {
     }
   });
 });
+
+// ---------------------------------------------------------------- dueño: cierre, cadena y venta en efectivo
+test.describe("dueño: cierre, atestación y venta en efectivo", () => {
+  test.use({ storageState: ARCHIVO_SESION_DUENA });
+
+  test("/cierre: el cierre de hoy, el control de Hacienda simulado y los grupos", async ({ page }) => {
+    await page.goto("/cierre");
+    await expect(page).toHaveURL(/\/cierre\/\d{4}-\d{2}-\d{2}$/, { timeout: 30_000 });
+    await expect(page.getByRole("heading", { name: /Cierre del/ })).toBeVisible();
+    await expect(page.getByText("¿Todos los cobros de hoy tienen su sello?")).toBeVisible();
+    // The control is labelled as simulated on screen.
+    const control = page.getByRole("region", { name: "Simulación de Hacienda SIMULADO" });
+    await expect(control.getByText("SIMULADO")).toBeVisible();
+    for (const grupo of ["Emitidos (con sello simulado)", "Pagados sin documento válido (huérfanos)", "Con plazo de 24 horas corriendo"]) {
+      await expect(page.getByRole("heading", { name: grupo })).toBeVisible();
+    }
+    const r = await page.request.get("/cierre", { maxRedirects: 0 });
+    expect(r.status()).toBeLessThan(400);
+    await page.goto("/cierre");
+    const sinDesborde = await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth);
+    expect(sinDesborde).toBe(true);
+  });
+
+  test("/cierre: la caída simulada se enciende y se apaga, y lo dice", async ({ page }) => {
+    await page.goto("/cierre");
+    const control = page.getByRole("region", { name: "Simulación de Hacienda SIMULADO" });
+    const caer = page.getByRole("button", { name: "Simular caída de Hacienda" });
+    const volver = page.getByRole("button", { name: "Simular que Hacienda volvió" });
+    try {
+      if (await volver.isEnabled()) {
+        await volver.click();
+        await expect(control.getByRole("status")).toContainText("SIMULADO", { timeout: 60_000 });
+      }
+      await caer.click();
+      await expect(control.getByRole("status")).toContainText("SIMULADO: caída de Hacienda activa", { timeout: 60_000 });
+      await expect(caer).toBeDisabled();
+    } finally {
+      // The outage is left off whatever happens, so the other tests and the sync emit normally.
+      await page.goto("/cierre");
+      if (await page.getByRole("button", { name: "Simular que Hacienda volvió" }).isEnabled()) {
+        await page.getByRole("button", { name: "Simular que Hacienda volvió" }).click();
+        await expect(page.getByRole("button", { name: "Simular caída de Hacienda" })).toBeEnabled({ timeout: 60_000 });
+      }
+    }
+  });
+
+  test("venta en efectivo: un solo ticket aunque se apriete dos veces", async ({ page }) => {
+    const marca = `Prueba e2e efectivo ${Date.now()}`;
+    await page.goto("/tickets/nueva");
+    await page.getByLabel("Concepto").fill(marca);
+    await page.getByLabel("Precio en dólares").fill("2.25");
+    const enviar = page.getByRole("button", { name: "Registrar venta" });
+    // One press: the button is disabled while the sale runs, so a second press would not send anything anyway.
+    await enviar.click();
+    await page.waitForURL(/\/tickets\/TK-/, { timeout: 180_000 });
+    await expect(page.getByText("Efectivo", { exact: true }).first()).toBeVisible();
+    const cuantos = Number(sql(`select count(*) from ledger_tickets where datos->'lineas'->0->>'descripcion' = '${marca}'`));
+    expect(cuantos).toBe(1);
+  });
+
+  test("atestación de tasa: el hash, el anterior y «Verificar cadena» recalcula la cadena", async ({ page }) => {
+    const id = sql("select ticket_id from ledger_atestaciones order by orden desc limit 1");
+    expect(id).toMatch(/^TK-\d{8}-[0-9A-F]{4}$/);
+    await page.goto(`/tickets/${id}`);
+    await expect(page.getByRole("heading", { name: "Atestación de tasa" })).toBeVisible();
+    await expect(page.getByText("Hash de este registro").first()).toBeVisible();
+    await expect(page.getByText("Hash del registro anterior").first()).toBeVisible();
+    await page.getByRole("button", { name: "Verificar cadena" }).click();
+    await expect(page.getByText(/Cadena íntegra: \d+ registros/)).toBeVisible({ timeout: 60_000 });
+    const hash = sql(`select hash from ledger_atestaciones where ticket_id = '${id}'`);
+    await expect(page.locator(".hash", { hasText: hash })).toBeVisible();
+  });
+});

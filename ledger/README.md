@@ -17,9 +17,11 @@ Ningún servicio del Ministerio lo emitió.
 | Funciona, se ve con `npm run demo` | Ticket con IVA del 13 % incluido y tipo de cliente; pago por Lightning (fixture con la forma del webhook de Blink) y en efectivo; factura 01 y comprobante 03 de la misma venta; validación contra los esquemas (dos generaciones, ver abajo); atestación de tasa encadenada, con verificación y prueba de alteración; cierre del día; libros de IVA y cifras de F-07 y F-14. |
 | Funciona, con pruebas | Cliente del firmador SVFE (contra un servidor falso); credenciales de varios comercios con cifrado AES-256-GCM; importación de facturas de BTCPay y de pedidos de CacaoMarket. |
 | Funciona en la web (dueño) | Tablero con el cierre de hoy; cierre por día en `/cierre/[día]`; tickets, detalle con la atestación de tasa, documento, libros del mes y CSV. Requiere cuenta de dueño y variables de entorno. |
-| Parcial | La web muestra la atestación del ticket, pero no guarda la cadena de atestaciones: la cadena vive en la CLI. Los esquemas `2026` se validan con el paquete oficial del Ministerio, pero el servicio de recepción real no se probó. Firma: solo el cliente, contra un firmador falso. |
-| No funciona | Transmisión a Hacienda, ni real ni de prueba. Firma con el firmador real del Ministerio (no se corrió). Contingencia (`tipoOperacion` 2) y cola de reenvío. Verificación del dígito del NIT y del NRC. Validación del par departamento-municipio contra CAT-013 de 2026. |
-| Qué sigue | Probar la recepción con el servicio de pruebas del Ministerio, con credenciales de un NIT registrado. Llevar la cadena de atestaciones a la base de la web. Contingencia con cola de reenvío. Revisar con un contador las cifras de F-07 y F-14 antes de usarlas. |
+| Funciona en la web (dueño) | Venta en efectivo marcada a mano (`/tickets/nueva`), con un token por envío: un doble envío no hace dos tickets. La cadena de atestaciones se guarda en `ledger_atestaciones` y «Verificar cadena» la recalcula en el servidor. |
+| Simulado | Caída de Hacienda (`/cierre`, «Simular caída de Hacienda»): los documentos nuevos salen con `tipoOperacion` 2 y `tipoContingencia` 1, esperan 24 horas y «Simular que Hacienda volvió» los transmite con sello simulado. Todo se rotula SIMULADO. |
+| Parcial | Los esquemas `2026` se validan con el paquete oficial del Ministerio, pero el servicio de recepción real no se probó. Firma: solo el cliente, contra un firmador falso. |
+| No funciona | Transmisión a Hacienda, ni real ni de prueba. Firma con el firmador real del Ministerio (no se corrió). Contingencia real: lo de arriba es solo una simulación. Verificación del dígito del NIT y del NRC. Validación del par departamento-municipio contra CAT-013 de 2026. |
+| Qué sigue | Probar la recepción con el servicio de pruebas del Ministerio, con credenciales de un NIT registrado. Contingencia de la CLI. Revisar con un contador las cifras de F-07 y F-14 antes de usarlas. |
 
 Lo que no está probado en este repositorio se dice en la sección «Límites».
 
@@ -72,7 +74,7 @@ propios, `ticket lista` sale vacío, y es lo esperado.
 | 2 | Pago en dos rieles, uno Lightning | Cumple, desde fixtures | `pagar <id> --blink fixtures/blink-receive-lightning.json` y `pagar <id> --efectivo`. Ver «Riel de pago». |
 | 3 | DTE 01 y 03 de la misma venta, con la forma de pago del riel que liquidó | Cumple | `dte construir <id>`: en efectivo, código 01; por Lightning, 99 en 01 con `caso` y 11 con `2026`; en 03, 11. |
 | 4 | Validación contra los esquemas oficiales, con falla legible del código 11 en 01 | Cumple, con matiz | `dte construir <id> --forzar-codigo 11` falla con `caso`. Con `--esquemas 2026` el mismo código pasa el esquema (ver «Los esquemas de Hacienda»). |
-| 5 | Atestación de tasa, enlazada y encadenada | Cumple | `atestacion ver <id>`, `atestacion verificar`. En la web, bloque «Atestación de tasa» en el ticket, sin la cadena. |
+| 5 | Atestación de tasa, enlazada y encadenada | Cumple | `atestacion ver <id>`, `atestacion verificar`. En la web, bloque «Atestación de tasa» en el ticket, con hash, hash anterior y «Verificar cadena». |
 | 6 | Cierre del día: pagados, con sello, huérfanos y dentro de 24 horas | Cumple | `cierre` en la CLI. En la web, «Cierre de hoy» en el tablero y `/cierre/[día]`. |
 
 Puntos opcionales:
@@ -83,7 +85,7 @@ Puntos opcionales:
 | 8 | Libros de consumidor final y de contribuyentes; cifras de F-07 y F-14 | Cumple | `mes <YYYY-MM>` y `--csv <carpeta>`. |
 | 9 | Convención defendida para la referencia de 50 caracteres | Cumple | `BTC-LN\|<sats>sat\|<tasa>\|<12 primeros del hash>`, con prueba de largo. Argumentos en `docs/hallazgos.md`, sección 8. |
 | 10 | Credenciales por comercio, con cifrado | Parcial | Varios comercios con sobre cifrado (`comercio registrar`, `comercio lista`) y `LEDGER_CLAVE_MAESTRA`. La demo usa un comercio. Ver `docs/firma-y-comercios.md`. |
-| 11 | Contingencia (`tipoOperacion` 2) con cola de reenvío | Falta | Necesita el canal de transmisión real. |
+| 11 | Contingencia (`tipoOperacion` 2) con cola de reenvío | Simulada (web) | Control del dueño en `/cierre`: documentos con `tipoOperacion` 2, en espera de 24 horas, y reenvío con sello simulado. Falta el canal real y la CLI lo tiene solo como texto. |
 | 12 | Recibo para el cliente con QR y versión legible | Cumple, en web y sitio | En `/tickets/[id]` y en el sitio del cierre: versión legible con QR en SVG y enlace a la consulta pública. |
 | 13 | Transmisión a la prueba del Ministerio, o un mock | Parcial | Hay un servicio de recepción simulado propio (`src/recepcion-simulada.ts`), no el mock comunitario. Nada sale a la red. |
 
@@ -121,7 +123,10 @@ pago y el código de generación del DTE al que pertenece. Cada registro lleva e
 recorre la cadena. Qué prueba y qué no: `docs/atestacion.md`.
 
 - La CLI guarda la cadena en `datos/atestaciones.jsonl`. Cambiar un número de un registro rompe la cadena.
-- La web muestra los mismos campos en el ticket, pero no guarda la cadena: falta llevarla a Supabase.
+- La web guarda la misma cadena en `ledger_atestaciones` (migración `20261104000099`). Cada registro lleva su hash y el
+  del anterior, y «Verificar cadena» en el ticket recalcula todos los hashes desde el contenido guardado.
+- Los tickets emitidos antes de que existiera la cadena reciben su registro al abrir el tablero del dueño, en orden de
+  creación. Ese orden es el de la venta, pero el registro se escribe en el momento de completar la cadena.
 - La tasa es la que informó el riel. No prueba que sea justa.
 
 ## El cierre del día
@@ -130,7 +135,8 @@ Para un día, cada ticket cae en un solo grupo:
 
 - **emitidos**: con sello (simulado);
 - **huérfanos**: cobrados y sin documento válido (sin construir, sin transmitir, o rechazados sin sello);
-- **con plazo de 24 horas corriendo**: rechazados, con los minutos que quedan, o vencidos;
+- **con plazo de 24 horas corriendo**: rechazados, con los minutos que quedan, o vencidos; y, en la web, los documentos
+  emitidos durante la caída simulada de Hacienda que esperan transmisión (el plazo cuenta desde el inicio de la caída);
 - **abiertos**: creados y sin cobrar.
 
 La pregunta final es «¿Todos los cobros de hoy tienen su sello?». La CLI sale con código 1 si la respuesta es no.
@@ -147,7 +153,8 @@ Next.js 16 en `app/`, en el mismo paquete que la CLI. El acceso usa Clerk (el mi
 `usuarios.es_admin` en Supabase.
 
 - Público: `/`, el tablero con cifras agregadas, sin filas de tickets ni causas de error.
-- Dueño: `/cierre`, `/cierre/[día]`, `/tickets`, `/tickets/[id]`, `/tickets/[id]/json`, `/mes`, `/mes/[mes]` y los CSV.
+- Dueño: `/cierre`, `/cierre/[día]` (con el control SIMULADO de Hacienda), `/tickets`, `/tickets/nueva` (venta en efectivo),
+  `/tickets/[id]` (con la cadena de atestaciones), `/tickets/[id]/json`, `/mes`, `/mes/[mes]` y los CSV.
 
 Variables de entorno (solo en el servidor, salvo la clave pública de Clerk):
 
@@ -167,8 +174,10 @@ npm run build && npm start
 ```
 
 Las migraciones que crean `ledger_dtes` y la reserva de números están en `market/supabase/migrations`
-(`20261021000004_ledger_dte.sql` y `20261021000005_ledger_seguridad.sql`). Desde este repositorio no se verificó que
-estén aplicadas en el proyecto desplegado.
+(`20261021000004_ledger_dte.sql` y `20261021000005_ledger_seguridad.sql`). La cadena de atestaciones (`ledger_atestaciones`),
+la simulación de Hacienda (`ledger_simulacion`) y el estado `contingencia` están en
+`20261104000099_ledger_atestaciones_contingencia.sql`. Esa migración se aplicó solo en el Supabase local. Desde este
+repositorio no se verificó que estén aplicadas en el proyecto desplegado: hay que correrla antes de usar la web allí.
 
 Pruebas de la web: `npm test` cubre el acceso, la sincronización con un BTCPay falso, la emisión con la reserva, el
 cierre web y el CSV. La página del dueño con sesión iniciada no se probó en un navegador: no hay cuenta de prueba de
@@ -203,7 +212,9 @@ Opciones generales: `--esquemas caso|2026` (o `LEDGER_ESQUEMAS`), `--datos <carp
 - **Los pagos de demostración son fixtures.** Siguen la forma del webhook de Blink; no mueven fondos.
 - **Los esquemas `2026` no se probaron contra el servicio de recepción.** Solo contra el paquete oficial.
 - **No se verifica el dígito del NIT ni del NRC.** Se valida el patrón de cada campo.
-- **La cadena de atestaciones vive en la CLI.** La web no la guarda.
+- **La contingencia es simulada.** No hay caída real ni transmisión a Hacienda: el sello de la contingencia empieza por `SIMULADO-`.
+  La CLI no tiene el control de contingencia.
+- **El tipo de contingencia 1 (CAT-008, no disponibilidad del sistema del Ministerio) se eligió por el texto del esquema; el significado del código no se verificó contra la tabla oficial.**
 - **La web no firma.** Emite con el esquema `2026` y sin JWS.
 - **El cierre web lee los cobros de los últimos 60 días, más todos los pagados o rechazados sin documento.** Un ticket creado hace más de 60 días y cobrado ese mismo día no aparece en la web. La CLI no tiene ese límite.
 - **Los libros y anexos CSV cubren solo las ventas de CacaoLedger.** El contador los integra con compras y retenciones antes de presentar el F-07 y el F-14. Los formatos de los CSV de la DGII no están confirmados (ver `docs/hallazgos.md`, sección 12).

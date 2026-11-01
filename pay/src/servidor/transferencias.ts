@@ -148,8 +148,8 @@ const COLUMNAS_PAGO =
 
 // Lightning through BTCPay Server. The invoice is valid for this long.
 const FACTURA_MINUTOS = 15;
-const SIN_PRECIO_BTC = 'No pudimos obtener el precio del bitcoin. Probá de nuevo en un momento.';
-const SIN_FACTURA = 'No pudimos crear la factura Lightning. Probá de nuevo en un momento.';
+const SIN_PRECIO_BTC = 'No pudimos calcular el precio del bitcoin ahora. Probá de nuevo en un momento, o mandalo en efectivo o a cuenta bancaria.';
+const SIN_FACTURA = 'No pudimos preparar el pago con bitcoin ahora. Probá de nuevo en un momento. Si sigue igual, podés cancelar el envío y mandarlo en efectivo o a cuenta bancaria.';
 
 type FilaPago = Pick<
   FilaEnvio,
@@ -642,7 +642,7 @@ export async function pagarEnvio(usuarioId: string, envioId: string): Promise<Re
   try {
     if (!esUuid(usuarioId) || !esUuid(envioId)) return fallo('NO_ENCONTRADA', MENSAJE_NO_ENCONTRADA);
     const btc = await configuracionBtcpay();
-    if (!btc) return fallo('NO_DISPONIBLE', 'El pago con Lightning no está activo en este servidor.');
+    if (!btc) return fallo('NO_DISPONIBLE', 'El pago con bitcoin no está disponible en este momento.');
 
     const fila = await cargarPago(envioId);
     if (!fila || fila.remitente_id !== usuarioId) return fallo('NO_ENCONTRADA', MENSAJE_NO_ENCONTRADA);
@@ -670,10 +670,10 @@ export async function pagarEnvio(usuarioId: string, envioId: string): Promise<Re
       const previa = await leerFacturaSiExiste(btc.config, fila.btcpay_tienda_id, fila.btcpay_factura_id);
       if (previa?.estado === 'Settled') {
         await confirmarPagoBtcpay(previa.id);
-        return fallo('ESTADO_INVALIDO', 'Esa factura ya se pagó. Revisá el estado del envío.');
+        return fallo('ESTADO_INVALIDO', 'Ese pago ya entró. Revisá el estado del envío.');
       }
       if (previa?.estado === 'Processing') {
-        return fallo('ESTADO_INVALIDO', 'La factura anterior todavía se está pagando. Probá de nuevo en un momento.');
+        return fallo('ESTADO_INVALIDO', 'El pago anterior todavía se está procesando. Probá de nuevo en un momento.');
       }
     }
 
@@ -721,7 +721,7 @@ export async function pagarEnvio(usuarioId: string, envioId: string): Promise<Re
         cotizacionUsdBtc: usdBtc,
       },
     });
-    if (!factura.bolt11) return fallo('SIN_LIGHTNING', 'La tienda de BTCPay no tiene Lightning activado.');
+    if (!factura.bolt11) return fallo('SIN_LIGHTNING', 'El pago con bitcoin no está disponible ahora. Probá más tarde.');
     const expiraEn = factura.expiraEn.toISOString();
 
     const { error } = await clienteServicio().rpc('pay_registrar_factura', {
@@ -795,15 +795,15 @@ export async function procesarEnvio(usuarioId: string, envioId: string): Promise
     // With BTCPay on, the sender starts the transfer by paying its invoice, not by this button.
     const conBtcpay = await pagoLightningActivo();
     if (fila.remitente_id === usuarioId && conBtcpay) {
-      return fallo('NO_PERMITIDO', 'Pagá el envío con Lightning para que salga.');
+      return fallo('NO_PERMITIDO', 'Pagá el envío con tu billetera de bitcoin para que salga.');
     }
     // A Lightning transfer starts when its invoice is paid (pay_confirmar_btcpay), never by hand.
     if (fila.entrega === 'lightning') {
-      return fallo('NO_PERMITIDO', 'Un envío por Lightning sale cuando quien envía paga la factura.');
+      return fallo('NO_PERMITIDO', 'Un envío por bitcoin sale cuando quien envía paga con su billetera.');
     }
     // With BTCPay on, every transfer leaves only once its invoice is paid, whoever presses the button.
     if (conBtcpay && fila.pagada_en === null) {
-      return fallo('ESTADO_INVALIDO', 'Todavía no está pagado. Sale cuando quien envía paga la factura.');
+      return fallo('ESTADO_INVALIDO', 'Todavía no está pagado. Sale cuando quien envía paga con su billetera.');
     }
 
     const { data, error } = await clienteServicio().rpc('pay_procesar', {
@@ -852,7 +852,7 @@ export async function cancelarEnvio(usuarioId: string, envioId: string): Promise
     // A paid transfer, or one whose invoice may still be paid, cannot be cancelled: the money would be stuck.
     const facturaViva = fila.factura_expira !== null && Date.parse(fila.factura_expira) > Date.now();
     if (fila.pagada_en !== null || facturaViva) {
-      return fallo('ESTADO_INVALIDO', 'Hay una factura Lightning vigente o un pago hecho. No se puede cancelar.');
+      return fallo('ESTADO_INVALIDO', 'Hay un código de pago vigente o un pago hecho. No se puede cancelar.');
     }
     // The invoice may have been paid since the sender last looked: BTCPay has the last word.
     let pagada: boolean;
@@ -860,7 +860,7 @@ export async function cancelarEnvio(usuarioId: string, envioId: string): Promise
       pagada = await confirmarSiPagada(fila);
     } catch (error) {
       console.error('BTCPay al revisar la cancelación:', error instanceof Error ? error.message : error);
-      return fallo('BTCPAY', 'No pudimos revisar la factura en BTCPay. Probá de nuevo en un momento.');
+      return fallo('BTCPAY', 'No pudimos confirmar el pago con la billetera ahora. Probá de nuevo en un momento.');
     }
     if (pagada) return fallo('ESTADO_INVALIDO', 'Ese envío ya está pagado: no se puede cancelar.');
 
@@ -902,7 +902,7 @@ export async function simularCompletar(
     if (!quien.ok) return quien;
     // A lightning transfer is completed by its recipient's claim (cobrar), never by hand.
     if (fila.entrega === 'lightning') {
-      return fallo('NO_PERMITIDO', 'Un envío por Lightning se completa cuando el destinatario lo cobra.');
+      return fallo('NO_PERMITIDO', 'Un envío por bitcoin se completa cuando el destinatario lo cobra.');
     }
 
     const { data, error } = await clienteServicio().rpc('pay_completar', {

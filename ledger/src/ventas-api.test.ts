@@ -103,6 +103,12 @@ function dtesMemoria(): AlmacenDtes & { reservas: number } {
     async reabrir() {
       return false;
     },
+    async contingencias() {
+      return [];
+    },
+    async transmitirContingencia() {
+      return false;
+    },
   };
   return dtes;
 }

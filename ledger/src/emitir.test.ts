@@ -90,6 +90,15 @@ function dtesMemoria(): DtesMemoria {
       filas.set(ticketId, { ...fila, estado: "reservado", sello: null, motivo: null, documento: {} });
       return true;
     },
+    async contingencias(): Promise<RegistroDte[]> {
+      return [...filas.values()].filter((f) => f.estado === "contingencia");
+    },
+    async transmitirContingencia(codigo: string, sello: string, momento: string): Promise<boolean> {
+      const fila = [...filas.values()].find((f) => f.codigoGeneracion === codigo);
+      if (!fila || fila.estado !== "contingencia") return false;
+      filas.set(fila.ticketId, { ...fila, estado: "aceptado", sello, motivo: null, creado: momento });
+      return true;
+    },
   };
 }
 

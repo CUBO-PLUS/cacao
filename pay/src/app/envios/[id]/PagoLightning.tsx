@@ -102,7 +102,7 @@ export function PagoLightning({ envioId }: { envioId: string }) {
       await navigator.clipboard.writeText(pago.bolt11);
       setCopiada(true);
     } catch {
-      setError('No pudimos copiar la factura. Seleccionala a mano.');
+      setError('No pudimos copiar el código. Seleccionalo a mano.');
     }
   }
 
@@ -111,16 +111,16 @@ export function PagoLightning({ envioId }: { envioId: string }) {
 
   return (
     <section className={estilos.pago} aria-labelledby="titulo-pago">
-      <h2 id="titulo-pago">Pagar con Lightning</h2>
+      <h2 id="titulo-pago">Pagá con tu billetera de bitcoin</h2>
       <p className={estilos.regtest}>
-        <strong>Bitcoin de prueba (regtest): no tiene valor.</strong>
+        <strong>Es bitcoin de prueba: no tiene valor real.</strong>
       </p>
 
       {!pago && (
         <>
-          <p>Pagás el monto completo del envío en sats. Cuando la factura se paga, el envío sale.</p>
+          <p>Pagás el monto completo del envío. Cuando tu billetera confirma el pago, el envío sale solo.</p>
           <button type="button" className="boton" disabled={pendiente} onClick={pagar}>
-            {pendiente ? 'Preparando la factura…' : 'Pagar con Lightning'}
+            {pendiente ? 'Preparando el pago…' : 'Preparar el pago'}
           </button>
         </>
       )}
@@ -133,12 +133,17 @@ export function PagoLightning({ envioId }: { envioId: string }) {
             </p>
           )}
           <p className={estilos.monto}>
-            <span className="dato">{formatoSats(pago.sats)}</span>
-            <span> equivalen a {formatoUsd(pago.usdCentavos)}</span>
+            <span className="dato">{formatoUsd(pago.usdCentavos)}</span>
           </p>
 
+          <ol className={estilos.pasos}>
+            <li>Copiá el código de pago de abajo.</li>
+            <li>Abrí tu billetera de bitcoin y pegalo para pagar.</li>
+            <li>Esta página avisa sola cuando el pago entra. No tenés que tocar nada.</li>
+          </ol>
+
           <label htmlFor="factura-lightning" className="campo-etiqueta">
-            Factura Lightning
+            Código de pago
           </label>
           <textarea
             id="factura-lightning"
@@ -151,7 +156,7 @@ export function PagoLightning({ envioId }: { envioId: string }) {
 
           <div className={estilos.botones}>
             <button type="button" className="boton boton--secundario" onClick={copiar}>
-              {copiada ? 'Factura copiada' : 'Copiar factura'}
+              {copiada ? 'Código copiado' : 'Copiar código de pago'}
             </button>
             {pago.enlaceBilleteraDePrueba && !vencida && (
               <a
@@ -165,16 +170,23 @@ export function PagoLightning({ envioId }: { envioId: string }) {
             )}
           </div>
 
+          <details className={estilos.detalle}>
+            <summary>Ver detalle</summary>
+            <p>
+              El monto exacto en bitcoin es <span className="dato">{formatoSats(pago.sats)}</span>.
+            </p>
+          </details>
+
           {vencida ? (
             <>
-              <p role="status">La factura venció y no se pagó. Pedí otra para seguir.</p>
+              <p role="status">El código venció y no se pagó. Pedí uno nuevo para seguir.</p>
               <button type="button" className="boton" disabled={pendiente} onClick={pagar}>
-                {pendiente ? 'Preparando la factura…' : 'Pedir otra factura'}
+                {pendiente ? 'Preparando el pago…' : 'Pedir un código nuevo'}
               </button>
             </>
           ) : (
             <p className="aviso">
-              Vence en {minutosYSegundos(restan)}. Esta página se actualiza sola cuando la factura se paga.
+              Vence en {minutosYSegundos(restan)}. Esta página se actualiza sola cuando el pago entra, aunque pagues desde otra app.
             </p>
           )}
         </div>

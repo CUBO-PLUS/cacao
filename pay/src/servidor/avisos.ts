@@ -217,11 +217,15 @@ async function enviarAvisoLedger(aviso: AvisoReclamado): Promise<void> {
   const servicio = clienteServicio();
   const { data: cobro, error: errorCobro } = await servicio
     .from('pay_cobros')
-    .select('cliente_id, estado, descripcion, usd_centavos, sats, cotizacion_usd_btc, btcpay_factura_id, hash_pago')
+    .select(
+      'cliente_id, estado, pago_tardio_en, descripcion, usd_centavos, sats, cotizacion_usd_btc, btcpay_factura_id, hash_pago',
+    )
     .eq('id', aviso.cobro_id)
     .single();
   if (errorCobro || !cobro) throw new Error('No pudimos leer el cobro del aviso a CacaoLedger.');
-  if (cobro.estado !== 'pagado' || !cobro.btcpay_factura_id || !cobro.hash_pago) {
+  // A late payment is a sale too: its charge was cancelled, but the money came in.
+  const pagado = cobro.estado === 'pagado' || cobro.pago_tardio_en !== null;
+  if (!pagado || !cobro.btcpay_factura_id || !cobro.hash_pago) {
     throw new Error('El cobro no está pagado por Lightning.');
   }
   const { data: negocio, error: errorNegocio } = await servicio

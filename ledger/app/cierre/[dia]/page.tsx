@@ -6,11 +6,13 @@ import { ETIQUETAS, GRUPOS, montoFila, textoPlazo, type FilaCierre, type Grupo, 
 import { formatoUsd } from "../../../src/dinero.ts";
 import { almacenDeEntorno } from "../../../src/servidor/configuracion.ts";
 import { informeDelDia } from "../../../src/servidor/informe.ts";
+import { leerSimulacion } from "../../../src/servidor/simulacion.ts";
 import { accesoDeDueno } from "../../../src/servidor/sesion.ts";
 import { diaDesplazado, esDia, hoySv } from "../../../src/servidor/tiempo-sv.ts";
 import { SinAcceso } from "../../_componentes/SinAcceso.tsx";
 import { SinDatos } from "../../_componentes/SinDatos.tsx";
-import { fechaCorta } from "../../_componentes/formato.ts";
+import { ControlSimulacion } from "./ControlSimulacion.tsx";
+import { fechaCorta, fechaHoraSv } from "../../_componentes/formato.ts";
 
 export const metadata = { title: "Cierre del día" };
 
@@ -82,6 +84,14 @@ export default async function PaginaCierre({ params }: PageProps<"/cierre/[dia]"
   if (!esDia(dia)) notFound();
   const ahora = new Date();
   const hoy = hoySv(ahora);
+  // The simulated outage of Hacienda: a read that fails only hides the control, never the close.
+  let simulacion: { caida: boolean; desde: string | null } | null = null;
+  try {
+    const s = await leerSimulacion();
+    simulacion = { caida: s.caida, desde: s.desde ? fechaHoraSv(s.desde.toISOString()) : null };
+  } catch (e) {
+    console.error("La simulación de Hacienda no pudo leerse:", e);
+  }
   let informe: InformeCierre;
   try {
     informe = await informeDelDia(almacenDeEntorno(), dia, ahora);
@@ -97,6 +107,7 @@ export default async function PaginaCierre({ params }: PageProps<"/cierre/[dia]"
   return (
     <>
       <Selector dia={dia} hoy={hoy} />
+      {simulacion !== null ? <ControlSimulacion caida={simulacion.caida} desde={simulacion.desde} /> : null}
       <p role="status" className={informe.todosConSello ? "nota" : "aviso"} style={{ marginTop: "0.5rem" }}>
         {informe.respuesta}
       </p>

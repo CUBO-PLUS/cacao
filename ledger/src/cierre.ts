@@ -120,6 +120,15 @@ export function clasificarCierre(entrada: EntradaCierre): InformeCierre {
     };
     if (t.estado === "emitido") {
       grupos.emitidos.push({ ...base, motivo: "sello simulado recibido" });
+    } else if (t.estado === "pagado" && t.contingencia && t.dte && !t.contingencia.transmitida) {
+      // Issued in the simulated outage: it waits for the reception and has the same 24-hour fuse as a rejection.
+      const minutos = minutosHasta(ahora, t.contingencia.desde);
+      grupos.plazo.push({
+        ...base,
+        motivo: "contingencia simulada: transmitir antes de 24 horas",
+        minutosRestantes: minutos,
+        vencido: minutos <= 0,
+      });
     } else if (t.estado === "pagado") {
       grupos.huerfanos.push({
         ...base,

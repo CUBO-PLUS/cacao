@@ -39,6 +39,12 @@ export function estadoGate(slug: string, ahora: number = Date.now()): EstadoGate
   return g.expira > ahora ? 'desbloqueado' : 'expirado';
 }
 
+/** The pass this browser keeps for a story, which is also the reader's access code. Null when there is none. */
+export function tokenDe(slug: string): { token: string; expira: number } | null {
+  const g = leer(slug);
+  return g ? { token: g.token, expira: g.expira } : null;
+}
+
 /** Stores the paid token the server signed for a story. Its expiry is read from the payload. */
 export function guardarAcceso(slug: string, token: string): boolean {
   try {

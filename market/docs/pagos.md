@@ -1,6 +1,6 @@
 # Pagos en CacaoMarket
 
-CacaoMarket no custodia dinero. El comprador paga en bitcoin por Lightning, y el pago llega a la billetera del vendedor. La aplicación crea la solicitud de pago, la muestra, detecta cuándo se pagó, y registra la orden como pagada. En la versión de demostración, los pagos son simulados: no se mueve dinero real.
+CacaoMarket no custodia dinero. El comprador paga en bitcoin por Lightning, y el pago llega a la billetera del vendedor. La aplicación crea la solicitud de pago, la muestra, detecta cuándo se pagó, y registra la orden como pagada. En la versión de demostración, los cobros son de bitcoin de prueba: no se mueve dinero real.
 
 El cobro tiene tres piezas:
 
@@ -42,8 +42,8 @@ export type Cobro = {
 | Tipo | Estado | Qué hace |
 |---|---|---|
 | `manual` | Implementado (`manual.ts`) | Usa la Lightning Address del vendedor. Pide una factura por LNURL-pay por el monto exacto. Si la factura se pudo pedir, la pantalla muestra la factura. Si no, muestra la dirección y el monto, y el vendedor confirma el pago a mano. Si la factura trae una URL de verificación (LUD-21), el estado se consulta solo. |
-| `falso` | Implementado (`falso.ts`), solo demostración | Genera una factura falsa (`lnbcfalso` más una referencia). No consulta ninguna red. El pago se confirma con `simularPago`, y la pantalla muestra el botón de simulación. |
-| `btcpay` | Implementado (`btcpay.ts`, cliente en `btcpay-api.ts`) | Usa la tienda de BTCPay Server del negocio (`negocios.btcpay_tienda_id`). Crea una factura Lightning por el monto exacto en sats, y consulta si está `Settled`. Ver [BTCPay Server](#btcpay-server-lightning). |
+| `falso` | Implementado (`falso.ts`), solo demostración | Genera una factura falsa (`lnbcfalso` más una referencia). No consulta ninguna red. Lo usa solo un negocio de demostración sin tienda de BTCPay (`proveedorEfectivo` en `src/lib/demo.ts`). El pago se confirma con `simularPago`, y la pantalla muestra el botón de simulación. |
+| `btcpay` | Implementado (`btcpay.ts`, cliente en `btcpay-api.ts`) | Usa la tienda de BTCPay Server del negocio (`negocios.btcpay_tienda_id`). Crea una factura Lightning por el monto exacto en sats, y consulta si está `Settled`. Si `CACAO_PAY_URL` está configurado, el cobro pasa por CacaoPay (`pay.ts`). Ver [BTCPay Server](#btcpay-server-lightning) y [CacaoPay](#cacaopay). |
 | `nwc` | Solo nombrado | Existe en el enum de la base y en la columna de credenciales, pero `proveedorPara` lanza `NO_DISPONIBLE`. |
 | `blink` | Solo nombrado | Igual que `nwc`. |
 
@@ -172,3 +172,12 @@ Es el proveedor de los negocios que tienen tienda en BTCPay. BTCPay no custodia 
 - **Pago.** La pantalla consulta el estado cada pocos segundos. Solo `Settled` cuenta como pagado; `Expired` e `Invalid` cuentan como expirado. Un error de BTCPay cuenta como "todavía no".
 - **Aviso.** `POST /api/pagos/btcpay` acepta los avisos firmados (`BTCPay-Sig`). Solo `InvoiceSettled` importa. El cuerpo no se usa como prueba: la factura se vuelve a leer en BTCPay, y si está `Settled` se confirma con `confirmar_pago`, igual que la pantalla. Un aviso repetido no paga dos veces.
 - **Billetera de prueba.** En regtest, la pantalla ofrece pagar la factura con la billetera de prueba. Esos bitcoin no tienen valor.
+
+## CacaoPay
+
+CacaoPay (Pay) es el servicio de pagos de la plataforma. Cuando está configurado, todos los cobros de productos y trabajos pasan por su API de cobros, y no por BTCPay directamente. La tienda sigue siendo la del negocio (`negocios.btcpay_tienda_id`), y CacaoPay solo acepta las tiendas de la lista de cobros de Market (`scripts/tiendas-btcpay.mjs` las agrega).
+
+- **Configuración.** `CACAO_PAY_URL` y `CACAO_PAY_API_KEY` (la clave del cliente Market, enviada como Bearer), y `CACAO_PAY_AVISO_SECRET` para verificar los avisos. Sin `CACAO_PAY_URL`, los cobros van a BTCPay directamente.
+- **Referencia.** El cobro se guarda con `proveedor = 'btcpay'` y `referencia_externa = 'pay:<id del cobro>'`. Una referencia de BTCPay directo (una orden de antes del cambio) sigue leyéndose por el adaptador directo.
+- **Pago.** La pantalla consulta el estado como con BTCPay. Cada consulta vuelve a leer el cobro en CacaoPay, y solo `pagado` cuenta como pagado.
+- **Aviso.** `POST /api/pagos/pay` recibe los avisos firmados (`Cacao-Firma`, con `Cacao-Aviso-Id`). Verifica la firma, vuelve a leer el cobro en CacaoPay y confirma con `confirmar_pago`. Un aviso repetido no paga dos veces. Si CacaoPay o la base no responden, el aviso responde 502 y CacaoPay lo vuelve a enviar.

@@ -56,3 +56,20 @@
   color: var(--tostado);
   font-weight: 600;
 }
+
+.pasos {
+  margin: 0;
+  padding-left: 22px;
+  display: grid;
+  gap: 6px;
+}
+
+.detalle {
+  font-size: 0.9375rem;
+}
+
+.detalle summary {
+  cursor: pointer;
+  font-weight: 600;
+  text-decoration: underline;
+}

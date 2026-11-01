@@ -8,7 +8,7 @@ import Logo from '../../components/Logo.astro';
 import { SignOutButton } from '@clerk/astro/components';
 import type { Rango } from '../../lib/servidor/admin';
 
-type Seccion = 'resumen' | 'transacciones' | 'actividad';
+type Seccion = 'resumen' | 'transacciones' | 'actividad' | 'autores';
 
 interface Props {
   /** Heading of the page, shown in the tab title. */
@@ -25,6 +25,7 @@ const SECCIONES = [
   { id: 'resumen', etiqueta: 'Resumen', ruta: '/admin/' },
   { id: 'transacciones', etiqueta: 'Transacciones', ruta: '/admin/transacciones/' },
   { id: 'actividad', etiqueta: 'Actividad', ruta: '/admin/actividad/' },
+  { id: 'autores', etiqueta: 'Autores', ruta: '/admin/autores/' },
 ] as const;
 ---
 

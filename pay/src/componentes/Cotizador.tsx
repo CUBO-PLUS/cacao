@@ -14,7 +14,7 @@ import estilos from './Cotizador.module.css';
 const ENTREGAS: { valor: Entrega; titulo: string; detalle: string }[] = [
   { valor: 'efectivo', titulo: 'Efectivo', detalle: 'Retira en un punto de pago' },
   { valor: 'cuenta', titulo: 'Cuenta bancaria', detalle: 'Llega en una hora' },
-  { valor: 'lightning', titulo: 'Bitcoin', detalle: 'Red Lightning, llega en un minuto' },
+  { valor: 'lightning', titulo: 'Bitcoin', detalle: 'a tu billetera de bitcoin, llega en un minuto' },
 ];
 
 // "50", "50.5" and "50,25" are amounts; anything else is not, and the field says so.
@@ -162,15 +162,19 @@ function Recibe({ cotizacion: c, usdBtc }: { cotizacion: Cotizacion | null; usdB
   let tipo: string | null = null;
   if (enSats || c.monedaOrigen === 'EUR') {
     const { principal } = tipoDeCambio(c);
-    tipo = enSats ? `${principal} (sats son pedacitos de bitcoin)` : principal;
+    tipo = principal;
   }
 
   return (
     <>
       <div className={estilos.recibe} aria-live="polite">
         <span className={estilos.recibeEtiqueta}>Recibe</span>
-        <span className={estilos.recibeMonto}>{formatoMonto(c.montoDestino, c.monedaDestino)}</span>
-        {enSats && <small className={estilos.nota}>Sats: pedacitos de bitcoin{aproximado ? `, ${aproximado}` : ''}</small>}
+        <span className={estilos.recibeMonto}>
+          {enSats && aproximado ? aproximado.replace('aprox. ', '') : formatoMonto(c.montoDestino, c.monedaDestino)}
+        </span>
+        {enSats && (
+          <small className={estilos.nota}>En bitcoin: {formatoMonto(c.montoDestino, c.monedaDestino)}</small>
+        )}
         <small className={estilos.nota}>{minutos}</small>
       </div>
       <p className={estilos.linea} aria-live="polite">

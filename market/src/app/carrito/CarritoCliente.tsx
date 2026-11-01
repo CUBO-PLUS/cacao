@@ -392,7 +392,7 @@ function BloqueNegocio({
               usdCentavos={grupo.totalUsdCentavos}
               sats={cotizacion === null ? null : usdCentavosASats(grupo.totalUsdCentavos, cotizacion)}
             />
-            <p className={styles.nota}>El monto en sats se fija al hacer el pedido.</p>
+            <p className={styles.nota}>El monto en bitcoin se fija al hacer el pedido.</p>
           </>
         ) : (
           <p className={styles.nota}>No hay productos disponibles de esta tienda.</p>

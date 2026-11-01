@@ -106,3 +106,52 @@ En un envío `entrega = 'lightning'`, el destinatario cobra con un enlace, sin c
 - **Pago**: `pay_iniciar_cobro` pone el cobro en `pagando` (solo uno a la vez) y el servidor paga la factura con la API Pay de BTCPay (`src/servidor/btcpay-pagos.ts`). Un `Complete` cierra el cobro con `pay_terminar_cobro`, que mueve el envío a `completada` y guarda el hash. Un rechazo de BTCPay (400 o 422) deja el cobro en `fallido` con un motivo, y el destinatario puede pedir otra factura. Una respuesta `Pending`, o un error de red, deja el cobro en `pagando`: `estadoDeCobro` pregunta a BTCPay por el hash de la factura hasta tener respuesta.
 - **Lo que no cambia**: el administrador no puede completar un envío por Lightning a mano (`simularCompletar` lo rechaza), y el remitente lo sigue pagando con su propia factura de BTCPay.
 - **Demostración**: BTCPay corre en regtest. La página de cobro enlaza la billetera de prueba (`/billetera/recibir?sats=N`) para quien no tiene una billetera Lightning.
+
+## 7. Entidades y relaciones
+
+Diagrama en texto de las tablas que usan los envíos (Pay), los cobros de negocio y de la API, y la cola de avisos.
+`1` = uno, `N` = muchos, `?` = opcional. Las columnas son las que importan para el flujo; el esquema completo está en `market/supabase/migrations`.
+
+```
+usuarios (id)
+  |  1
+  |----< pay_transferencias            un envío de dinero
+  |        codigo         UNIQUE       "CP-XXXX-XXXX", la base rechaza repetidos
+  |        remitente_id   -> usuarios
+  |        destinatario_id ? -> usuarios (si tiene cuenta con ese celular o correo)
+  |        entrega        efectivo | cuenta | lightning
+  |        estado         creada | procesando | completada | fallida | cancelada | devuelta
+  |        monto_origen_centavos, comision_centavos, neto_centavos, tasa, monto_destino
+  |        cobro_token, cobro_estado, cobro_hash     el cobro del destinatario (Lightning)
+  |        pagada_en, pago_tardio_en, cobro_vence_en
+  |  |
+  |  |----< pay_facturas              factura de BTCPay para el remitente (una por intento)
+  |           btcpay_factura_id, factura (BOLT11), sats, expira
+  |
+pay_api_clientes (id)                 cliente de la API de cobros (una tienda y un producto)
+  |  nombre, prefijo, clave_hash, aviso_secreto, producto (pay | negocios), tienda_btcpay
+  |  1
+  |----< pay_cobros                    un cobro (idempotente por clave_idempotencia)
+  |  |      cliente_id -> pay_api_clientes
+  |  |      producto, estado: pendiente | pagado | vencido | cancelado
+  |  |      btcpay_factura_id, factura, sats, usd_centavos, cotizacion_usd_btc, hash_pago
+  |  |      pagado_en, cancelado_en, pago_tardio_en (pago que llega a un cobro cancelado)
+  |  |      aviso_url (dirección del cliente, opcional)
+  |  |
+  |  |----< pay_avisos               cola durable de avisos (un aviso por cobro, estado y destino)
+  |          cobro_id, estado, destino: cliente | ledger
+  |          entrega: pendiente | entregado | muerto, intentos, proximo_intento_en, reclamo
+  |
+  |  (producto = negocios)
+  |----  pay_negocios                 el negocio de un cliente (negocio_id, cliente_id, estado)
+          |
+          |  (una venta de negocio, en CacaoLedger)
+          `----> ledger_ventas_api    venta por factura: producto, negocio_id, factura, hash, sats, tasa
+```
+
+Reglas que cruzan estas tablas:
+
+- **Código único**: `pay_transferencias.codigo` es `UNIQUE` y `pay_crear_transferencia` vuelve a sortear hasta que el código esté libre. Prueba: `tests/db/codigos-envio.test.ts` (sesenta envíos a la vez, y un código repetido rechazado por la base).
+- **Pago tardío**: un pago de BTCPay que llega a un cobro cancelado se guarda en `pago_tardio_en` y, si el producto es `negocios`, encola un aviso `pagado` a `ledger` en la misma transacción (migración `20261104000001_pay_pago_tardio_ledger.sql`). Un cobro vencido que se paga después pasa a `pagado` y también encola el aviso a Ledger.
+- **Un aviso no cambia un cobro**: `pay_avisos` solo registra el envío. Un fallo de Ledger o del cliente queda en la cola y se reintenta; nunca toca el estado del cobro.
+- **Dinero una sola vez**: un envío se mueve una sola vez (`pay_confirmar_btcpay` es idempotente, y `pay_iniciar_cobro` toma el cobro con bloqueo), y el precio lo fija el servidor.

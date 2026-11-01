@@ -444,3 +444,90 @@ export async function actividadPanel(rango: Rango): Promise<ActividadPanel> {
     total: eventos.length,
   };
 }
+
+// ---------------------------------------------------------------------------------------------
+// Authors
+
+export interface FilaAutorHistoria {
+  slug: string;
+  titulo: string;
+  /** Story opened by a reader (vista_historia events in the period). */
+  vistas: number;
+  /** Wall reached: vio_muro events in the period. */
+  muro: number;
+  /** Invoices asked for in the period. */
+  facturas: number;
+  pagadas: number;
+  sats: number;
+}
+
+export interface GrupoAutor extends Omit<FilaAutorHistoria, 'slug' | 'titulo'> {
+  autor: string;
+  historias: FilaAutorHistoria[];
+}
+
+export interface PanelAutores {
+  autores: GrupoAutor[];
+  /** Stories in the period with any reader or invoice activity, most sats first. */
+  historias: FilaAutorHistoria[];
+  total: number;
+}
+
+/**
+ * Views, wall views, invoices, paid invoices and sats earned per story and per author, for the period.
+ * Every number comes from the events table and the invoice table. Stories with no activity show zeros.
+ */
+export async function autoresPanel(rango: Rango): Promise<PanelAutores> {
+  await vencerCobros();
+  const [eventos, resumen, catalogo] = await Promise.all([
+    eventosDelPeriodo(rango),
+    historiasDelPeriodo(rango),
+    todasLasHistorias(),
+  ]);
+
+  const vistas = new Map<string, number>();
+  const muro = new Map<string, number>();
+  for (const e of eventos) {
+    const slug = e.objeto;
+    if (!slug) continue;
+    if (e.nombre === 'vista_historia') vistas.set(slug, (vistas.get(slug) ?? 0) + 1);
+    if (e.nombre === 'vio_muro') muro.set(slug, (muro.get(slug) ?? 0) + 1);
+  }
+  const cobrosDe = new Map(resumen.map((f) => [f.slug, f]));
+
+  const porHistoria = catalogo
+    .map((h): FilaAutorHistoria & { autor: string } => {
+      const c = cobrosDe.get(h.id);
+      return {
+        slug: h.id,
+        titulo: h.data.titulo,
+        autor: h.data.autor,
+        vistas: vistas.get(h.id) ?? 0,
+        muro: muro.get(h.id) ?? 0,
+        facturas: c?.cobros ?? 0,
+        pagadas: c?.pagadas ?? 0,
+        sats: c?.sats ?? 0,
+      };
+    })
+    .filter((f) => f.vistas + f.muro + f.facturas > 0)
+    .sort((a, b) => b.sats - a.sats || b.vistas - a.vistas || a.titulo.localeCompare(b.titulo, 'es'));
+
+  const grupos = new Map<string, GrupoAutor>();
+  for (const f of porHistoria) {
+    const g = grupos.get(f.autor) ?? { autor: f.autor, vistas: 0, muro: 0, facturas: 0, pagadas: 0, sats: 0, historias: [] };
+    g.vistas += f.vistas;
+    g.muro += f.muro;
+    g.facturas += f.facturas;
+    g.pagadas += f.pagadas;
+    g.sats += f.sats;
+    g.historias.push({ slug: f.slug, titulo: f.titulo, vistas: f.vistas, muro: f.muro, facturas: f.facturas, pagadas: f.pagadas, sats: f.sats });
+    grupos.set(f.autor, g);
+  }
+  const autores = [...grupos.values()].sort((a, b) => b.sats - a.sats || b.vistas - a.vistas || a.autor.localeCompare(b.autor, 'es'));
+
+  return {
+    autores,
+    historias: porHistoria.map(({ autor: _autor, ...f }) => f),
+    total: eventos.length,
+  };
+}

@@ -449,6 +449,7 @@ export function paraAcciones(detalle: DetalleOrden): OrdenParaAcciones {
     tipo: detalle.tipo,
     estado: detalle.estado,
     pagada: detalle.pagadaEn !== null,
+    demo: detalle.demo,
     entregadaEn: detalle.entregadaEn ? new Date(detalle.entregadaEn) : null,
     tieneResena: detalle.resena !== null,
     disputa: detalle.disputa
@@ -477,6 +478,12 @@ export async function confirmarPagoManual(ordenId: string, usuarioId: string): P
   if (!esUuid(ordenId) || !esUuid(usuarioId)) return NO_ENCONTRADA();
   const error = await confirmarPagoEnBD(ordenId, usuarioId, null);
   return error ? desdeError(error) : exito(null);
+}
+
+/** Demo sellers only: the buyer settles a pickup order as delivered. The database refuses any other order. */
+export async function simularEntregaDemo(ordenId: string, usuarioId: string): Promise<Resultado<null>> {
+  if (!esUuid(ordenId) || !esUuid(usuarioId)) return NO_ENCONTRADA();
+  return ejecutarRpc(clienteServicio().rpc('simular_entrega_demo', { p_orden: ordenId, p_actor: usuarioId }));
 }
 
 export async function marcarLista(ordenId: string, usuarioId: string): Promise<Resultado<null>> {

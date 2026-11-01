@@ -42,7 +42,7 @@ const DESCRIPCION_ESTADO: Record<EstadoEnvio, Record<'remitente' | 'destinatario
     destinatario: 'Quien envió el dinero lo canceló. No te va a llegar.',
   },
   devuelta: {
-    remitente: 'Nadie cobró el envío a tiempo, así que te devolvimos el dinero por Lightning.',
+    remitente: 'Nadie cobró el envío a tiempo, así que te devolvimos el dinero.',
     destinatario: 'El envío se devolvió a quien lo mandó porque no se cobró a tiempo.',
   },
 };
@@ -79,7 +79,7 @@ export function indicePaso(estado: EstadoEnvio): number {
 }
 
 export const ETIQUETA_ENTREGA: Record<Entrega, string> = {
-  lightning: 'Bitcoin por Lightning',
+  lightning: 'Bitcoin en su billetera',
   efectivo: 'Efectivo en un punto de pago',
   cuenta: 'Depósito a cuenta bancaria',
 };

@@ -110,7 +110,7 @@ test('the wall explains what a sat is and that the access stays in this browser'
   await requiereDemo(request);
   await page.goto(PAGA);
   await expect(page.locator('[data-gate-sat]')).toContainText('Un sat es la cienmillonésima parte de un bitcoin.');
-  await expect(muro(page)).toContainText('Si abrís la historia desde otro navegador o celular, hay que pagar otra factura.');
+  await expect(muro(page)).toContainText('usá tu código de acceso');
   // The explanation stays on the wall while the invoice is open, next to the dollar value.
   await page.locator('[data-gate-pedir]').click();
   await expect(page.locator('[data-gate-pendiente]')).toBeVisible();
@@ -247,6 +247,101 @@ test('a different browser stays locked and cannot read the first invoice', async
   } finally {
     await otra.close();
   }
+});
+
+/** The access code the reader was shown after paying: the text of the code box. */
+async function codigoDeAcceso(page: Page): Promise<string> {
+  const valor = page.locator('.gate-codigo__valor');
+  await expect(valor).toBeVisible();
+  return (await valor.textContent())?.trim() ?? '';
+}
+
+/** Types a code into the wall's "Ya pagué, tengo un código" field and submits it. */
+async function restaurarConCodigo(page: Page, codigo: string): Promise<void> {
+  await page.locator('[data-gate-ya] summary').click();
+  await page.locator('[data-gate-codigo-entrada]').fill(codigo);
+  await page.locator('[data-gate-restaurar-boton]').click();
+}
+
+test('the access code opens the paid story in another browser', async ({ page, browser, request }) => {
+  await requiereDemo(request);
+  await page.goto(PAGA);
+  await pagarHistoria(page);
+  const codigo = await codigoDeAcceso(page);
+  expect(codigo.length).toBeGreaterThan(40);
+
+  const otra = await browser.newContext({ baseURL: 'http://localhost:4321' });
+  try {
+    const pagina = await otra.newPage();
+    await pagina.goto(PAGA);
+    await expect(cerrado(pagina)).toBeHidden();
+    await restaurarConCodigo(pagina, codigo);
+    await expect(cerrado(pagina)).toBeVisible();
+    await expect(pagina.locator('article[data-historia]')).toHaveAttribute('data-gate-estado', 'desbloqueado');
+    // The code is kept in this browser too, so a reload needs no code.
+    await pagina.reload();
+    await expect(cerrado(pagina)).toBeVisible();
+  } finally {
+    await otra.close();
+  }
+});
+
+test('a forged access code does not open the story, and the server says so', async ({ page, browser, request }) => {
+  await requiereDemo(request);
+  await page.goto(PAGA);
+  await pagarHistoria(page);
+  const codigo = await codigoDeAcceso(page);
+  // Flip the last character of the signature: the payload still reads as a valid pass.
+  const falso = codigo.slice(0, -1) + (codigo.endsWith('A') ? 'B' : 'A');
+
+  const otra = await browser.newContext({ baseURL: 'http://localhost:4321' });
+  try {
+    const pagina = await otra.newPage();
+    await pagina.goto(PAGA);
+    await restaurarConCodigo(pagina, falso);
+    await expect(pagina.locator('[data-gate-error]')).toBeVisible();
+    await expect(cerrado(pagina)).toBeHidden();
+    const respuesta = await otra.request.post('/api/codigo/', { data: { slug: SLUG, codigo: falso } });
+    expect(respuesta.status()).toBe(401);
+  } finally {
+    await otra.close();
+  }
+});
+
+test('an access code for one story does not open another', async ({ page, browser, request }) => {
+  await requiereDemo(request);
+  await page.goto(OTRA_PAGA);
+  await pagarHistoria(page);
+  const codigoDeOtra = await codigoDeAcceso(page);
+
+  const otra = await browser.newContext({ baseURL: 'http://localhost:4321' });
+  try {
+    const pagina = await otra.newPage();
+    await pagina.goto(PAGA);
+    await restaurarConCodigo(pagina, codigoDeOtra);
+    await expect(pagina.locator('[data-gate-error]')).toBeVisible();
+    await expect(cerrado(pagina)).toBeHidden();
+    const respuesta = await otra.request.post('/api/codigo/', { data: { slug: SLUG, codigo: codigoDeOtra } });
+    expect(respuesta.status()).toBe(401);
+  } finally {
+    await otra.close();
+  }
+});
+
+test('reaching the end of the unlocked story sends the end-of-story event', async ({ page, request }) => {
+  await requiereDemo(request);
+  await page.goto(PAGA);
+  await pagarHistoria(page);
+  const evento = page.waitForRequest((r) => r.url().endsWith('/api/evento/') && (r.postData() ?? '').includes('leyo_completa'));
+  // Scroll down the whole story in steps, then back to the end marker, as a reader would.
+  const fin = page.locator('[data-gate-fin]');
+  for (let y = 0; y < 4000; y += 300) {
+    await page.evaluate((v) => window.scrollTo(0, v), y);
+    await page.waitForTimeout(60);
+  }
+  await fin.scrollIntoViewIfNeeded();
+  await expect(page.locator('article[data-historia]')).toHaveAttribute('data-gate-estado', 'leyendo');
+  expect((await evento).postDataJSON()).toMatchObject({ nombre: 'leyo_completa', objeto: SLUG });
 });
 
 test('an expired stored pass is renewed from the cookie', async ({ page, request }) => {

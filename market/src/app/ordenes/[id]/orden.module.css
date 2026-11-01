@@ -346,3 +346,11 @@
   border-style: solid;
   color: var(--chocolate);
 }
+
+/* Quick cancellation reasons: one tap fills the field, wrapping on narrow screens. */
+.motivosRapidos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-block: 0.5rem;
+}

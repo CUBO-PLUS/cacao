@@ -9,7 +9,7 @@ import estilos from './estilos.module.css';
 const ENTREGA_CORTA: Record<Entrega, string> = {
   efectivo: 'Efectivo',
   cuenta: 'Cuenta bancaria',
-  lightning: 'Lightning',
+  lightning: 'Bitcoin',
 };
 
 /** Step 2: who receives the money and how to reach them. */

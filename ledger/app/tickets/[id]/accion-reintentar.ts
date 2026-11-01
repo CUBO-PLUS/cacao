@@ -6,6 +6,7 @@ import { reintentarEmision } from "../../../src/emitir.ts";
 import { ErrorLedger } from "../../../src/errores.ts";
 import { almacenDeEntorno, almacenDtesDeEntorno } from "../../../src/servidor/configuracion.ts";
 import { accesoDeDueno } from "../../../src/servidor/sesion.ts";
+import { opcionesDeEmision } from "../../../src/servidor/simulacion.ts";
 
 // The "Reintentar emisión" button of a refused ticket. Owner only: the action checks the session itself, since a form
 // post can come from anywhere. The retry reuses the number of the refused document (src/emitir.ts).
@@ -27,7 +28,7 @@ export async function reintentarEmisionTicket(_anterior: EstadoReintento, formul
   try {
     const ticket = await almacenDeEntorno().porId(id);
     if (ticket === null) return { mensaje: null, error: "No existe ese ticket." };
-    const r = await reintentarEmision(almacenDeEntorno(), almacenDtesDeEntorno(), ticket, { ahora: new Date() });
+    const r = await reintentarEmision(almacenDeEntorno(), almacenDtesDeEntorno(), ticket, await opcionesDeEmision(new Date()));
     revalidatePath(`/tickets/${id}`);
     revalidatePath("/tickets");
     if (r.estado === "aceptado") return { mensaje: "Listo: el documento quedó aceptado.", error: null };

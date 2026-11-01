@@ -1980,6 +1980,41 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      simular_entrega_demo: {
+        Args: { p_actor: string; p_orden: string }
+        Returns: {
+          cancelada_en: string | null
+          cerrada_en: string | null
+          clave_idempotencia: string
+          codigo_entrega: string | null
+          comision_teorica_sats: number
+          comprador_id: string
+          cotizacion_usd_btc: number
+          creada_en: string
+          disputada_en: string | null
+          entregada_en: string | null
+          estado: Database["public"]["Enums"]["estado_orden"]
+          expirada_en: string | null
+          hecha_en: string | null
+          id: string
+          lista_en: string | null
+          modo_entrega: Database["public"]["Enums"]["modo_entrega"] | null
+          motivo_cancelacion: string | null
+          negocio_id: string
+          numero: number
+          pagada_en: string | null
+          resuelta_en: string | null
+          tipo: Database["public"]["Enums"]["tipo_orden"]
+          total_sats: number
+          total_usd_centavos: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "ordenes"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       marcar_reembolso: {
         Args: { p_actor: string; p_orden: string }
         Returns: {

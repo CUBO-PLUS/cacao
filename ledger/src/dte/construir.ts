@@ -41,6 +41,8 @@ export interface OpcionesDte {
   // Demonstration only: writes this code instead of the default.
   forzarCodigo?: string;
   generacion?: Generacion;
+  // Simulated contingency: tipoOperacion 2 with tipoContingencia 1 and this motivo (the schemas require it as text).
+  contingencia?: { motivo: string };
 }
 
 export interface ResultadoConstruccion {
@@ -278,9 +280,9 @@ export function construirDte(
     codigoGeneracion,
     // CAT-003 1 is the pre-issue billing model; CAT-004 1 is a normal transmission.
     tipoModelo: 1,
-    tipoOperacion: 1,
-    tipoContingencia: null,
-    motivoContin: null,
+    tipoOperacion: opciones.contingencia ? 2 : 1,
+    tipoContingencia: opciones.contingencia ? 1 : null,
+    motivoContin: opciones.contingencia ? opciones.contingencia.motivo : null,
     fecEmi: fecha.fecEmi,
     horEmi: fecha.horEmi,
     tipoMoneda: "USD",

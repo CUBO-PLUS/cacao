@@ -5,6 +5,7 @@ import { formatoMonto } from '@/lib/cotizacion';
 import { descripcionDeEstado } from '@/lib/transferencias';
 import type { RastreoPublico } from '@/servidor/transferencias';
 
+import { ComoSeRecoge } from './ComoSeRecoge';
 import { DolaresAproximados } from './DolaresAproximados';
 import { EtiquetaEstado } from './EtiquetaEstado';
 import { LineaDeTiempo } from './LineaDeTiempo';
@@ -58,6 +59,8 @@ export function VistaDestinatario({ saludo, envio, extra }: Props) {
         <p className={estilos.texto}>{descripcionDeEstado(envio.estado, 'destinatario', envio.entrega)}</p>
         {tiempo && <p className={estilos.tiempo}>{tiempo}</p>}
       </section>
+
+      <ComoSeRecoge entrega={envio.entrega} codigo={envio.codigo} estado={envio.estado} />
 
       <section className={estilos.pasos} aria-labelledby="titulo-pasos">
         <h2 id="titulo-pasos" className={estilos.etiqueta}>

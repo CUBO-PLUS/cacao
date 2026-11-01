@@ -42,8 +42,9 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
       </div>
     </div>
     <div class="muro__prueba" data-gate-prueba hidden>
+      <p class="muro__nota muro__nota--fuerte"><b>¿No tenés billetera Lightning?</b> Pagá con esta billetera de prueba: abre en otra pestaña y la factura ya viene cargada.</p>
       <a class="boton muro__secundario" data-gate-billetera href="#" target="_blank" rel="noopener">Pagar con la billetera de prueba</a>
-      <p class="muro__nota">Bitcoin de prueba (regtest): no tiene valor.</p>
+      <p class="muro__nota">Es bitcoin de prueba (regtest): no tiene valor y no se mueve dinero real.</p>
     </div>
     <p class="muro__cuenta">Vence en <span class="mono" data-gate-cuenta>5:00</span></p>
     {
@@ -70,7 +71,26 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
     data-texto-fallida="Intentar de nuevo"
   >Desbloquear por {precio}</button>
 
-  <p class="muro__nota">Tu acceso queda guardado en este navegador. Sin cuenta ni suscripción. Si abrís la historia desde otro navegador o celular, hay que pagar otra factura.</p>
+  <details class="muro__ya" data-gate-ya>
+    <summary>Ya pagué, tengo un código</summary>
+    <form class="muro__ya-form" data-gate-restaurar novalidate>
+      <label class="etiqueta" for={`codigo-${slug}`}>Código de acceso</label>
+      <textarea
+        class="muro__campo mono"
+        id={`codigo-${slug}`}
+        rows="3"
+        spellcheck="false"
+        autocomplete="off"
+        autocapitalize="off"
+        data-gate-codigo-entrada
+        placeholder="Pegá aquí el código que guardaste"
+      ></textarea>
+      <button class="boton muro__secundario" type="submit" data-gate-restaurar-boton>Abrir con mi código</button>
+      <p class="muro__nota">Sirve en cualquier navegador o celular, para esta historia y hasta que venza.</p>
+    </form>
+  </details>
+
+  <p class="muro__nota">Tu acceso queda guardado en este navegador, sin cuenta ni suscripción. Para abrirla desde otro navegador o celular, usá tu código de acceso: lo ves cuando pagás.</p>
   {demo && <p class="etiqueta muro__demo-nota">Modo demo · no se cobra nada</p>}
 </aside>
 
@@ -114,6 +134,7 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
     max-width: 100%;
   }
   .muro__nota { font-size: 1rem; color: var(--arena-oscura); }
+  .muro__nota--fuerte { color: var(--pulpa); max-width: 42ch; }
   .muro__cerrado { color: var(--arena-oscura); max-width: 40ch; }
   .muro__demo-nota { color: var(--arena-oscura); }
 
@@ -174,11 +195,64 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
   .muro .boton:hover { background: var(--pulpa); color: var(--tostado); }
   .muro .boton:disabled { opacity: 0.6; cursor: wait; }
   .muro .boton:focus-visible { outline: 3px solid var(--mazorca); outline-offset: 3px; }
+
+  .muro__ya { width: 100%; min-width: 0; }
+  .muro__ya summary {
+    cursor: pointer;
+    font-weight: 700;
+    text-decoration: underline;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+  .muro__ya-form { display: grid; gap: 10px; justify-items: start; padding-top: 10px; min-width: 0; width: 100%; }
+  .muro__campo {
+    width: 100%;
+    min-width: 0;
+    padding: 12px 14px;
+    border-radius: var(--radio-chico);
+    border: 1.5px solid var(--pulpa);
+    background: var(--blanco-calido);
+    color: var(--tostado);
+    font: inherit;
+    font-size: var(--t-etiqueta);
+    resize: vertical;
+    overflow-wrap: anywhere;
+  }
+  .muro__campo:focus-visible { outline: 3px solid var(--mazorca); outline-offset: 2px; }
+  .muro [hidden] { display: none; }
+
+  /* The access code, shown at the start of the unlocked text. Global: the text is put in by the script. */
+  :global(.gate-codigo) {
+    display: grid;
+    gap: 10px;
+    justify-items: start;
+    margin: 0 0 2em;
+    padding: clamp(20px, 4vw, 28px);
+    background: var(--tostado);
+    color: var(--pulpa);
+    border-radius: var(--radio);
+    min-width: 0;
+  }
+  :global(.gate-codigo .gate-codigo__valor) {
+    font-family: var(--mono);
+    font-size: var(--t-etiqueta);
+    overflow-wrap: anywhere;
+    max-width: 100%;
+    background: var(--chocolate);
+    padding: 10px 12px;
+    border-radius: var(--radio-chico);
+    user-select: all;
+  }
+  :global(.gate-codigo p) { margin: 0; color: var(--arena-oscura); }
+  :global(.gate-codigo .gate-codigo__titulo) { color: var(--pulpa); font-weight: 800; font-size: var(--t-h2); }
+  :global(.gate-codigo .gate-codigo__acciones) { display: flex; flex-wrap: wrap; gap: 10px; }
+  :global(.gate-codigo .boton) { min-height: 44px; }
 </style>
 
 <script>
   import QRCode from 'qrcode';
-  import { estadoGate, guardarAcceso, traerCerrado } from '../lib/gate';
+  import { estadoGate, guardarAcceso, tokenDe, traerCerrado } from '../lib/gate';
 
   type Paso = 'inicio' | 'pendiente' | 'pagada' | 'vencida' | 'fallida' | 'sin-base';
   interface Respuesta {
@@ -245,6 +319,10 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
     const aviso = dentro('[data-gate-error]');
     const prueba = dentro('[data-gate-prueba]');
     const billetera = dentro<HTMLAnchorElement>('[data-gate-billetera]');
+    const ya = dentro<HTMLDetailsElement>('[data-gate-ya]');
+    const restaurar = dentro<HTMLFormElement>('[data-gate-restaurar]');
+    const entrada = dentro<HTMLTextAreaElement>('[data-gate-codigo-entrada]');
+    const restaurarBoton = dentro<HTMLButtonElement>('[data-gate-restaurar-boton]');
 
     let cobro: string | null = null;
     let vence = 0;
@@ -275,7 +353,7 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
     }
 
     function ocupado(on: boolean): void {
-      for (const boton of [pedir, simular, fallar]) if (boton) boton.disabled = on;
+      for (const boton of [pedir, simular, fallar, restaurarBoton]) if (boton) boton.disabled = on;
     }
 
     function pintarArticulo(estado: 'bloqueado' | 'desbloqueado' | 'leyendo'): void {
@@ -312,6 +390,8 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
       if (cerradoTexto) cerradoTexto.hidden = paso !== 'inicio';
       if (pendiente) pendiente.hidden = paso !== 'pendiente';
       if (motivo) motivo.hidden = paso !== 'fallida';
+      // The code field is for a reader who has not paid on this browser: not while an invoice is open.
+      if (ya) ya.hidden = paso === 'pendiente' || paso === 'pagada' || paso === 'sin-base';
       if (pedir) {
         pedir.hidden = !['inicio', 'vencida', 'fallida'].includes(paso);
         pedir.textContent =
@@ -401,6 +481,11 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
     }
 
     // Reading unlocked: the first scroll starts the observers, so loading the page is not reading yet.
+    // The observers are kept in this scope on purpose: an observer that nothing refers to can be collected,
+    // and then the "leyó hasta el final" event never fires.
+    let observadorTexto: IntersectionObserver | null = null;
+    let observadorFin: IntersectionObserver | null = null;
+
     function observarLectura(): void {
       if (observandoLectura || !cerrado || !('IntersectionObserver' in window)) return;
       observandoLectura = true;
@@ -408,15 +493,16 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
         'scroll',
         () => {
           if (!cerrado) return;
-          const observadorTexto = new IntersectionObserver((entradas) => {
+          const texto = cerrado;
+          observadorTexto = new IntersectionObserver((entradas, o) => {
             if (!entradas.some((e) => e.isIntersecting)) return;
             pintarArticulo('leyendo');
-            observadorTexto.disconnect();
+            o.disconnect();
           });
-          observadorTexto.observe(cerrado);
-          const fin = cerrado.querySelector('[data-gate-fin]');
+          observadorTexto.observe(texto);
+          const fin = texto.querySelector('[data-gate-fin]');
           if (fin) {
-            const observadorFin = new IntersectionObserver((entradas, o) => {
+            observadorFin = new IntersectionObserver((entradas, o) => {
               if (!entradas.some((e) => e.isIntersecting)) return;
               enviar('leyo_completa');
               o.disconnect();
@@ -428,10 +514,70 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
       );
     }
 
+    // The access code: the pass this browser keeps, shown first so the reader can save or copy it.
+    // Built with DOM calls, so nothing from the page is parsed as HTML.
+    function cajaCodigo(codigo: string, expira: number): HTMLElement {
+      const caja = document.createElement('section');
+      caja.className = 'gate-codigo';
+      caja.dataset.gateCodigo = '';
+      caja.setAttribute('aria-label', 'Código de acceso');
+
+      const titulo = document.createElement('p');
+      titulo.className = 'gate-codigo__titulo';
+      titulo.textContent = 'Tu código de acceso';
+
+      const texto = document.createElement('p');
+      const fecha = new Date(expira).toLocaleDateString('es-SV', { day: 'numeric', month: 'long', year: 'numeric' });
+      texto.textContent = `Guardalo o copialo. Sirve en cualquier navegador o celular para esta historia, hasta el ${fecha}. Pegalo en el muro con «Ya pagué, tengo un código».`;
+
+      const valor = document.createElement('p');
+      valor.className = 'gate-codigo__valor';
+      valor.textContent = codigo;
+
+      const acciones = document.createElement('div');
+      acciones.className = 'gate-codigo__acciones';
+
+      const copia = document.createElement('button');
+      copia.type = 'button';
+      copia.className = 'boton';
+      copia.textContent = 'Copiar código';
+      copia.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(codigo);
+          copia.textContent = 'Código copiado';
+        } catch {
+          copia.textContent = 'No pudimos copiar: seleccionalo a mano';
+        }
+      });
+
+      const guardar = document.createElement('button');
+      guardar.type = 'button';
+      guardar.className = 'boton';
+      guardar.textContent = 'Guardar en un archivo';
+      guardar.addEventListener('click', () => {
+        const cuerpo = `Código de acceso de Cacao Media\nHistoria: ${slug}\nVence: ${fecha}\n\n${codigo}\n`;
+        const url = URL.createObjectURL(new Blob([cuerpo], { type: 'text/plain' }));
+        const enlace = document.createElement('a');
+        enlace.href = url;
+        enlace.download = `cacao-media-codigo-${slug}.txt`;
+        document.body.append(enlace);
+        enlace.click();
+        enlace.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      });
+
+      acciones.append(copia, guardar);
+      caja.append(titulo, texto, valor, acciones);
+      return caja;
+    }
+
     // The locked text goes into the page only now, from the server, with the reader's token.
     async function abrir(html: string, enfocar: boolean): Promise<void> {
       if (!cerrado) return;
-      cerrado.innerHTML = html;
+      cerrado.innerHTML = '';
+      const pase = tokenDe(slug);
+      if (pase) cerrado.append(cajaCodigo(pase.token, pase.expira));
+      cerrado.insertAdjacentHTML('beforeend', html);
       const fin = document.createElement('span');
       fin.dataset.gateFin = '';
       fin.setAttribute('aria-hidden', 'true');
@@ -566,6 +712,40 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
         error(MENSAJE_RED);
       }
     }
+
+    // Restores access from a code typed on this browser. The server checks the code; the pass is then kept here.
+    async function restaurarCon(codigo: string): Promise<void> {
+      ocupado(true);
+      error(null);
+      try {
+        const r = await fetch('/api/codigo/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug, codigo }),
+        });
+        const datos = ((await r.json().catch(() => ({}))) ?? {}) as Respuesta;
+        if (!r.ok) {
+          error(datos.error ?? MENSAJE_RED);
+          return;
+        }
+        await cobrado(datos.token ?? codigo, false);
+      } catch {
+        error(MENSAJE_RED);
+      } finally {
+        ocupado(false);
+      }
+    }
+
+    restaurar?.addEventListener('submit', (evento) => {
+      evento.preventDefault();
+      const codigo = (entrada?.value ?? '').replace(/\s+/g, '');
+      if (!codigo) {
+        error('Escribí o pegá tu código de acceso.');
+        entrada?.focus();
+        return;
+      }
+      void restaurarCon(codigo);
+    });
 
     pedir?.addEventListener('click', () => void pedirFactura());
     simular?.addEventListener('click', () => void accionDemo('pagar'));

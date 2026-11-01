@@ -14,6 +14,7 @@ import {
   marcarOrdenLista,
   marcarReembolsoVendedor,
   marcarTrabajoHecho,
+  simularEntregaDeDemo,
 } from './acciones';
 import { FormularioCancelar } from './FormularioCancelar';
 import { FormularioDisputa } from './FormularioDisputa';
@@ -77,6 +78,17 @@ export function AccionesOrden({
             pregunta="¿Ya recibiste el pedido?"
             etiquetaConfirmar="Sí, ya lo recibí"
             operacion={() => confirmarEntregaComprador(ordenId)}
+          />
+        </Paso>
+      )}
+
+      {tiene('simular_entrega') && (
+        <Paso descripcion="Este negocio es de demostración: no participa en CacaoMarket y no va a marcar el pedido. Simulá la entrega para ver el recibo.">
+          <BotonConConfirmacion
+            etiqueta="Simular entrega"
+            pregunta="¿Simulamos la entrega de este pedido de demostración?"
+            etiquetaConfirmar="Sí, simular entrega"
+            operacion={() => simularEntregaDeDemo(ordenId)}
           />
         </Paso>
       )}

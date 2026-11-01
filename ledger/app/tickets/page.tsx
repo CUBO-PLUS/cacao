@@ -103,6 +103,11 @@ export default async function PaginaTickets({ searchParams }: PageProps<"/ticket
       <div className="encabezado">
         <h1>Tickets</h1>
         <p className="nota">Más nuevos primero. Hora de El Salvador.</p>
+        <p>
+          <Link className="boton secundario" href="/tickets/nueva">
+            Registrar venta en efectivo
+          </Link>
+        </p>
       </div>
 
       <form className="bloque filtros" method="get" action="/tickets" role="search" aria-label="Filtrar tickets">

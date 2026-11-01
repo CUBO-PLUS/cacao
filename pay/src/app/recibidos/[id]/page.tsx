@@ -4,7 +4,10 @@ import { notFound, redirect } from 'next/navigation';
 import { connection } from 'next/server';
 
 import { ActualizarEnvio } from '@/componentes/ActualizarEnvio';
+import { fechaEnvio } from '@/componentes/formatoEnvio';
 import { esEstadoFinal, primerNombre, saludoDestinatario } from '@/componentes/textosEnvio';
+import { formatoMonto } from '@/lib/cotizacion';
+import { ETIQUETA_ENTREGA } from '@/lib/transferencias';
 import { VistaDestinatario } from '@/componentes/VistaDestinatario';
 import { cobroDeEnvio, tokenDeCobroDelDestinatario } from '@/servidor/cobro';
 import { envioPara } from '@/servidor/transferencias';
@@ -86,6 +89,36 @@ export default async function PaginaRecibido(props: PageProps<'/recibidos/[id]'>
           </section>
         }
       />
+
+      {envio.estado === 'completada' && envio.entrega !== 'lightning' && (
+        <section className={estilos.datos} aria-labelledby="titulo-recibo">
+          <h2 id="titulo-recibo" className="solo-lectores">
+            Recibo
+          </h2>
+          <dl className={estilos.definiciones}>
+            <div>
+              <dt>Código</dt>
+              <dd className={estilos.codigo}>{envio.codigo}</dd>
+            </div>
+            <div>
+              <dt>Te lo mandó</dt>
+              <dd>{primerNombre(envio.remitenteNombre)}</dd>
+            </div>
+            <div>
+              <dt>Recibiste</dt>
+              <dd>{formatoMonto(envio.montoDestino, envio.monedaDestino)}</dd>
+            </div>
+            <div>
+              <dt>Cómo lo recibiste</dt>
+              <dd>{ETIQUETA_ENTREGA[envio.entrega]}</dd>
+            </div>
+            <div>
+              <dt>Fecha</dt>
+              <dd>{fechaEnvio(envio.completadaEn ?? envio.creadaEn, true)}</dd>
+            </div>
+          </dl>
+        </section>
+      )}
 
       <ActualizarEnvio activo={!esEstadoFinal(envio.estado)} />
     </div>

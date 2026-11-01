@@ -93,6 +93,19 @@ export interface Ticket {
   rechazo: Rechazo | null;
   comercioId?: string | null;
   origen?: OrigenTicket | null;
+  // Simulated contingency (demo control of the owner). Set while the document waits for the Ministry to answer.
+  contingencia?: Contingencia | null;
+}
+
+// A document issued in contingency (tipoOperacion 2). simulada is always true: nothing reached the Ministry.
+export interface Contingencia {
+  desde: string;
+  simulada: true;
+  // CAT-008 code (1 to 5). The demo uses 1: no availability of the Ministry's system.
+  tipoContingencia: 1 | 2 | 3 | 4 | 5;
+  motivo: string;
+  // Filled when the simulated reception took the document.
+  transmitida: { momento: string; sello: string } | null;
 }
 
 export interface EntradaTicket {

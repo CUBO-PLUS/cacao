@@ -4,7 +4,8 @@ import { after, connection } from "next/server";
 
 import { formatoSats, formatoUsd } from "../src/dinero.ts";
 import { URL_GRUPO } from "../src/grupo.ts";
-import { almacenDeEntorno } from "../src/servidor/configuracion.ts";
+import { completarAtestaciones } from "../src/emitir.ts";
+import { almacenAtestacionesDeEntorno, almacenDeEntorno } from "../src/servidor/configuracion.ts";
 import { mesActualSv, negociosDelMes } from "../src/servidor/api.ts";
 import { informeDelDia } from "../src/servidor/informe.ts";
 import { sesionActual } from "../src/servidor/sesion.ts";
@@ -119,6 +120,14 @@ export default async function PaginaTablero() {
   const ahora = new Date();
   // The owner sees the cause of a failed run and the sync button; everyone else sees the calm line only.
   const dueno = (await sesionActual())?.usuario.esAdmin === true;
+  // Owner only: sales emitted before the attestation chain existed get their record, oldest first (idempotent).
+  if (dueno) {
+    try {
+      await completarAtestaciones(almacenDeEntorno(), almacenAtestacionesDeEntorno(), { ahora });
+    } catch (e) {
+      console.error("La cadena de atestaciones no pudo completarse:", e);
+    }
+  }
   // The page renders from the stored rows. A due run goes to the background: no visitor waits for BTCPay.
   const lectura = await leerEstadoSincronizacion({ ahora });
   if (lectura.debeCorrer) after(() => sincronizarSiHaceFalta({ ahora: new Date() }));
@@ -222,8 +231,10 @@ export default async function PaginaTablero() {
       const n = await negociosDelMes(mesActualSv(ahora));
       negocios = (
         <section className="bloque" aria-labelledby="titulo-negocios">
-          <h2 id="titulo-negocios">Ventas de negocios que cobran con CacaoPay</h2>
-          <p className="nota">Estas ventas no son ingresos de Grupo Cacao: cada negocio lleva las suyas.</p>
+          <h2 id="titulo-negocios">Ventas de negocios (aparte)</h2>
+          <p className="nota">
+            Negocios que cobran con CacaoPay. No suman a los totales de Grupo Cacao: cada negocio lleva las suyas.
+          </p>
           <p>
             {plural(n.ventas, "venta", "ventas")}, {formatoUsd(n.centavos)} este mes.
           </p>

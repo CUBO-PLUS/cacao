@@ -1,0 +1,119 @@
+---
+// Admin authors: views, wall views, invoices, paid invoices and sats earned, per author and per story.
+import Panel from './_panel.astro';
+import { hayBase, leerError } from '../../lib/servidor/bd';
+import { autoresPanel, leerRango, type PanelAutores } from '../../lib/servidor/admin';
+import { accesoAdmin, noEncontrado } from '../../lib/servidor/admin-acceso';
+
+export const prerender = false;
+Astro.response.headers.set('Cache-Control', 'no-store');
+const acceso = await accesoAdmin(Astro);
+if (acceso.estado === 'sin-sesion') return Astro.redirect('/admin/entrar/');
+if (acceso.estado === 'sin-permiso') return noEncontrado();
+
+const rango = leerRango({
+  desde: Astro.url.searchParams.get('desde'),
+  hasta: Astro.url.searchParams.get('hasta'),
+});
+
+let panel: PanelAutores | null = null;
+let error: string | null = null;
+if (hayBase()) {
+  try {
+    panel = await autoresPanel(rango);
+  } catch (e) {
+    error = leerError(e).mensaje;
+  }
+}
+const satsTexto = (n: number) => `${n.toLocaleString('en-US')} sats`;
+---
+
+<Panel titulo="Autores" seccion="autores" rango={rango}>
+  <h2 class="seccion-titulo">Autores e historias</h2>
+
+  {!hayBase() && <p class="vacio">La base de datos no está configurada.</p>}
+  {error && <p class="error" role="alert">{error}</p>}
+
+  {
+    panel && (
+      <>
+        <p class="nota">
+          Vistas cuenta cada vez que se abrió una historia de pago. Llegadas al muro cuenta cada vez que el muro
+          se mostró. Facturas, pagadas y sats salen de las facturas del período. Todo es real: sin datos de prueba.
+        </p>
+
+        <section class="bloque" aria-labelledby="por-autor-titulo">
+          <h3 id="por-autor-titulo" class="seccion-titulo">Por autor</h3>
+          {panel.autores.length === 0 ? (
+            <p class="vacio">Sin actividad de autores en este período.</p>
+          ) : (
+            <div class="tabla-caja">
+              <table class="tabla">
+                <caption>Autores con actividad, de más sats a menos</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Autor</th>
+                    <th scope="col">Vistas</th>
+                    <th scope="col">Llegadas al muro</th>
+                    <th scope="col">Facturas</th>
+                    <th scope="col">Pagadas</th>
+                    <th scope="col">Sats ganados</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {panel.autores.map((a) => (
+                    <tr>
+                      <th scope="row">{a.autor}</th>
+                      <td class="numero" data-etiqueta="Vistas">{a.vistas}</td>
+                      <td class="numero" data-etiqueta="Llegadas al muro">{a.muro}</td>
+                      <td class="numero" data-etiqueta="Facturas">{a.facturas}</td>
+                      <td class="numero" data-etiqueta="Pagadas">{a.pagadas}</td>
+                      <td class="numero" data-etiqueta="Sats ganados">{satsTexto(a.sats)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        <section class="bloque" aria-labelledby="por-historia-titulo">
+          <h3 id="por-historia-titulo" class="seccion-titulo">Por historia</h3>
+          {panel.historias.length === 0 ? (
+            <p class="vacio">Sin historias con actividad en este período.</p>
+          ) : (
+            <div class="tabla-caja">
+              <table class="tabla">
+                <caption>Historias con actividad, de más sats a menos</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Historia</th>
+                    <th scope="col">Vistas</th>
+                    <th scope="col">Llegadas al muro</th>
+                    <th scope="col">Facturas</th>
+                    <th scope="col">Pagadas</th>
+                    <th scope="col">Sats ganados</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {panel.historias.map((h) => (
+                    <tr>
+                      <th scope="row">
+                        <a href={`/historias/${h.slug}/`}>{h.titulo}</a>
+                      </th>
+                      <td class="numero" data-etiqueta="Vistas">{h.vistas}</td>
+                      <td class="numero" data-etiqueta="Llegadas al muro">{h.muro}</td>
+                      <td class="numero" data-etiqueta="Facturas">{h.facturas}</td>
+                      <td class="numero" data-etiqueta="Pagadas">{h.pagadas}</td>
+                      <td class="numero" data-etiqueta="Sats ganados">{satsTexto(h.sats)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      </>
+    )
+  }
+</Panel>

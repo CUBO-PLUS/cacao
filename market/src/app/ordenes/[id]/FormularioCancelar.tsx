@@ -10,6 +10,10 @@ import { useAccion } from './useAccion';
 const MINIMO = 4;
 const MAXIMO = 300;
 
+// One tap fills the reason. The text can still be edited, and the same limits apply to it.
+const MOTIVOS_PEDIDO = ['Cambié de idea', 'Encontré otro precio', 'Me equivoqué al pedir', 'Tarda mucho el pago'];
+const MOTIVOS_TRABAJO = ['Ya no lo necesito', 'No pudimos coordinar la hora', 'Cambió el precio acordado'];
+
 // Cancels with a reason. A job: either party while it is agreed. A product order: the buyer, before it
 // is paid, and the stock goes back. Behind a disclosure, like the dispute form, and a second step,
 // because a cancelled order cannot be reopened. `alCancelar` lets the payment screen refresh itself.
@@ -79,6 +83,22 @@ export function FormularioCancelar({
             <label htmlFor="cancelar-motivo" className="campo-etiqueta">
               Motivo de la cancelación
             </label>
+            <div className={styles.motivosRapidos} role="group" aria-label="Motivos frecuentes">
+              {(trabajo ? MOTIVOS_TRABAJO : MOTIVOS_PEDIDO).map((motivoRapido) => (
+                <button
+                  key={motivoRapido}
+                  type="button"
+                  className="boton boton--secundario"
+                  onClick={() => {
+                    setMotivo(motivoRapido);
+                    setPreguntando(false);
+                    setErrorLocal(null);
+                  }}
+                >
+                  {motivoRapido}
+                </button>
+              ))}
+            </div>
             <textarea
               id="cancelar-motivo"
               className={styles.campoTexto}

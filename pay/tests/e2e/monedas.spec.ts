@@ -52,7 +52,7 @@ test('dólares a sats por Lightning: la comisión va aparte del tipo de cambio',
     await lucia.goto('/enviar');
     await lucia.getByLabel('Monto a enviar').fill('100');
     await lucia.getByLabel('Moneda que enviás').selectOption('USD');
-    await lucia.getByLabel(/Bitcoin por Lightning:/).check();
+    await lucia.getByLabel(/Billetera de bitcoin:/).check();
 
     const lineas = cotizacion(lucia).locator('dl > div');
     await expect(lineas).toHaveCount(4);

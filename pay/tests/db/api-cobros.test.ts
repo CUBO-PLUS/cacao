@@ -389,6 +389,35 @@ describe('estados de BTCPay y avisos', () => {
     expect((await leerCobroDb(cobro.id)).estado).toBe('pagado');
   });
 
+  it('un pago tardío de un negocio cancelado llega a la cola de CacaoLedger, una sola vez', async () => {
+    const cliente = await clienteNuevo({ producto: 'negocios' });
+    const cobro = await cobroCreado(cliente, `clave-${aleatorio(8)}`);
+    await servicio().rpc('pay_cancelar_cobro', { p_cliente: cliente.id, p_id: cobro.id });
+    const hash = huella('tardio');
+
+    const primera = await servicio().rpc('pay_aplicar_btcpay', { p_factura_id: cobro.facturaId, p_estado: 'Settled', p_hash: hash });
+    const r = primera.data as unknown as { cambio: boolean; aviso_ledger_id: string | null };
+    expect(r.cambio).toBe(false);
+    expect(r.aviso_ledger_id).not.toBeNull();
+    const { data: aviso } = await servicio().from('pay_avisos').select('estado, destino').eq('id', r.aviso_ledger_id!).single();
+    expect(aviso).toEqual({ estado: 'pagado', destino: 'ledger' });
+    expect((await leerCobroDb(cobro.id)).estado).toBe('cancelado');
+
+    const segunda = await servicio().rpc('pay_aplicar_btcpay', { p_factura_id: cobro.facturaId, p_estado: 'Settled', p_hash: hash });
+    expect((segunda.data as unknown as { aviso_ledger_id: string | null }).aviso_ledger_id).toBeNull();
+  });
+
+  it('un negocio vencido que se paga después también llega a la cola de CacaoLedger', async () => {
+    const cliente = await clienteNuevo({ producto: 'negocios' });
+    const cobro = await cobroCreado(cliente, `clave-${aleatorio(8)}`);
+    await servicio().rpc('pay_aplicar_btcpay', { p_factura_id: cobro.facturaId, p_estado: 'Expired', p_hash: NULO });
+    const { data } = await servicio().rpc('pay_aplicar_btcpay', { p_factura_id: cobro.facturaId, p_estado: 'Settled', p_hash: huella('vencido') });
+    const r = data as unknown as { cambio: boolean; aviso_ledger_id: string | null };
+    expect(r.cambio).toBe(true);
+    expect(r.aviso_ledger_id).not.toBeNull();
+    expect((await leerCobroDb(cobro.id)).estado).toBe('pagado');
+  });
+
   it('una factura que no es de ningún cobro se rechaza', async () => {
     const { error } = await servicio().rpc('pay_aplicar_btcpay', { p_factura_id: `N${aleatorio(12)}`, p_estado: 'Settled', p_hash: NULO });
     expect(error?.message).toMatch(/NO_ENCONTRADA/);

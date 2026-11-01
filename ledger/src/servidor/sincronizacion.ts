@@ -4,6 +4,7 @@ import { sincronizarBtcpay, type ConfigSincronizacion, type RegistroSincronizaci
 import { createAlmacenSupabase } from "../almacen/supabase.ts";
 import { createAlmacenDtesSupabase } from "../almacen/dtes.ts";
 import { emitirPagados, LIMITE_EMISION_POR_SYNC } from "../emitir.ts";
+import { opcionesDeEmision } from "./simulacion.ts";
 import { haceCuanto } from "../tiempo.ts";
 import { btcpayDeEntorno, supabaseDeEntorno, type ConfigSupabaseWeb } from "./configuracion.ts";
 import { soltarCandado, tomarCandado } from "./candado.ts";
@@ -177,7 +178,7 @@ async function correrSincronizacion(
       {
         ahora,
         registrar,
-        emitir: (almacenTickets) => emitirPagados(almacenTickets, dtes, { ahora, limite: LIMITE_EMISION_POR_SYNC }),
+        emitir: async (almacenTickets) => emitirPagados(almacenTickets, dtes, { ...(await opcionesDeEmision(ahora)), limite: LIMITE_EMISION_POR_SYNC }),
       },
     );
     return { ultima: new Date(), error: null, detalle: null, nuevas: r.nuevas, emitidos: r.emitidos ?? 0, rechazados: r.rechazados ?? 0, corrio: true, enCurso: false };

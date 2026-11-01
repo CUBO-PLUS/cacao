@@ -46,7 +46,7 @@ export default async function PaginaRastreo(props: PageProps<'/t/[codigo]'>) {
         envio={envio}
       />
 
-      {envio.cobradaPorLightning && <p className={estilos.cobrado}>Cobrado por Lightning</p>}
+      {envio.cobradaPorLightning && <p className={estilos.cobrado}>Cobrado con bitcoin</p>}
 
       <div className={estilos.qr}>
         <CodigoQr texto={enlaceRastreo(envio.codigo)} titulo="Escaneá para seguir este envío desde tu teléfono" />

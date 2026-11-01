@@ -258,6 +258,18 @@ main:focus {
   }
 }
 
+/* At 320px the logo, account and cart share one row: tighter gaps keep the cart inside the screen. */
+@media (max-width: 359px) {
+  .cabecera__fila {
+    gap: 4px;
+  }
+
+  .carrito-enlace {
+    gap: 4px;
+    padding: 0 6px;
+  }
+}
+
 .contador {
   min-width: 1.75em;
   padding: 2px 6px;

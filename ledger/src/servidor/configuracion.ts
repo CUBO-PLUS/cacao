@@ -1,3 +1,4 @@
+import { createAlmacenAtestacionesSupabase, type AlmacenAtestaciones } from "../almacen/atestaciones.ts";
 import { createAlmacenDtesSupabase, type AlmacenDtes } from "../almacen/dtes.ts";
 import { createAlmacenSupabase } from "../almacen/supabase.ts";
 import type { AlmacenTickets } from "../almacen/tipos.ts";
@@ -43,4 +44,11 @@ export async function btcpayDeEntorno(): Promise<ConfigSincronizacion | null> {
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
   return { url, clave, tiendas };
+}
+
+// The rate attestation chain (ledger_atestaciones). Same configuration and message as the other stores.
+export function almacenAtestacionesDeEntorno(entorno: Entorno = process.env): AlmacenAtestaciones {
+  const config = supabaseDeEntorno(entorno);
+  if (config === null) throw new ErrorLedger("Falta la configuración de la base de datos en el servidor.");
+  return createAlmacenAtestacionesSupabase(config);
 }

@@ -35,6 +35,7 @@ export type Accion =
   | 'marcar_reembolso'
   | 'confirmar_reembolso'
   | 'marcar_hecha'
+  | 'simular_entrega'
   | 'cancelar';
 
 export type ResultadoDisputa =
@@ -182,6 +183,8 @@ export type OrdenParaAcciones = {
     reembolsoConfirmado: boolean;
   } | null;
   proveedor: 'manual' | 'falso' | 'nwc' | 'blink' | 'btcpay';
+  // A demo seller (BTC Map profile) that does not take part in CacaoMarket. Its pickup orders can be simulated.
+  demo?: boolean;
 };
 
 // Buyer may open a dispute from payment until 48 h after delivery, and only once.
@@ -238,9 +241,12 @@ function accionesDeProducto(orden: OrdenParaAcciones, rol: Rol, ahora: Date): Ac
       break;
     case 'pagada':
       if (vendedor) acciones.push('marcar_lista');
+      // A demo seller never marks the order ready: the buyer can settle it as a simulation.
+      if (comprador && orden.demo === true) acciones.push('simular_entrega');
       break;
     case 'lista':
       if (comprador) acciones.push('marcar_entregada');
+      if (comprador && orden.demo === true) acciones.push('simular_entrega');
       if (vendedor) acciones.push('entregar_con_codigo');
       break;
     case 'entregada':

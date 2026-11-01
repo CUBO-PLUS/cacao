@@ -213,6 +213,26 @@ describe('accionesPosibles, roles and guards', () => {
   });
 });
 
+describe('demo sellers: the buyer may simulate a pickup delivery', () => {
+  it('a demo pickup order that is paid or ready offers the simulation to the buyer only', () => {
+    expect(accionesPosibles(orden({ demo: true, estado: 'pagada' }), 'comprador')).toContain('simular_entrega');
+    expect(accionesPosibles(orden({ demo: true, estado: 'lista' }), 'comprador')).toContain('simular_entrega');
+    expect(accionesPosibles(orden({ demo: true, estado: 'pagada' }), 'vendedor')).not.toContain('simular_entrega');
+    expect(accionesPosibles(orden({ demo: true, estado: 'lista' }), 'vendedor')).not.toContain('simular_entrega');
+  });
+
+  it('a real seller never gets the simulation, paid or ready', () => {
+    expect(accionesPosibles(orden({ demo: false, estado: 'pagada' }), 'comprador')).not.toContain('simular_entrega');
+    expect(accionesPosibles(orden({ estado: 'lista' }), 'comprador')).not.toContain('simular_entrega');
+  });
+
+  it('the simulation is offered only before delivery, never on a job', () => {
+    expect(accionesPosibles(orden({ demo: true, estado: 'creada', pagada: false }), 'comprador')).not.toContain('simular_entrega');
+    expect(accionesPosibles(orden({ demo: true, estado: 'entregada' }), 'comprador')).not.toContain('simular_entrega');
+    expect(accionesPosibles(orden({ demo: true, tipo: 'servicio', estado: 'pagada' }), 'comprador')).not.toContain('simular_entrega');
+  });
+});
+
 describe('product orders: buyer cancellation before payment', () => {
   it('the buyer cancels while creada or esperando_pago, and never once paid', () => {
     for (const estado of ['creada', 'esperando_pago'] as EstadoOrden[]) {

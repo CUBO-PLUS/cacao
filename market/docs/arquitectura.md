@@ -33,13 +33,15 @@ Las lecturas tienen dos caminos. La mayoría de las páginas públicas y de las 
   |   Storage    bucket "productos" con las fotos (lectura pública)      |
   +------------------------------------+---------------------------------+
                                        |
-                                       | LNURL-pay y LUD-21, solo desde el
-                                       | servidor, a la Lightning Address
+                                       | Cobros, solo desde el servidor:    |
+                                       | CacaoPay o BTCPay, y LNURL-pay     |
+                                       | (LUD-21) a la Lightning Address    |
                                        v
                        +------------------------------------+
-                       | Proveedor de pago                  |
+                       | Proveedores de cobro               |
+                       | CacaoPay (API de cobros, Pay)      |
+                       | BTCPay Server (tienda del negocio) |
                        | Lightning Address del vendedor     |
-                       | (o un adaptador de otra billetera) |
                        +------------------------------------+
 ```
 
@@ -83,8 +85,8 @@ La tabla `ordenes` guarda dos tipos de orden. Una **orden de productos** (`tipo 
 |---|---|---|
 | `creada` | El comprador confirma el carrito (`crear_orden`). Descuenta stock. | La pantalla de pago registra el cobro (`registrar_cobro`) y pasa a `esperando_pago`. Si no se registra un cobro en 10 minutos, `expirar_ordenes` la pasa a `expirada` y devuelve el stock. El comprador puede cancelar (`cancelar_orden`). |
 | `esperando_pago` | El sistema registra el cobro. | Si el cobro tiene verificación (LUD-21) y el pago está hecho, el servidor lo confirma al consultar la pantalla de pago (`confirmar_pago` sin actor). Si el cobro es manual, el vendedor lo confirma a mano (`confirmar_pago`). Si pasan 600 segundos, `expirar_ordenes` la pasa a `expirada`. El comprador puede cancelar. |
-| `pagada` | `confirmar_pago`. | El vendedor la marca como lista (`marcar_lista`). El comprador puede abrir una disputa. |
-| `lista` | `marcar_lista`. | El comprador confirma que recibió el pedido (`marcar_entregada`, sin código). O el vendedor confirma la entrega con el código de seis dígitos que le muestra el comprador (`entregar_con_codigo`). |
+| `pagada` | `confirmar_pago`. | El vendedor la marca como lista (`marcar_lista`). El comprador puede abrir una disputa. En un negocio de demostración el comprador puede simular la entrega (`simular_entrega_demo`), porque ese negocio no marca nada. |
+| `lista` | `marcar_lista`. | El comprador confirma que recibió el pedido (`marcar_entregada`, sin código). O el vendedor confirma la entrega con el código de seis dígitos que le muestra el comprador (`entregar_con_codigo`). En un negocio de demostración, el comprador también puede simular la entrega. |
 | `entregada` | `marcar_entregada`. | El comprador deja una reseña (`crear_resena`) y la orden pasa a `cerrada`. Si no hay disputa, `cerrar_ordenes` la cierra 48 horas después de la entrega. Durante esas 48 horas se puede abrir disputa. |
 | `cerrada` | Reseña o `cerrar_ordenes`. | Fin. |
 
@@ -139,7 +141,7 @@ La base guarda una fila por evento, sesión, objeto y hora: un refresco dentro d
 
 - **Página con id correcto que no existe.** Responde con estado 200 y el texto de "no encontramos esa orden" (o el equivalente de la página). La 404 real solo se da para ids que no son UUID.
 - **Correo en el plan gratuito.** En el proyecto alojado con el plan gratuito, el correo de acceso trae un enlace, no un código. En local trae el código.
-- **Pagos simulados.** No hay procesador real. El cobro manual depende de que la Lightning Address del vendedor responda por LNURL-pay y LUD-21. Si no responde, el vendedor confirma el pago a mano.
+- **Cobros de prueba.** Ningún cobro mueve dinero real. Los negocios con tienda de BTCPay cobran en bitcoin de prueba, y con `CACAO_PAY_URL` configurado el cobro pasa por CacaoPay (ver [pagos.md](pagos.md#cacaopay)). Un negocio de demostración sin tienda usa el proveedor `falso`. El cobro manual depende de que la Lightning Address del vendedor responda por LNURL-pay y LUD-21; si no responde, el vendedor confirma el pago a mano.
 - **Sin proceso programado.** No hay `pg_cron` ni un proceso que corra solo. Las órdenes vencidas, los cierres de 48 horas y las necesidades vencidas se procesan cuando alguien abre una página que llama a `barrer()` (`src/servidor/mantenimiento.ts`): las órdenes, las compras, las ventas y la pantalla de pago. Si nadie entra, nada vence.
 - **Vencimiento de la factura.** El plazo de pago es de 600 segundos desde que se crea el cobro. La aplicación no lee la fecha de vencimiento de la factura Lightning.
 - **Precio del bitcoin.** La caché de la cotización vive en memoria, por proceso. En Vercel cada instancia tiene la suya.

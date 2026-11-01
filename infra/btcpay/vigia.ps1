@@ -74,6 +74,7 @@ $stackOk = $false
 $tunelOk = $false
 $urlCambio = 'no'
 $supabaseOk = $false
+$lightningOk = $false
 $url = $null
 $motivo = ''
 
@@ -105,6 +106,23 @@ try {
   # bitcoind writes its chain index to disk only on a clean shutdown or hourly while blocks arrive. A Docker
   # crash once rolled the regtest chain back to block 101. gettxoutsetinfo forces the write on every run.
   cmd /c "docker exec cacao-btcpay-bitcoind-1 bitcoin-cli -regtest -rpcport=43782 -rpcuser=cacao -rpcpassword=cacao-regtest gettxoutsetinfo >nul 2>&1"
+
+  # After a restart the Lightning node waits for a new block and the channel has no peer, so no invoice can be made.
+  # Regtest has no miners: one block wakes it up, and the buyer's node connects again.
+  $lndCacao = 'docker exec cacao-btcpay-lnd_cacao-1 lncli --lnddir=/data --network=regtest'
+  $info = ((cmd /c "$lndCacao getinfo 2>nul") -join ' ')
+  if ($info -notmatch '"synced_to_chain":\s*true' -or $info -match '"num_active_channels":\s*0') {
+    $bitcoin = 'docker exec cacao-btcpay-bitcoind-1 bitcoin-cli -regtest -rpcport=43782 -rpcuser=cacao -rpcpassword=cacao-regtest'
+    cmd /c "$bitcoin loadwallet minero >nul 2>&1"
+    $direccion = ((cmd /c "$bitcoin -rpcwallet=minero getnewaddress 2>nul") -join '').Trim()
+    if ($direccion) { cmd /c "$bitcoin generatetoaddress 1 $direccion >nul 2>&1" }
+    Start-Sleep -Seconds 10
+    $llave = [regex]::Match($info, '"identity_pubkey":\s*"([0-9a-f]+)"').Groups[1].Value
+    if ($llave) { cmd /c "docker exec cacao-btcpay-lnd_comprador-1 lncli --lnddir=/data --network=regtest connect $llave@lnd_cacao:9735 >nul 2>&1" }
+    Start-Sleep -Seconds 10
+    $info = ((cmd /c "$lndCacao getinfo 2>nul") -join ' ')
+  }
+  $lightningOk = ($info -match '"synced_to_chain":\s*true') -and ($info -notmatch '"num_active_channels":\s*0')
 
   # (c) The tunnel container: create it when missing or stopped, same as tunel.ps1.
   $corriendo = (cmd /c "docker inspect -f {{.State.Running}} cacao-tunel 2>nul") -join ''
@@ -169,10 +187,10 @@ try {
   Write-Host "Vigia: $motivo"
 }
 
-$ok = $dockerOk -and $stackOk -and $tunelOk -and $supabaseOk
-$resumen = "docker={0} stack={1} tunel={2} supabase={3} url={4} url_cambio={5}" -f `
+$ok = $dockerOk -and $stackOk -and $tunelOk -and $supabaseOk -and $lightningOk
+$resumen = "docker={0} stack={1} lightning={6} tunel={2} supabase={3} url={4} url_cambio={5}" -f `
   ($dockerOk -as [string]).ToLower(), ($stackOk -as [string]).ToLower(), ($tunelOk -as [string]).ToLower(), `
-  ($supabaseOk -as [string]).ToLower(), $(if ($url) { $url } else { '-' }), $urlCambio
+  ($supabaseOk -as [string]).ToLower(), $(if ($url) { $url } else { '-' }), $urlCambio, ($lightningOk -as [string]).ToLower()
 if ($motivo) { $resumen = "$resumen motivo=`"$motivo`"" }
 try { Registrar $resumen } catch { }
 

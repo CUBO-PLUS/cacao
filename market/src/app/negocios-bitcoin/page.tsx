@@ -105,6 +105,9 @@ async function Listado({ busqueda }: { busqueda: PageProps<'/negocios-bitcoin'>[
         {encontrados.length === 1 ? '1 negocio' : `${encontrados.length} negocios`}
         {filtro.texto && ` para “${filtro.texto}”`}
       </p>
+      <p className="directorio__dato">
+        Los enlaces de cada negocio abren otra página, fuera de CacaoMarket: su sitio web o su ficha en BTC Map.
+      </p>
 
       {pagina.items.length === 0 ? (
         <Vacio

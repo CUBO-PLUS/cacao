@@ -1,12 +1,11 @@
 import type { ReactNode } from 'react';
-import { Suspense } from 'react';
 
+import { formatoUsd } from '@/lib/dinero';
 import { formatoMonto } from '@/lib/cotizacion';
 import { descripcionDeEstado } from '@/lib/transferencias';
 import type { RastreoPublico } from '@/servidor/transferencias';
 
 import { ComoSeRecoge } from './ComoSeRecoge';
-import { DolaresAproximados } from './DolaresAproximados';
 import { EtiquetaEstado } from './EtiquetaEstado';
 import { LineaDeTiempo } from './LineaDeTiempo';
 import { TEXTO_ENTREGA_DESTINATARIO, tiempoEstimado } from './textosEnvio';
@@ -16,13 +15,15 @@ type Props = {
   /** "Marta, te mandaron dinero" */
   saludo: string;
   envio: Pick<RastreoPublico, 'codigo' | 'estado' | 'monedaDestino' | 'montoDestino' | 'entrega' | 'minutosEstimados' | 'historial'>;
+  /** The dollars fixed when the transfer was quoted, in cents. Null when there are none to show. */
+  usdCentavos: number | null;
   /** Extra blocks for the signed-in recipient: the sender and the note. */
   extra?: ReactNode;
 };
 
 // What a recipient reads about one transfer: the amount, how it arrives, the state and the steps.
 // The same view serves the public tracking page and the recipient's own page.
-export function VistaDestinatario({ saludo, envio, extra }: Props) {
+export function VistaDestinatario({ saludo, envio, usdCentavos, extra }: Props) {
   const esperando = envio.estado === 'creada' || envio.estado === 'procesando';
   const tiempo = esperando
     ? envio.estado === 'creada'
@@ -39,11 +40,9 @@ export function VistaDestinatario({ saludo, envio, extra }: Props) {
           Vas a recibir
         </h2>
         <p className={estilos.cifra}>{formatoMonto(envio.montoDestino, envio.monedaDestino)}</p>
-        {envio.monedaDestino === 'SATS' && (
+        {envio.monedaDestino === 'SATS' && usdCentavos !== null && (
           <div className={estilos.dolares}>
-            <Suspense fallback={<p>Calculando cuántos dólares son…</p>}>
-              <DolaresAproximados sats={envio.montoDestino} />
-            </Suspense>
+            <p>{`Unos ${formatoUsd(usdCentavos)} en dólares, al cambio del momento de enviar.`}</p>
           </div>
         )}
         <p className={estilos.entrega}>{TEXTO_ENTREGA_DESTINATARIO[envio.entrega]}</p>

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 
 import { formatoSats, formatoUsd } from '@/lib/dinero';
+import type { Entrega } from '@/lib/cotizacion';
 import type { PagoLightning as Pago } from '@/lib/lightning';
 
 import { estadoDePagoAccion, pagarEnvioAccion } from './acciones';
@@ -23,7 +24,7 @@ function minutosYSegundos(milisegundos: number): string {
  * page asks the server every few seconds, and only while the tab is visible. The server asks BTCPay;
  * when the invoice is Settled the transfer moves on, and the page is refreshed.
  */
-export function PagoLightning({ envioId }: { envioId: string }) {
+export function PagoLightning({ envioId, entrega }: { envioId: string; entrega: Entrega }) {
   const router = useRouter();
   const [pago, setPago] = useState<Pago | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -111,14 +112,22 @@ export function PagoLightning({ envioId }: { envioId: string }) {
 
   return (
     <section className={estilos.pago} aria-labelledby="titulo-pago">
-      <h2 id="titulo-pago">Pagá con tu billetera de bitcoin</h2>
+      {entrega === 'lightning' ? (
+        <h2 id="titulo-pago">Pagá con tu billetera de bitcoin</h2>
+      ) : (
+        <h2 id="titulo-pago">Primero pagá el envío con tu billetera de bitcoin</h2>
+      )}
       <p className={estilos.regtest}>
         <strong>Es bitcoin de prueba: no tiene valor real.</strong>
       </p>
 
       {!pago && (
         <>
-          <p>Pagás el monto completo del envío. Cuando tu billetera confirma el pago, el envío sale solo.</p>
+          <p>
+            {entrega === 'lightning'
+              ? 'Pagás el monto completo del envío. Cuando tu billetera confirma el pago, el envío sale solo.'
+              : 'Pagás el monto completo del envío. Cuando tu billetera confirma el pago, el envío sale. Recién después de tu pago, quien recibe puede retirar o cobrar el dinero.'}
+          </p>
           <button type="button" className="boton" disabled={pendiente} onClick={pagar}>
             {pendiente ? 'Preparando el pago…' : 'Preparar el pago'}
           </button>

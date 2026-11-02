@@ -1,4 +1,5 @@
 import { formatoMonto, type Entrega } from '@/lib/cotizacion';
+import { usdCotizadoCentavos } from '@/lib/transferencias';
 
 import { comisionExplicada, plazoEnvio, tipoDeCambio, type TarifaMostrada } from './formatoEnvio';
 import estilos from './LineasDinero.module.css';
@@ -36,8 +37,8 @@ export function LineasDinero({
 }) {
   const tipo = tipoDeCambio(datos);
   const enSats = datos.monedaDestino === 'SATS';
-  // Cents, rounded down: the same value the approximate line shows for a sats amount.
-  const aproximado = enSats && usdBtc ? Math.floor((datos.montoDestino * usdBtc) / 1_000_000) : null;
+  // The dollars fixed when the transfer was quoted: the same figure once the transfer exists.
+  const aproximado = enSats ? usdCotizadoCentavos(datos) : null;
 
   return (
     <dl className={estilos.lineas}>

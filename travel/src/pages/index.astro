@@ -82,7 +82,7 @@ const foto = tours.find((t) => t.id === 'amanecer-en-el-volcan-de-santa-ana') ??
 
     <div class="barra">
       <p class="barra__cuenta" aria-live="polite">
-        <strong data-cuenta>{tours.length}</strong> experiencias{' '}
+        <strong data-cuenta>{tours.length}</strong> <span data-noun>{tours.length === 1 ? 'experiencia' : 'experiencias'}</span>{' '}
         <span data-para></span>
       </p>
       <div class="barra__controles">
@@ -174,9 +174,9 @@ const foto = tours.find((t) => t.id === 'amanecer-en-el-volcan-de-santa-ana') ??
     border-radius: var(--radio-chico);
     color: var(--tostado);
   }
-  .buscador__fila { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: stretch; }
-  /* Phone: Buscar stays the submit button for the keyboard, but the live filter makes it visually redundant. */
-  .buscador__boton { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  /* Phone: the field takes the first row, Buscar and Filtros share the second, so both buttons stay visible down to 320 px. */
+  .buscador__fila { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; align-items: stretch; }
+  .buscador__fila .campo--texto { grid-column: 1 / -1; }
   .campo { display: grid; gap: 2px; padding: 8px 14px; border-radius: var(--radio-chico); background: var(--arena); min-width: 0; }
   .campo span { font-size: 0.8125rem; font-weight: 600; color: var(--chocolate); }
   .campo input, .campo select {
@@ -194,6 +194,7 @@ const foto = tours.find((t) => t.id === 'amanecer-en-el-volcan-de-santa-ana') ??
   .campo input:focus-visible, .campo select:focus-visible { outline: none; }
   .buscador__boton {
     min-height: 52px;
+    min-width: 0;
     padding: 0 1.4em;
     border: 0;
     border-radius: var(--radio-chico);
@@ -303,9 +304,14 @@ const foto = tours.find((t) => t.id === 'amanecer-en-el-volcan-de-santa-ana') ??
   .pasos h3 { font-size: var(--t-h2); }
   .pasos p { font-size: 1rem; color: var(--arena); }
 
-  /* Tablet and desktop: the photo and the cards use the full width. */
+  /* Tablet and desktop: the photo and the cards use the full width.
+     Fixed columns, so a short last row is centred instead of leaving one card alone at the left. */
   @media (min-width: 640px) {
-    .celdas { grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: clamp(16px, 2vw, 24px); }
+    .celdas { --cols: 2; --hueco: clamp(16px, 2vw, 24px); display: flex; flex-wrap: wrap; justify-content: center; gap: var(--hueco); }
+    .celdas :global([data-boleto]) { flex: 0 0 calc((100% - (var(--cols) - 1) * var(--hueco)) / var(--cols)); }
+  }
+  @media (min-width: 1024px) {
+    .celdas { --cols: 3; }
   }
   @media (min-width: 861px) {
     .inicio { padding-top: 24px; gap: 20px; }
@@ -314,7 +320,7 @@ const foto = tours.find((t) => t.id === 'amanecer-en-el-volcan-de-santa-ana') ??
     .inicio h1 { left: 40px; bottom: 64px; font-size: clamp(2.75rem, 5vw, 4.25rem); max-width: 16ch; }
     .buscador { padding: 12px 12px 14px; }
     .buscador__fila { grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; }
-    .buscador__boton { position: static; width: auto; height: auto; overflow: visible; clip-path: none; white-space: normal; }
+    .buscador__fila .campo--texto { grid-column: auto; }
     .buscador__filtros { min-height: 52px; padding: 0 1.2em; }
     .filtros { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     .categorias { flex-wrap: wrap; overflow: visible; }
@@ -335,6 +341,7 @@ const foto = tours.find((t) => t.id === 'amanecer-en-el-volcan-de-santa-ana') ??
   const nivel = document.querySelector<HTMLSelectElement>('[data-nivel]');
   const orden = document.querySelector<HTMLSelectElement>('[data-orden]');
   const cuenta = document.querySelector<HTMLElement>('[data-cuenta]');
+  const sustantivo = document.querySelector<HTMLElement>('[data-noun]');
   const para = document.querySelector<HTMLElement>('[data-para]');
   const vacio = document.querySelector<HTMLElement>('[data-vacio]');
   const botonFiltros = document.querySelector<HTMLButtonElement>('[data-filtros-boton]');
@@ -407,6 +414,7 @@ const foto = tours.find((t) => t.id === 'amanecer-en-el-volcan-de-santa-ana') ??
       partes.push(`el ${cuando}`);
     }
     if (cuenta) cuenta.textContent = String(visibles.length);
+    if (sustantivo) sustantivo.textContent = visibles.length === 1 ? 'experiencia' : 'experiencias';
     if (para) para.textContent = partes.map((p) => `· ${p}`).join(' ');
     if (vacio) vacio.hidden = visibles.length > 0;
     contarFiltros();

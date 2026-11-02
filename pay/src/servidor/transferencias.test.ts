@@ -20,7 +20,15 @@ vi.mock('@/lib/precio/fuente', () => ({ cotizacionUsdBtc }));
 
 import { formatoMonto, cotizar, TARIFAS, TASA_EUR_USD } from '@/lib/cotizacion';
 
-import { cancelarEnvio, crearEnvio, pagarEnvio, procesarEnvio, simularFallar, type DatosNuevoEnvio } from './transferencias';
+import {
+  cancelarEnvio,
+  crearEnvio,
+  pagarEnvio,
+  procesarEnvio,
+  simularCompletar,
+  simularFallar,
+  type DatosNuevoEnvio,
+} from './transferencias';
 
 const USUARIO = '11111111-1111-4111-8111-111111111111';
 const ADMIN = '33333333-3333-4333-8333-333333333333';
@@ -280,6 +288,66 @@ describe('procesar y fallar un envío por Lightning', () => {
 
     expect(r).toMatchObject({ ok: false, codigo: 'ESTADO_INVALIDO' });
     expect(llamadas('pay_fallar')).toHaveLength(0);
+  });
+});
+
+describe('marcar como entregado por el remitente', () => {
+  const REMITENTE = { id: USUARIO, esAdmin: false };
+  let demoAnterior: string | undefined;
+
+  beforeEach(() => {
+    demoAnterior = process.env.NEXT_PUBLIC_DEMO;
+    delete process.env.NEXT_PUBLIC_DEMO;
+  });
+
+  afterEach(() => {
+    if (demoAnterior === undefined) delete process.env.NEXT_PUBLIC_DEMO;
+    else process.env.NEXT_PUBLIC_DEMO = demoAnterior;
+  });
+
+  it('quien envía marca como entregado su efectivo pagado que va en camino, también fuera de la demo', async () => {
+    tablas.pay_transferencias = envio({ entrega: 'efectivo', estado: 'procesando', pagada_en: hace(60_000) });
+
+    await simularCompletar(REMITENTE, ENVIO);
+
+    expect(llamadas('pay_completar')).toHaveLength(1);
+    expect(llamadas('pay_completar')[0][1]).toMatchObject({ p_transferencia: ENVIO, p_actor: null });
+  });
+
+  it('nunca marca como entregado un envío sin pagar, aunque esté en camino', async () => {
+    tablas.pay_transferencias = envio({ entrega: 'cuenta', estado: 'procesando', pagada_en: null });
+
+    const r = await simularCompletar(REMITENTE, ENVIO);
+
+    expect(r).toMatchObject({ ok: false, codigo: 'ESTADO_INVALIDO' });
+    expect(llamadas('pay_completar')).toHaveLength(0);
+  });
+
+  it('nunca marca como entregado un envío pagado que todavía no salió', async () => {
+    tablas.pay_transferencias = envio({ entrega: 'efectivo', estado: 'creada', pagada_en: hace(60_000) });
+
+    const r = await simularCompletar(REMITENTE, ENVIO);
+
+    expect(r).toMatchObject({ ok: false, codigo: 'ESTADO_INVALIDO' });
+    expect(llamadas('pay_completar')).toHaveLength(0);
+  });
+
+  it('nunca marca como entregado un envío por Lightning, ni pagado', async () => {
+    tablas.pay_transferencias = envio({ entrega: 'lightning', estado: 'procesando', pagada_en: hace(60_000) });
+
+    const r = await simularCompletar(REMITENTE, ENVIO);
+
+    expect(r).toMatchObject({ ok: false, codigo: 'NO_PERMITIDO' });
+    expect(llamadas('pay_completar')).toHaveLength(0);
+  });
+
+  it('quien no envió el dinero no lo ve: la respuesta es la de un envío que no existe', async () => {
+    tablas.pay_transferencias = envio({ entrega: 'efectivo', estado: 'procesando', pagada_en: hace(60_000) });
+
+    const r = await simularCompletar({ id: ADMIN, esAdmin: false }, ENVIO);
+
+    expect(r).toMatchObject({ ok: false, codigo: 'NO_ENCONTRADA' });
+    expect(llamadas('pay_completar')).toHaveLength(0);
   });
 });
 

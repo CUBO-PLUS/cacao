@@ -5,6 +5,8 @@ import 'server-only';
 // only here: the database records the outcome (pay_iniciar_cobro, pay_terminar_cobro), and the browser
 // never decides that a payment happened. A payment counts only when BTCPay says Complete.
 
+import { usdCotizadoCentavos } from '@/lib/transferencias';
+
 import type { ConfigBtcpay } from './btcpay';
 import { consultarPago, pagarFactura, type ResultadoPago } from './btcpay-pagos';
 import { desdeError, exito, fallo, type Resultado } from './resultado';
@@ -21,6 +23,8 @@ export type DatosCobro = {
   codigo: string;
   estado: 'creada' | 'procesando' | 'completada' | 'fallida' | 'cancelada' | 'devuelta';
   sats: number;
+  /** The dollars fixed at quote time, in cents. Null when the quote stored none. The same figure as the sender sees. */
+  usdCentavos: number | null;
   /** The sender's first name only. */
   remitenteNombre: string;
   cobroEstado: EstadoCobroEnvio | null;
@@ -63,7 +67,7 @@ export const MOTIVO_SIN_PAGO = 'No encontramos el pago de esta factura. Pedí ot
 export const ESPERA_SIN_PAGO_MS = 10 * 60 * 1000;
 
 const COLUMNAS_COBRO =
-  'codigo, estado, entrega, monto_destino, cobro_estado, cobro_motivo, cobro_hash, cobrada_en, cobro_vence_en, remitente:usuarios!pay_transferencias_remitente_id_fkey(nombre)';
+  'codigo, estado, entrega, moneda_origen, neto_centavos, moneda_destino, monto_destino, cobro_estado, cobro_motivo, cobro_hash, cobrada_en, cobro_vence_en, remitente:usuarios!pay_transferencias_remitente_id_fkey(nombre)';
 
 // Amounts of a BOLT11 multiplier, as a fraction of one BTC in sats: 1 BTC = 1e8 sats.
 // m = 1e-3 BTC, u = 1e-6 BTC, n = 1e-9 BTC, p = 1e-12 BTC.
@@ -215,6 +219,9 @@ type FilaCobro = {
   codigo: string;
   estado: DatosCobro['estado'];
   entrega: 'efectivo' | 'cuenta' | 'lightning';
+  moneda_origen: 'USD' | 'EUR';
+  neto_centavos: number;
+  moneda_destino: 'USD' | 'SATS';
   monto_destino: number;
   cobro_estado: EstadoCobroEnvio | null;
   cobro_motivo: string | null;
@@ -281,6 +288,12 @@ export async function datosDeCobro(token: string): Promise<DatosCobro | null> {
     codigo: fila.codigo,
     estado: fila.estado,
     sats: Number(fila.monto_destino),
+    usdCentavos: usdCotizadoCentavos({
+      monedaOrigen: fila.moneda_origen,
+      netoCentavos: fila.neto_centavos,
+      monedaDestino: fila.moneda_destino,
+      montoDestino: Number(fila.monto_destino),
+    }),
     remitenteNombre: primerNombre(fila.remitente?.nombre),
     cobroEstado: fila.cobro_estado,
     cobroMotivo: fila.cobro_motivo,

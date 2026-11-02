@@ -78,7 +78,7 @@ export function AccionesEnvio({
 
   return (
     <div className={estilos.acciones}>
-      {puedePagar && <PagoLightning envioId={envioId} />}
+      {puedePagar && <PagoLightning envioId={envioId} entrega={entrega} />}
 
       {sinBitcoin && (
         <section className={estilos.bloqueAcciones} aria-labelledby="titulo-sin-bitcoin">
@@ -165,7 +165,7 @@ export function AccionesEnvio({
 
       {(puedeCompletar || puedeFallar) && (
         <section className={estilos.simulacion} aria-labelledby="titulo-simulacion">
-          <h2 id="titulo-simulacion">Simulación (modo demo)</h2>
+          <h2 id="titulo-simulacion">Simulación</h2>
           <p>No se mueve dinero real. Sirve para ver cómo termina un envío.</p>
 
           {puedeCompletar && (

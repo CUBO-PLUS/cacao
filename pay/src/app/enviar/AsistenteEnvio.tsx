@@ -58,6 +58,10 @@ export function AsistenteEnvio({
   const [nota, setNota] = useState('');
   const [intentoDestino, setIntentoDestino] = useState(false);
   const [respuesta, setRespuesta] = useState<Respuesta | null>(null);
+  // "Seguir" pressed while the quote for these inputs is still on its way: the step changes when it arrives.
+  // The ref is what the quote callback reads; the state only shows the wait on the button.
+  const [seguirPara, setSeguirPara] = useState<string | null>(null);
+  const seguirParaRef = useRef<string | null>(null);
   // Counts up each time a quote runs out, so the quote is asked again for the same inputs.
   const [vencimientos, setVencimientos] = useState(0);
   const alVencer = useCallback(() => setVencimientos((n) => n + 1), []);
@@ -85,8 +89,18 @@ export function AsistenteEnvio({
       try {
         const pedido = await cotizarAccion({ montoCentavos: centavos, monedaOrigen: moneda, entrega });
         if (!vigente) return;
+        // A "Seguir" that waited for this quote is answered now, whatever the quote says.
+        const seguir = seguirParaRef.current === clave;
+        if (seguir) {
+          seguirParaRef.current = null;
+          setSeguirPara(null);
+        }
         if (pedido.ok) {
           setRespuesta({ clave, cotizacion: pedido.dato.cotizacion, usdBtc: pedido.dato.usdBtc });
+          if (seguir) {
+            pendienteFoco.current = true;
+            setPaso(2);
+          }
           if (!visitaRegistrada.current) {
             visitaRegistrada.current = true;
             void registrarVisitaCotizacion();
@@ -110,6 +124,14 @@ export function AsistenteEnvio({
   const usdBtc = vigente?.usdBtc ?? null;
   const errorCotizacion = vigente?.error ?? null;
   const enEspera = clave !== null && vigente === null;
+  // The button waits for the quote of the inputs it was pressed for.
+  const seguirPendiente = seguirPara !== null && seguirPara === clave && enEspera;
+
+  // Changing the amount, the currency or the way of delivery cancels a queued "Seguir": the person presses it again.
+  function cancelarSeguir() {
+    seguirParaRef.current = null;
+    setSeguirPara(null);
+  }
 
   // Validation of the recipient, the same rules the server applies.
   const largoNombre = Array.from(nombre.trim()).length;
@@ -133,8 +155,15 @@ export function AsistenteEnvio({
   function seguirDelMonto(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     setIntentoMonto(true);
-    // Without a quote for these inputs there is nothing to confirm yet; the sentence above says why.
-    if (errorMonto !== null || cotizacion === null) return;
+    if (errorMonto !== null) return;
+    // The quote is still on its way: the step changes as soon as it arrives.
+    if (cotizacion === null) {
+      if (clave !== null) {
+        seguirParaRef.current = clave;
+        setSeguirPara(clave);
+      }
+      return;
+    }
     irAPaso(2);
   }
 
@@ -169,11 +198,20 @@ export function AsistenteEnvio({
         <PasoMonto
           tituloRef={tituloRef}
           montoTexto={montoTexto}
-          onMonto={setMontoTexto}
+          onMonto={(valor) => {
+            setMontoTexto(valor);
+            cancelarSeguir();
+          }}
           moneda={moneda}
-          onMoneda={setMoneda}
+          onMoneda={(valor) => {
+            setMoneda(valor);
+            cancelarSeguir();
+          }}
           entrega={entrega}
-          onEntrega={setEntrega}
+          onEntrega={(valor) => {
+            setEntrega(valor);
+            cancelarSeguir();
+          }}
           tarifas={tarifas}
           precioDisponible={precioDisponible}
           error={intentoMonto ? errorMonto : null}
@@ -181,6 +219,7 @@ export function AsistenteEnvio({
           usdBtc={usdBtc}
           errorCotizacion={errorCotizacion}
           enEspera={enEspera}
+          seguirPendiente={seguirPendiente}
           onVencer={alVencer}
           onSeguir={seguirDelMonto}
         />

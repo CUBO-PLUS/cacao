@@ -20,6 +20,7 @@ import { FormularioCancelar } from './FormularioCancelar';
 import { FormularioDisputa } from './FormularioDisputa';
 import { FormularioResena } from './FormularioResena';
 import styles from './orden.module.css';
+import { useOrdenViva } from './OrdenViva';
 import { useAccion } from './useAccion';
 
 // Renders exactly the actions the state machine returned. Nothing here decides who may act.
@@ -36,6 +37,8 @@ export function AccionesOrden({
   pagada?: boolean;
 }) {
   const tiene = (accion: Accion) => acciones.includes(accion);
+  // The page's order state: an action that ends the order shows its result at once, not after the round trip.
+  const orden = useOrdenViva();
 
   return (
     <div className={styles.bloque}>
@@ -52,7 +55,14 @@ export function AccionesOrden({
         />
       )}
 
-      {tiene('cancelar') && <FormularioCancelar ordenId={ordenId} trabajo={trabajo} />}
+      {tiene('cancelar') && (
+        <FormularioCancelar
+          ordenId={ordenId}
+          trabajo={trabajo}
+          alIniciar={trabajo ? undefined : () => orden?.marcarEstado('cancelada')}
+          alCancelar={trabajo ? undefined : () => orden?.setResultado('cancelada')}
+        />
+      )}
 
       {tiene('confirmar_pago') && (
         <Paso descripcion="El pago no llega solo a la app cuando la Lightning Address no avisa. Confirmalo a mano.">
@@ -89,6 +99,8 @@ export function AccionesOrden({
             pregunta="¿Simulamos la entrega de este pedido de demostración?"
             etiquetaConfirmar="Sí, simular entrega"
             operacion={() => simularEntregaDeDemo(ordenId)}
+            alIniciar={() => orden?.marcarEstado('entregada')}
+            alExito={() => orden?.setResultado('entregada')}
           />
         </Paso>
       )}
@@ -162,11 +174,15 @@ function BotonConConfirmacion({
   pregunta,
   etiquetaConfirmar,
   operacion,
+  alIniciar,
+  alExito,
 }: {
   etiqueta: string;
   pregunta: string;
   etiquetaConfirmar: string;
   operacion: () => Promise<Resultado<null>>;
+  alIniciar?: () => void;
+  alExito?: () => void;
 }) {
   const [preguntando, setPreguntando] = useState(false);
   const { pendiente, error, correr } = useAccion();
@@ -187,7 +203,16 @@ function BotonConConfirmacion({
           type="button"
           className="boton"
           disabled={pendiente}
-          onClick={() => correr(operacion, () => setPreguntando(false))}
+          onClick={() =>
+            correr(
+              operacion,
+              () => {
+                setPreguntando(false);
+                alExito?.();
+              },
+              alIniciar,
+            )
+          }
         >
           {pendiente ? 'Enviando…' : etiquetaConfirmar}
         </button>

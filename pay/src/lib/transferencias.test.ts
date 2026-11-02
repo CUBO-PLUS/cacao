@@ -14,6 +14,8 @@ import {
   normalizarCodigo,
   normalizarContacto,
   PASOS,
+  puedeSimularEntregaRemitente,
+  usdCotizadoCentavos,
   type EstadoEnvio,
 } from './transferencias';
 
@@ -126,12 +128,26 @@ describe('acciones por rol y estado', () => {
     expect(accionesPosibles('devuelta', 'remitente', 'lightning')).toEqual([]);
   });
 
-  it('el simulador agrega completar y fallar para quien envía, solo en la demo', () => {
+  it('el simulador agrega fallar para quien envía, solo en la demo y antes de pagar', () => {
     demo('1');
     expect(accionesPosibles('creada', 'remitente')).toEqual(['procesar', 'cancelar', 'fallar']);
-    expect(accionesPosibles('procesando', 'remitente')).toEqual(['completar', 'fallar']);
+    expect(accionesPosibles('procesando', 'remitente', 'efectivo')).toEqual(['fallar']);
+    expect(accionesPosibles('procesando', 'remitente', 'efectivo', { pagada: true })).toEqual(['completar']);
     demo('0');
-    expect(accionesPosibles('procesando', 'remitente')).toEqual([]);
+    expect(accionesPosibles('procesando', 'remitente', 'efectivo')).toEqual([]);
+  });
+
+  it('quien envía marca como entregado un efectivo o una cuenta pagados, también fuera de la demo', () => {
+    demo('0');
+    for (const entrega of ['efectivo', 'cuenta'] as const) {
+      expect(accionesPosibles('procesando', 'remitente', entrega, { pagada: true })).toEqual(['completar']);
+      expect(accionesPosibles('procesando', 'remitente', entrega, { pagada: false })).toEqual([]);
+    }
+  });
+
+  it('el administrador conserva completar y fallar en un envío en camino', () => {
+    demo('0');
+    expect(accionesPosibles('procesando', 'admin', 'efectivo')).toEqual(['completar', 'fallar']);
   });
 });
 
@@ -218,6 +234,44 @@ describe('cancelar un envío', () => {
   it('un envío por Lightning nunca ofrece completar a mano, ni en la demo', () => {
     expect(accionesPosibles('procesando', 'remitente', 'lightning')).toEqual([]);
     expect(accionesPosibles('procesando', 'admin', 'lightning')).toEqual(['fallar']);
+  });
+});
+
+describe('quién puede marcar como entregado un envío', () => {
+  it('solo quien envía, solo en efectivo o cuenta, solo en camino y solo pagado', () => {
+    expect(puedeSimularEntregaRemitente({ entrega: 'efectivo', estado: 'procesando', pagada: true })).toBe(true);
+    expect(puedeSimularEntregaRemitente({ entrega: 'cuenta', estado: 'procesando', pagada: true })).toBe(true);
+  });
+
+  it('nunca para Lightning, ni sin pagar, ni fuera de camino', () => {
+    expect(puedeSimularEntregaRemitente({ entrega: 'lightning', estado: 'procesando', pagada: true })).toBe(false);
+    expect(puedeSimularEntregaRemitente({ entrega: 'efectivo', estado: 'procesando', pagada: false })).toBe(false);
+    expect(puedeSimularEntregaRemitente({ entrega: 'efectivo', estado: 'creada', pagada: true })).toBe(false);
+    expect(puedeSimularEntregaRemitente({ entrega: 'cuenta', estado: 'completada', pagada: true })).toBe(false);
+  });
+
+  it('un envío por Lightning no ofrece completar, ni pagado', () => {
+    expect(accionesPosibles('procesando', 'remitente', 'lightning', { pagada: true })).toEqual([]);
+  });
+});
+
+describe('monto en dólares fijado al cotizar', () => {
+  it('quien envía en dólares: el neto, que es lo que llega', () => {
+    expect(
+      usdCotizadoCentavos({ monedaOrigen: 'USD', netoCentavos: 9_950, monedaDestino: 'SATS', montoDestino: 123_456 }),
+    ).toBe(9_950);
+  });
+
+  it('un envío en efectivo o cuenta: los dólares de destino ya guardados', () => {
+    expect(
+      usdCotizadoCentavos({ monedaOrigen: 'EUR', netoCentavos: 10_000, monedaDestino: 'USD', montoDestino: 10_692 }),
+    ).toBe(10_692);
+  });
+
+  it('en euros por Lightning no hay dólares guardados: no se muestran', () => {
+    expect(
+      usdCotizadoCentavos({ monedaOrigen: 'EUR', netoCentavos: 10_000, monedaDestino: 'SATS', montoDestino: 100_000 }),
+    ).toBeNull();
   });
 });
 

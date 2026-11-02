@@ -10,9 +10,11 @@ export function useAccion() {
   const [pendiente, empezar] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  function correr(operacion: () => Promise<Resultado<unknown>>, alExito?: () => void) {
+  // alIniciar runs inside the transition, before the server answers: it is where an optimistic state goes.
+  function correr(operacion: () => Promise<Resultado<unknown>>, alExito?: () => void, alIniciar?: () => void) {
     setError(null);
     empezar(async () => {
+      alIniciar?.();
       const resultado = await operacion();
       if (resultado.ok) {
         alExito?.();

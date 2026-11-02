@@ -6,8 +6,9 @@ export type Seccion = 'supermercado' | 'servicios' | 'necesito';
 
 const PUERTAS: { id: Seccion; nombre: string; href: string; linea: string }[] = [
   { id: 'supermercado', nombre: 'Supermercado', href: '/', linea: 'Productos del huerto' },
-  { id: 'servicios', nombre: 'Servicios', href: '/servicios', linea: 'Gente que trabaja' },
-  { id: 'necesito', nombre: 'Necesito', href: '/necesito', linea: 'Pedí lo que buscás' },
+  // trailingSlash is on, so the slashed address is the canonical one for every section.
+  { id: 'servicios', nombre: 'Servicios', href: '/servicios/', linea: 'Gente que trabaja' },
+  { id: 'necesito', nombre: 'Necesito', href: '/necesito/', linea: 'Pedí lo que buscás' },
 ];
 
 // The three-way switch between the sections. It is plain links: no data, no session.

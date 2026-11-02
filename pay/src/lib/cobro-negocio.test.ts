@@ -5,6 +5,7 @@ import {
   centavosDesdeTexto,
   COBRO_MAX_CENTAVOS,
   esTipoNegocio,
+  estadoAMostrar,
   etiquetaTipo,
   formatoDolares,
   inicioDelDiaSV,
@@ -102,5 +103,24 @@ describe('día y mes de El Salvador (UTC-6, sin horario de verano)', () => {
     expect(inicioDelMesSV(new Date('2026-10-30T18:00:00Z')).toISOString()).toBe('2026-10-01T06:00:00.000Z');
     // Primer día del mes, 00:30 local: sigue siendo ese mes.
     expect(inicioDelMesSV(new Date('2026-11-01T06:30:00Z')).toISOString()).toBe('2026-11-01T06:00:00.000Z');
+  });
+});
+
+describe('cobros vencidos en el panel', () => {
+  const ahora = new Date('2026-11-01T12:00:00Z');
+
+  it('un cobro pendiente cuyo plazo ya pasó se muestra como vencido', () => {
+    expect(estadoAMostrar('pendiente', '2026-11-01T11:59:00Z', ahora)).toBe('vencido');
+  });
+
+  it('un cobro pendiente que todavía vive se queda como esperando', () => {
+    expect(estadoAMostrar('pendiente', '2026-11-01T12:05:00Z', ahora)).toBe('pendiente');
+  });
+
+  it('pagados, cancelados y vencidos no cambian', () => {
+    expect(estadoAMostrar('pagado', '2026-10-01T00:00:00Z', ahora)).toBe('pagado');
+    expect(estadoAMostrar('cancelado', '2026-10-01T00:00:00Z', ahora)).toBe('cancelado');
+    expect(estadoAMostrar('vencido', null, ahora)).toBe('vencido');
+    expect(estadoAMostrar('pendiente', null, ahora)).toBe('pendiente');
   });
 });

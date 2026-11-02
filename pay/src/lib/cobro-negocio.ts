@@ -108,9 +108,18 @@ export function horaSV(instante: Date): string {
 export const ETIQUETA_ESTADO: Record<string, string> = {
   pendiente: 'Esperando el pago',
   pagado: 'Pagado',
-  vencido: 'Venció',
+  vencido: 'Vencido',
   cancelado: 'Cancelado',
 };
+
+/**
+ * A charge nobody paid stays "pendiente" in the database until someone tries it again. Once its time has run
+ * out it reads as "vencido", so the list never shows a charge that can no longer be paid as waiting.
+ */
+export function estadoAMostrar(estado: string, expiraEn: string | null, ahora: Date): string {
+  if (estado === 'pendiente' && expiraEn !== null && Date.parse(expiraEn) <= ahora.getTime()) return 'vencido';
+  return estado;
+}
 
 /** Public address of the business's QR page. The id is a UUID, so it cannot be guessed from another business. */
 export function rutaPagarNegocio(negocioId: string): string {

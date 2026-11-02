@@ -71,7 +71,7 @@ async function DetalleProducto({ producto }: { producto: ProductoDetalle }) {
 
         <p className="producto__tienda">
           Vende{' '}
-          <Link href={`/negocios/${producto.negocioId}`}>{producto.negocioNombre}</Link>{' '}
+          <Link href={`/negocios/${producto.negocioId}`} prefetch={false}>{producto.negocioNombre}</Link>{' '}
           <EtiquetaEjemplo activo={esDemo(producto.btcmapId)} />
           <EtiquetaCerrado btcmapId={producto.btcmapId} abierto={producto.abierto} texto="Cerrado" />
         </p>

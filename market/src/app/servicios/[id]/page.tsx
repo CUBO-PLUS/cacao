@@ -67,7 +67,7 @@ async function DetalleServicio({ servicio }: { servicio: ServicioDetalle }) {
         <h1>{servicio.titulo}</h1>
 
         <p className={estilos.oferta}>
-          Ofrece <Link href={`/negocios/${servicio.negocioId}`}>{servicio.negocioNombre}</Link>{' '}
+          Ofrece <Link href={`/negocios/${servicio.negocioId}`} prefetch={false}>{servicio.negocioNombre}</Link>{' '}
           <EtiquetaEjemplo activo={esDemo(servicio.btcmapId)} />
           {mostrarCerrado(servicio.btcmapId, servicio.abierto) && (
             <>

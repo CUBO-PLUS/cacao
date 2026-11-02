@@ -32,6 +32,7 @@ export function PasoMonto({
   usdBtc,
   errorCotizacion,
   enEspera,
+  seguirPendiente,
   onVencer,
   onSeguir,
 }: {
@@ -51,6 +52,8 @@ export function PasoMonto({
   errorCotizacion: string | null;
   /** A quote for the current inputs is on its way. */
   enEspera: boolean;
+  /** "Seguir" was pressed and the step changes when the quote arrives. */
+  seguirPendiente: boolean;
   /** The quote ran out: the form asks for a new one. */
   onVencer: () => void;
   onSeguir: (evento: FormEvent<HTMLFormElement>) => void;
@@ -156,8 +159,8 @@ export function PasoMonto({
         <Link href="/" className={estilos.enlaceVolver}>
           Volver al inicio
         </Link>
-        <button type="submit" className="boton">
-          Seguir
+        <button type="submit" className="boton" aria-busy={seguirPendiente || undefined}>
+          {seguirPendiente ? 'Calculando el envío…' : 'Seguir'}
         </button>
       </div>
     </form>

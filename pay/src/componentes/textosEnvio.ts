@@ -1,5 +1,4 @@
 import type { Entrega } from '@/lib/cotizacion';
-import { formatoUsd } from '@/lib/dinero';
 import type { EstadoEnvio } from '@/lib/transferencias';
 
 // Plain words and dates for the screens people read: the tracking page, the recipient's pages and
@@ -38,13 +37,6 @@ export function tiempoEstimado(minutos: number): string {
 /** True once the state can no longer change. */
 export function esEstadoFinal(estado: EstadoEnvio): boolean {
   return estado === 'completada' || estado === 'fallida' || estado === 'cancelada' || estado === 'devuelta';
-}
-
-/** The USD value of a sats amount at the given BTC price, as "$96.50", or null without a price. */
-export function dolaresDeSats(sats: number, usdBtc: number | null): string | null {
-  if (usdBtc === null) return null;
-  // sats / 100,000,000 BTC times the USD price, kept in cents.
-  return formatoUsd(Math.round((sats * usdBtc) / 1_000_000));
 }
 
 /**

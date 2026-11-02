@@ -4,11 +4,12 @@ import { connection } from 'next/server';
 import { Suspense } from 'react';
 
 import { Boton } from '@/componentes/Boton';
-import { precioBtcOpcional } from '@/componentes/DolaresAproximados';
 import { EtiquetaEstado } from '@/componentes/EtiquetaEstado';
 import { Paginacion } from '@/componentes/Paginacion';
-import { dolaresDeSats, fechaSv, primerNombre } from '@/componentes/textosEnvio';
+import { fechaSv, primerNombre } from '@/componentes/textosEnvio';
 import { formatoMonto } from '@/lib/cotizacion';
+import { formatoUsd } from '@/lib/dinero';
+import { usdCotizadoCentavos } from '@/lib/transferencias';
 import { recibidos, type Envio, vincularRecibidos } from '@/servidor/transferencias';
 import { exigirSesion } from '@/servidor/sesion';
 
@@ -51,8 +52,6 @@ async function ListaRecibidos({
   await vincularRecibidos(sesionId);
   const datos = await recibidos(sesionId, { pagina });
   const totalPaginas = Math.max(1, Math.ceil(datos.total / datos.porPagina));
-  // One price read for the whole list; each card only formats it.
-  const usdBtc = datos.envios.some((e) => e.monedaDestino === 'SATS') ? await precioBtcOpcional() : null;
 
   return (
     <div className={estilos.pagina}>
@@ -64,7 +63,12 @@ async function ListaRecibidos({
       {datos.total === 0 ? (
         <div className="vacio">
           <p>
-            Todavía no te han mandado dinero. Cuando alguien te envíe a tu celular o correo, aparece aquí.
+            Todavía no te han mandado dinero. Cuando alguien te envíe a tu celular o a tu correo, sus envíos aparecen
+            aquí.
+          </p>
+          <p>
+            Si te mandaron un enlace de cobro o un código de envío, podés usarlo sin tener cuenta: el enlace te lleva a
+            cobrar y el código a seguir el envío.
           </p>
           <Boton href="/rastrear" variante="secundario">
             ¿Tenés un código? Seguí tu envío
@@ -82,7 +86,7 @@ async function ListaRecibidos({
           <ul className={estilos.lista}>
             {datos.envios.map((envio) => (
               <li key={envio.id}>
-                <TarjetaRecibido envio={envio} usdBtc={usdBtc} />
+                <TarjetaRecibido envio={envio} />
               </li>
             ))}
           </ul>
@@ -97,16 +101,15 @@ async function ListaRecibidos({
   );
 }
 
-function TarjetaRecibido({ envio, usdBtc }: { envio: Envio; usdBtc: number | null }) {
-  const dolares = envio.monedaDestino === 'SATS' ? dolaresDeSats(envio.montoDestino, usdBtc) : null;
+function TarjetaRecibido({ envio }: { envio: Envio }) {
+  // The dollars fixed when the transfer was quoted; no live price is read for the list.
+  const usd = usdCotizadoCentavos(envio);
   return (
     <Link href={`/recibidos/${envio.id}`} className={estilos.tarjeta}>
       <span className={estilos.de}>Te mandó {primerNombre(envio.remitenteNombre)}</span>
       <span className={estilos.monto}>{formatoMonto(envio.montoDestino, envio.monedaDestino)}</span>
-      {envio.monedaDestino === 'SATS' && (
-        <span className={estilos.dolares}>
-          {dolares ? `Unos ${dolares} en dólares` : 'Sin precio de bitcoin ahora'}
-        </span>
+      {envio.monedaDestino === 'SATS' && usd !== null && (
+        <span className={estilos.dolares}>{`Unos ${formatoUsd(usd)} en dólares`}</span>
       )}
       <span>
         <EtiquetaEstado estado={envio.estado} entrega={envio.entrega} />

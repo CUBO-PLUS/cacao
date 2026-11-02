@@ -74,7 +74,7 @@ function TarjetaOferta({
   return (
     <article className={estilos.oferta} aria-labelledby={`oferta-${oferta.id}`}>
       <h3 id={`oferta-${oferta.id}`} className={estilos.subtitulo}>
-        <Link href={`/negocios/${oferta.negocioId}`}>{oferta.negocioNombre}</Link>
+        <Link href={`/negocios/${oferta.negocioId}`} prefetch={false}>{oferta.negocioNombre}</Link>
       </h3>
       {oferta.negocioResenas > 0 && oferta.negocioPromedio !== null && (
         <Estrellas valor={oferta.negocioPromedio} cantidad={oferta.negocioResenas} />

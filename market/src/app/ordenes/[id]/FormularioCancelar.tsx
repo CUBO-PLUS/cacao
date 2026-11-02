@@ -21,10 +21,12 @@ export function FormularioCancelar({
   ordenId,
   trabajo = true,
   alCancelar,
+  alIniciar,
 }: {
   ordenId: string;
   trabajo?: boolean;
   alCancelar?: () => void;
+  alIniciar?: () => void;
 }) {
   const [abierto, setAbierto] = useState(false);
   const [motivo, setMotivo] = useState('');
@@ -54,6 +56,7 @@ export function FormularioCancelar({
         setAbierto(false);
         alCancelar?.();
       },
+      alIniciar,
     );
   }
 

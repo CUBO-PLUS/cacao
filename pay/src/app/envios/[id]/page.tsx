@@ -8,8 +8,7 @@ import { ComoSeRecoge } from '@/componentes/ComoSeRecoge';
 import { fechaEnvio, fraseDeLaSuma } from '@/componentes/formatoEnvio';
 import { LineasDinero } from '@/componentes/LineasDinero';
 import { Logo } from '@/componentes/Logo';
-import { precioBtcOpcional } from '@/componentes/DolaresAproximados';
-import { dolaresDeSats, primerNombre } from '@/componentes/textosEnvio';
+import { primerNombre } from '@/componentes/textosEnvio';
 import { formatoSats, formatoUsd } from '@/lib/dinero';
 import { formatoMonto } from '@/lib/cotizacion';
 import { enlaceRastreo, enlaceWhatsapp, mensajeRastreo } from '@/lib/compartir';
@@ -18,6 +17,7 @@ import {
   accionesPosibles,
   descripcionDeEstado,
   ETIQUETA_ENTREGA,
+  usdCotizadoCentavos,
 } from '@/lib/transferencias';
 import { cobroDeEnvio, enlaceDeCobro } from '@/servidor/cobro';
 import { exigirSesion } from '@/servidor/sesion';
@@ -75,8 +75,9 @@ export default async function PaginaEnvio(props: PageProps<'/envios/[id]'>) {
     envio.cobroVencido &&
     envio.satsPagados !== null &&
     cobro?.estado !== 'pagando';
-  // The dollar value shown next to the sats in the claim share text, read only when the link is shown.
-  const dolaresEnlace = enlaceCobro ? dolaresDeSats(envio.montoDestino, await precioBtcOpcional()) : null;
+  // The dollar value shown next to the sats in the claim share text: the figure fixed when the transfer was quoted.
+  const usdEnvio = usdCotizadoCentavos(envio);
+  const dolaresEnlace = enlaceCobro && usdEnvio !== null ? formatoUsd(usdEnvio) : null;
   const rastreo = enlaceRastreo(envio.codigo);
   const whatsapp = enlaceWhatsapp(mensajeRastreo(envio.codigo, rastreo));
   const completada = envio.estado === 'completada';
@@ -238,9 +239,6 @@ export default async function PaginaEnvio(props: PageProps<'/envios/[id]'>) {
         {completada && (
           <div className={estilos.botonesRecibo}>
             <BotonImprimir />
-            <a className="boton boton--secundario" href={whatsapp} target="_blank" rel="noopener">
-              Compartir por WhatsApp
-            </a>
           </div>
         )}
         {envio.rol === 'remitente' && (

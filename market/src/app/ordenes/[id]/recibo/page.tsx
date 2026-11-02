@@ -6,7 +6,7 @@ import { Suspense } from 'react';
 import { AvisoPedidoDemo } from '@/componentes/Demo';
 import { formatoSats, formatoUsd, usdCentavosASats } from '@/lib/dinero';
 import { URL_LEDGER } from '@/lib/grupo';
-import { detalleDeOrden, referenciaDeCobro } from '@/servidor/pedidos';
+import { detalleDeOrden, NOMBRE_SIN_DATO, referenciaDeCobro } from '@/servidor/pedidos';
 import { exigirSesion } from '@/servidor/sesion';
 
 import { fechaCorta } from '../../fechas';
@@ -43,8 +43,11 @@ async function Recibo({ params }: { params: Promise<{ id: string }> }) {
 
   const referencia = await referenciaDeCobro(id);
   const trabajo = detalle.tipo === 'servicio';
-  const comprador =
-    detalle.rol === 'comprador' ? sesion.usuario.nombre.trim() || 'Comprador' : detalle.otraParte;
+  // The buyer's own name comes from the session; for the seller it is the other party's name. A
+  // missing name (no name on the account) is left out of the receipt, not printed as a placeholder.
+  const nombreComprador =
+    detalle.rol === 'comprador' ? sesion.usuario.nombre.trim() : detalle.otraParte;
+  const mostrarComprador = nombreComprador !== '' && nombreComprador !== NOMBRE_SIN_DATO;
   const vendedor =
     detalle.rol === 'comprador' ? detalle.otraParte : (sesion.negocio?.nombre ?? detalle.otraParte);
   const cotizacion = Math.round(detalle.cotizacionUsdBtc * 100);
@@ -84,10 +87,12 @@ async function Recibo({ params }: { params: Promise<{ id: string }> }) {
             <dt>{trabajo ? 'Quien trabaja' : 'Vendedor'}</dt>
             <dd>{vendedor}</dd>
           </div>
-          <div>
-            <dt>Comprador</dt>
-            <dd>{comprador}</dd>
-          </div>
+          {mostrarComprador && (
+            <div>
+              <dt>Comprador</dt>
+              <dd>{nombreComprador}</dd>
+            </div>
+          )}
           <div>
             <dt>Forma de pago</dt>
             <dd>{formaDePago}</dd>

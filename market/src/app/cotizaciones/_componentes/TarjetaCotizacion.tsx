@@ -21,7 +21,7 @@ export function TarjetaCotizacion({ dato, usdBtc }: { dato: Cotizacion; usdBtc: 
         {dato.titulo}
       </h3>
       <p className={estilos.meta}>
-        <Link href={`/negocios/${dato.negocioId}`}>{dato.negocioNombre}</Link>
+        <Link href={`/negocios/${dato.negocioId}`} prefetch={false}>{dato.negocioNombre}</Link>
         <span>{ETIQUETA_COTIZACION[estado]}</span>
       </p>
 

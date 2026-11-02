@@ -190,6 +190,15 @@ export async function filaEnvioDb(id: string) {
   return data;
 }
 
+/** Marks a transfer as paid, the way the settled sender payment does. */
+export async function pagarDb(id: string): Promise<void> {
+  const { error } = await servicio()
+    .from('pay_transferencias')
+    .update({ pagada_en: new Date().toISOString() })
+    .eq('id', id);
+  if (error) throw new Error(`No pude marcar como pagado el envío: ${error.message}`);
+}
+
 /** Moves a transfer through the database function as the administrator. */
 export async function avanzarDb(
   id: string,

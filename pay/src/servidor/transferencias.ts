@@ -7,7 +7,9 @@ import {
   esCodigo,
   esDemo,
   normalizarCodigo,
+  usdCotizadoCentavos,
   normalizarContacto,
+  puedeSimularEntregaRemitente,
   type EstadoEnvio,
   type RolEnvio,
 } from '@/lib/transferencias';
@@ -95,6 +97,8 @@ export type RastreoPublico = {
   estado: EstadoEnvio;
   monedaDestino: 'USD' | 'SATS';
   montoDestino: number;
+  /** The dollars fixed at quote time, in cents. Null when the quote stored none. Never recomputed from today's rate. */
+  usdCentavos: number | null;
   entrega: Entrega;
   minutosEstimados: number;
   /** The recipient's first name only. */
@@ -137,7 +141,7 @@ export const COLUMNAS_ENVIO =
 
 // Only what the public view may show. Nothing else is selected, so nothing can leak by mistake.
 const COLUMNAS_RASTREO =
-  'id, codigo, estado, moneda_destino, monto_destino, entrega, creada_en, destinatario_nombre, cobro_estado';
+  'id, codigo, estado, moneda_origen, neto_centavos, moneda_destino, monto_destino, entrega, creada_en, destinatario_nombre, cobro_estado';
 
 const COLUMNAS_CAMBIO =
   'id, codigo, remitente_id, estado, moneda_origen, monto_origen_centavos, entrega, pagada_en, factura_expira, btcpay_factura_id, btcpay_tienda_id';
@@ -449,7 +453,15 @@ export async function rastreo(codigo: string): Promise<RastreoPublico | null> {
 
   const fila = data as unknown as Pick<
     FilaEnvio,
-    'codigo' | 'estado' | 'moneda_destino' | 'monto_destino' | 'entrega' | 'creada_en' | 'destinatario_nombre'
+    | 'codigo'
+    | 'estado'
+    | 'moneda_origen'
+    | 'neto_centavos'
+    | 'moneda_destino'
+    | 'monto_destino'
+    | 'entrega'
+    | 'creada_en'
+    | 'destinatario_nombre'
   > & { cobro_estado: string | null };
   const [tarifasLeidas, historial] = await Promise.all([tarifas(), historialDe(data.id)]);
   return {
@@ -457,6 +469,12 @@ export async function rastreo(codigo: string): Promise<RastreoPublico | null> {
     estado: fila.estado,
     monedaDestino: fila.moneda_destino,
     montoDestino: Number(fila.monto_destino),
+    usdCentavos: usdCotizadoCentavos({
+      monedaOrigen: fila.moneda_origen,
+      netoCentavos: fila.neto_centavos,
+      monedaDestino: fila.moneda_destino,
+      montoDestino: Number(fila.monto_destino),
+    }),
     entrega: fila.entrega,
     minutosEstimados: tarifasLeidas[fila.entrega].minutosEstimados,
     destinatarioNombre: primerNombre(fila.destinatario_nombre),
@@ -876,7 +894,7 @@ export async function cancelarEnvio(usuarioId: string, envioId: string): Promise
 }
 
 /**
- * The actor the database should see for a simulator step. An administrator passes their own id.
+ * The actor the database should see for the simulator's fail. An administrator passes their own id.
  * The sender passes null, which the database takes as the simulator, and only in the demo.
  */
 async function actorDelSimulador(
@@ -889,7 +907,32 @@ async function actorDelSimulador(
   return exito(null);
 }
 
-/** Completes a transfer that is processing: an administrator, or the sender in the demo. */
+/**
+ * Who may complete a transfer by hand. An administrator passes their own id. The sender passes null, the
+ * simulator, and only for a paid cash or bank transfer that is processing (puedeSimularEntregaRemitente):
+ * it never reaches "entregado" unpaid, and a Lightning transfer is never completed by hand.
+ */
+async function actorDeCompletar(
+  actor: { id: string; esAdmin: boolean },
+  fila: FilaCambio,
+): Promise<Resultado<string | null>> {
+  if (actor.esAdmin && (await esAdministrador(actor.id))) return exito(actor.id);
+  if (fila.remitente_id !== actor.id) return fallo('NO_ENCONTRADA', MENSAJE_NO_ENCONTRADA);
+  const permitido = puedeSimularEntregaRemitente({
+    entrega: fila.entrega,
+    estado: fila.estado,
+    pagada: fila.pagada_en !== null,
+  });
+  if (!permitido) {
+    if (fila.entrega === 'lightning') {
+      return fallo('NO_PERMITIDO', 'Un envío por bitcoin se completa cuando el destinatario lo cobra.');
+    }
+    return fallo('ESTADO_INVALIDO', 'Solo podés marcar como entregado un envío pagado que va en camino.');
+  }
+  return exito(null);
+}
+
+/** Completes a transfer that is processing: an administrator, or the sender for a paid cash or bank transfer. */
 export async function simularCompletar(
   actor: { id: string; esAdmin: boolean },
   envioId: string,
@@ -898,9 +941,9 @@ export async function simularCompletar(
     if (!esUuid(actor.id) || !esUuid(envioId)) return fallo('NO_ENCONTRADA', MENSAJE_NO_ENCONTRADA);
     const fila = await cargarCambio(envioId);
     if (!fila) return fallo('NO_ENCONTRADA', MENSAJE_NO_ENCONTRADA);
-    const quien = await actorDelSimulador(actor, fila);
+    const quien = await actorDeCompletar(actor, fila);
     if (!quien.ok) return quien;
-    // A lightning transfer is completed by its recipient's claim (cobrar), never by hand.
+    // A lightning transfer is never completed by hand, not even by an administrator.
     if (fila.entrega === 'lightning') {
       return fallo('NO_PERMITIDO', 'Un envío por bitcoin se completa cuando el destinatario lo cobra.');
     }

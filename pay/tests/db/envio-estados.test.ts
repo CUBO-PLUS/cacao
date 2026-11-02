@@ -17,6 +17,7 @@ import {
   filaEnvio,
   administrador,
   ok,
+  servicio,
   usuarioNuevo,
   type Usuario,
 } from './ayuda';
@@ -36,6 +37,12 @@ afterEach(() => demo(ORIGINAL_DEMO));
 
 async function envioNuevo(remitente: Usuario) {
   return ok(await crearEnvio(remitente.id, datosEnvio(remitente)));
+}
+
+// The sender's payment settles: the transfer records it, as the BTCPay confirmation does.
+async function marcarPagado(envioId: string) {
+  const { error } = await servicio().from('pay_transferencias').update({ pagada_en: new Date().toISOString() }).eq('id', envioId);
+  if (error) throw new Error(error.message);
 }
 
 describe('transiciones permitidas', () => {
@@ -141,13 +148,22 @@ describe('transiciones rechazadas', () => {
     expect((await filaEnvio(envio.id)).estado).toBe('creada');
   });
 
-  it('quien envía no puede completar un envío aunque sea el suyo, si la demo está apagada', async () => {
+  it('quien envía no puede completar un envío sin pagar, aunque sea el suyo', async () => {
     demo(undefined);
     const remitente = await usuarioNuevo();
     const envio = await envioNuevo(remitente);
     await procesarEnvio(remitente.id, envio.id);
-    expect(codigoDe(await simularCompletar({ id: remitente.id, esAdmin: false }, envio.id))).toBe('NO_PERMITIDO');
+    expect(codigoDe(await simularCompletar({ id: remitente.id, esAdmin: false }, envio.id))).toBe('ESTADO_INVALIDO');
     expect((await filaEnvio(envio.id)).estado).toBe('procesando');
+  });
+
+  it('quien envía completa su efectivo pagado que va en camino, también fuera de la demo', async () => {
+    demo(undefined);
+    const remitente = await usuarioNuevo();
+    const envio = await envioNuevo(remitente);
+    await procesarEnvio(remitente.id, envio.id);
+    await marcarPagado(envio.id);
+    expect(ok(await simularCompletar({ id: remitente.id, esAdmin: false }, envio.id))).toEqual({ id: envio.id, estado: 'completada' });
   });
 
   it('un administrador que no es quien envió no puede cancelar el envío', async () => {
@@ -175,16 +191,18 @@ describe('quién puede actuar', () => {
     expect((await filaEnvio(envio.id)).estado).toBe('creada');
   });
 
-  it('el simulador rechaza a quien envió cuando la demo está apagada y lo acepta cuando está encendida', async () => {
+  it('el simulador de quien envió nunca entrega sin pago, con la demo apagada ni encendida', async () => {
     const remitente = await usuarioNuevo();
     const envio = await envioNuevo(remitente);
     await procesarEnvio(remitente.id, envio.id);
 
     demo(undefined);
-    expect(codigoDe(await simularCompletar({ id: remitente.id, esAdmin: false }, envio.id))).toBe('NO_PERMITIDO');
+    expect(codigoDe(await simularCompletar({ id: remitente.id, esAdmin: false }, envio.id))).toBe('ESTADO_INVALIDO');
+    demo('1');
+    expect(codigoDe(await simularCompletar({ id: remitente.id, esAdmin: false }, envio.id))).toBe('ESTADO_INVALIDO');
     expect((await filaEnvio(envio.id)).estado).toBe('procesando');
 
-    demo('1');
+    await marcarPagado(envio.id);
     expect(ok(await simularCompletar({ id: remitente.id, esAdmin: false }, envio.id))).toEqual({ id: envio.id, estado: 'completada' });
     expect((await filaEnvio(envio.id)).estado).toBe('completada');
   });

@@ -99,11 +99,37 @@ export function esDemo(): boolean {
 }
 
 /**
+ * The sender may mark a paid cash or bank transfer as delivered, to see how the flow ends (the simulator).
+ * Only the sender, only while it is processing, only when the sender has paid it, and never for Lightning:
+ * a Lightning transfer is delivered by its recipient's claim. The server applies the same rule.
+ */
+export function puedeSimularEntregaRemitente(datos: { entrega: Entrega; estado: EstadoEnvio; pagada: boolean }): boolean {
+  return datos.entrega !== 'lightning' && datos.estado === 'procesando' && datos.pagada;
+}
+
+/**
+ * The USD value of a transfer, as stored when it was quoted: the net amount for a USD sender, the dollars
+ * for a USD payout. Every screen shows this figure and never recomputes it from today's rate. Null when the
+ * quote did not store dollars (a EUR sender paying in Lightning): then no dollar figure is shown.
+ */
+export function usdCotizadoCentavos(datos: {
+  monedaOrigen: 'USD' | 'EUR';
+  netoCentavos: number;
+  monedaDestino: 'USD' | 'SATS';
+  montoDestino: number;
+}): number | null {
+  if (datos.monedaDestino === 'USD') return datos.montoDestino;
+  if (datos.monedaOrigen === 'USD') return datos.netoCentavos;
+  return null;
+}
+
+/**
  * What a person may do with a transfer in this state. The sender confirms or cancels before it
- * moves. An administrator moves it and can complete or fail it. The simulator adds complete and
- * fail for the sender, but only in the demo. A recipient never acts on a transfer. A lightning
- * transfer leaves "creada" only when its invoice is paid (BTCPay), and the recipient's claim completes
- * it; so nobody starts or completes it by hand.
+ * moves. An administrator moves it and can complete or fail it. The sender can also complete a paid
+ * cash or bank transfer that is processing (see puedeSimularEntregaRemitente), and the simulator adds
+ * fail for the sender, but only in the demo and only before payment. A recipient never acts on a
+ * transfer. A lightning transfer leaves "creada" only when its invoice is paid (BTCPay), and the recipient's
+ * claim completes it; so nobody starts or completes it by hand.
  */
 export function accionesPosibles(
   estado: EstadoEnvio,
@@ -123,7 +149,14 @@ export function accionesPosibles(
       if (esDemo() && !opciones.pagada) acciones.push('fallar');
       return acciones;
     }
-    if (estado === 'procesando') return esDemo() && !lightning ? ['completar', 'fallar'] : [];
+    if (estado === 'procesando') {
+      const acciones: AccionEnvio[] = [];
+      if (puedeSimularEntregaRemitente({ entrega: entrega ?? 'efectivo', estado, pagada: opciones.pagada === true })) {
+        acciones.push('completar');
+      }
+      if (esDemo() && !lightning && !opciones.pagada) acciones.push('fallar');
+      return acciones;
+    }
     return [];
   }
   if (estado === 'creada') return lightning || opciones.pagoLightning ? ['fallar'] : ['procesar', 'fallar'];

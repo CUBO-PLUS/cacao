@@ -31,7 +31,7 @@ export function TarjetaProducto({
       />
       <div className="tarjeta__cuerpo">
         <h3 className="tarjeta__titulo">
-          <Link href={`/productos/${producto.id}`} className="tarjeta__enlace">
+          <Link href={`/productos/${producto.id}`} className="tarjeta__enlace" prefetch={false}>
             {producto.nombre}
           </Link>
         </h3>

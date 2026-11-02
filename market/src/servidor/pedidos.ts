@@ -94,6 +94,9 @@ const PENDIENTES = new Set([
 
 // Shop and buyer names come from the service role. A suspended shop is hidden from session reads,
 // but its buyers still need to see whose order it is. Only id and name are read, never the phone.
+/** The name shown when a party has no name on its account. The receipt leaves that row out. */
+export const NOMBRE_SIN_DATO = 'Comprador';
+
 async function nombresNegocios(ids: string[]): Promise<Map<string, string>> {
   const unicos = [...new Set(ids)];
   if (unicos.length === 0) return new Map();
@@ -190,7 +193,7 @@ async function resumenes(filas: FilaOrden[], rol: RolOrden): Promise<ResumenOrde
     const otraParte =
       rol === 'comprador'
         ? (nombres.get(f.negocio_id) ?? 'Tienda')
-        : (nombres.get(f.comprador_id) ?? 'Comprador');
+        : (nombres.get(f.comprador_id) ?? NOMBRE_SIN_DATO);
     const necesitaAccion = accionesPosibles(
       aOrdenParaAcciones(f, disputa, proveedores.get(f.id) ?? null),
       rol,
@@ -392,7 +395,7 @@ export async function detalleDeOrden(ordenId: string, sesion: Sesion): Promise<D
   const otraParte =
     rol === 'comprador'
       ? (nombres.get(orden.negocio_id) ?? 'Tienda')
-      : (nombres.get(orden.comprador_id) ?? 'Comprador');
+      : (nombres.get(orden.comprador_id) ?? NOMBRE_SIN_DATO);
 
   const detalle: DetalleOrden = {
     id: orden.id,

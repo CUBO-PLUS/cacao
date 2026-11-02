@@ -8,6 +8,7 @@ import 'server-only';
 import { randomBytes } from 'node:crypto';
 
 import { hashClave, LIMITES, type Producto } from '@/lib/api-cobros';
+import { estadoAMostrar } from '@/lib/cobro-negocio';
 import {
   inicioDelDiaSV,
   inicioDelMesSV,
@@ -317,7 +318,7 @@ export async function resumenNegocio(usuarioId: string, ahora: Date = new Date()
 
   const { data: recientes, error: errorRecientes } = await servicio
     .from('pay_cobros')
-    .select('id, estado, usd_centavos, creado_en, pagado_en')
+    .select('id, estado, usd_centavos, creado_en, pagado_en, expira_en')
     .eq('cliente_id', clienteId)
     .order('creado_en', { ascending: false })
     .limit(20);
@@ -329,7 +330,7 @@ export async function resumenNegocio(usuarioId: string, ahora: Date = new Date()
   return exito({
     hoy: { centavos: sumar(deHoy), cuenta: deHoy.length },
     mes: { centavos: sumar(pagados ?? []), cuenta: (pagados ?? []).length },
-    recientes: recientes ?? [],
+    recientes: (recientes ?? []).map(({ expira_en, ...c }) => ({ ...c, estado: estadoAMostrar(c.estado, expira_en, ahora) })),
   });
 }
 

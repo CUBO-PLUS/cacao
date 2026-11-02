@@ -4,9 +4,7 @@ import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import type { ReactNode } from 'react';
 
-import { precioBtcOpcional } from '@/componentes/DolaresAproximados';
-import { dolaresDeSats } from '@/componentes/textosEnvio';
-import { formatoSats } from '@/lib/dinero';
+import { formatoSats, formatoUsd } from '@/lib/dinero';
 import { datosDeCobro, enlaceFacturaDePrueba } from '@/servidor/cobro';
 
 import { FormularioCobro } from './FormularioCobro';
@@ -30,8 +28,9 @@ export default async function PaginaCobrar(props: { params: Promise<{ token: str
   const datos = await datosDeCobro(token);
   if (!datos) notFound();
 
+  // The sats are the exact amount the invoice needs; the dollars are the figure fixed when the transfer was quoted.
   const cifra = formatoSats(datos.sats);
-  const dolares = dolaresDeSats(datos.sats, await precioBtcOpcional());
+  const dolares = datos.usdCentavos === null ? null : formatoUsd(datos.usdCentavos);
   const de = datos.remitenteNombre ? `De ${datos.remitenteNombre}. ` : '';
 
   let contenido: ReactNode;
@@ -132,8 +131,11 @@ export default async function PaginaCobrar(props: { params: Promise<{ token: str
           Código <span className="dato">{datos.codigo}</span>
         </p>
         <h1>Te mandaron {dolares ?? cifra}</h1>
-        {dolares && <p className={estilos.dolares}>En dólares, aproximado. Se cobra en bitcoin.</p>}
+        {dolares && <p className={estilos.dolares}>En dólares, al cambio del momento de enviar. Se cobra en bitcoin.</p>}
         <p className={estilos.texto}>{de}Cobralo con tu billetera de bitcoin.</p>
+        <p className={estilos.texto}>
+          El monto exacto en bitcoin es <span className="dato">{cifra}</span>.
+        </p>
       </header>
       <section className={estilos.bloque} aria-live="polite">
         {contenido}

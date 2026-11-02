@@ -16,7 +16,7 @@ export function FormularioCobro({
   enlaceFacturaDePrueba,
 }: {
   token: string;
-  /** The exact amount in bitcoin, in words: "1,250 sats". Shown under "Ver detalle". */
+  /** The exact amount in bitcoin, in words: "1,250 sats". Shown in the steps, where the invoice is asked for. */
   monto: string;
   /** Test wallet link for whoever has no bitcoin wallet, or null when BTCPay is not set up. */
   enlaceFacturaDePrueba: string | null;
@@ -51,7 +51,10 @@ export function FormularioCobro({
         </h2>
         <ol className={estilos.pasosLista}>
           <li>Abrí tu billetera de bitcoin. Si no tenés una, mirá la opción de abajo.</li>
-          <li>Pedí un pago por el monto exacto que te mandaron.</li>
+          <li>
+            Pedí un pago por exactamente <span className="dato">{monto}</span>. Ese es el monto exacto que tiene que
+            tener el código.
+          </li>
           <li>Copiá el código de pago. Es un texto largo que empieza con &quot;lnbc&quot;.</li>
           <li>Pegalo aquí abajo y tocá Cobrar.</li>
         </ol>
@@ -96,13 +99,6 @@ export function FormularioCobro({
           </ol>
         </section>
       )}
-
-      <details className={estilos.detalles}>
-        <summary>Ver detalle</summary>
-        <p>
-          El monto exacto en bitcoin es <span className="dato">{monto}</span>. El código tiene que ser por ese monto.
-        </p>
-      </details>
 
       <p className={estilos.regtest}>
         <strong>Es bitcoin de prueba: no tiene valor real.</strong>

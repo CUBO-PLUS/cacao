@@ -32,6 +32,21 @@
   font-weight: 600;
 }
 
+/* The result of the last action, under the state chip. */
+.resultado {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: var(--radio-chico);
+  background: var(--arena);
+  color: var(--pulpa);
+  font-weight: 600;
+}
+
+.resultado p {
+  margin: 0;
+}
+
 /* Sats before payment are an estimate; the note sits under the price tag. */
 .aproximado {
   margin: 0;

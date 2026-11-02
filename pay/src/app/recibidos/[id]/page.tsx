@@ -7,7 +7,7 @@ import { ActualizarEnvio } from '@/componentes/ActualizarEnvio';
 import { fechaEnvio } from '@/componentes/formatoEnvio';
 import { esEstadoFinal, primerNombre, saludoDestinatario } from '@/componentes/textosEnvio';
 import { formatoMonto } from '@/lib/cotizacion';
-import { ETIQUETA_ENTREGA } from '@/lib/transferencias';
+import { ETIQUETA_ENTREGA, usdCotizadoCentavos } from '@/lib/transferencias';
 import { VistaDestinatario } from '@/componentes/VistaDestinatario';
 import { cobroDeEnvio, tokenDeCobroDelDestinatario } from '@/servidor/cobro';
 import { envioPara } from '@/servidor/transferencias';
@@ -50,6 +50,7 @@ export default async function PaginaRecibido(props: PageProps<'/recibidos/[id]'>
       <VistaDestinatario
         saludo={saludoDestinatario(envio.destinatarioNombre)}
         envio={envio}
+        usdCentavos={usdCotizadoCentavos(envio)}
         extra={
           <section className={estilos.datos} aria-labelledby="titulo-datos">
             <h2 id="titulo-datos" className="solo-lectores">

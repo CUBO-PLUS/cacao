@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { OPCIONES_CONTEXTO, avanzarDb, crearEnvioDb, filaEnvioDb, sesionDe } from './ayuda';
+import { OPCIONES_CONTEXTO, avanzarDb, crearEnvioDb, filaEnvioDb, pagarDb, sesionDe } from './ayuda';
 
 // The buttons that move a transfer. None of them may show once the transfer has ended.
 const ACCIONES = /Enviar ahora|Cancelar envío|Simular que retiró el dinero|Simular depósito|Simular que falló|Marcar como/;
@@ -64,14 +64,19 @@ test('fallar desde el monitor: el remitente ve el motivo y el rastreo dice que n
   }
 });
 
-test('en modo demo el remitente simula la llegada y el fallo de su propio envío', async ({ browser }) => {
+test('el remitente simula la llegada solo de un envío pagado, y el fallo de su propio envío en la demo', async ({ browser }) => {
   const llego = await crearEnvioDb({ remitente: 'lucia', nombre: 'Marta Hernández' });
   const fallo = await crearEnvioDb({ remitente: 'lucia', nombre: 'Marta Hernández' });
   await avanzarDb(llego.id, 'procesar');
   await avanzarDb(fallo.id, 'procesar');
   const lucia = await sesionDe(browser, 'lucia');
   try {
-    // Simulated arrival.
+    // Without payment the sender cannot mark the arrival.
+    await lucia.goto(`/envios/${llego.id}`);
+    await expect(lucia.getByRole('button', { name: 'Simular que retiró el dinero' })).toHaveCount(0);
+
+    // Simulated arrival, once the transfer is paid.
+    await pagarDb(llego.id);
     await lucia.goto(`/envios/${llego.id}`);
     const encabezado = lucia.locator('article header').first();
     await expect(encabezado.getByText('En camino', { exact: true })).toBeVisible();

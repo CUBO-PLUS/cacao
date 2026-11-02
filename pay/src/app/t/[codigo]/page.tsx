@@ -44,6 +44,7 @@ export default async function PaginaRastreo(props: PageProps<'/t/[codigo]'>) {
       <VistaDestinatario
         saludo={saludoDestinatario(envio.destinatarioNombre)}
         envio={envio}
+        usdCentavos={envio.usdCentavos}
       />
 
       {envio.cobradaPorLightning && <p className={estilos.cobrado}>Cobrado con bitcoin</p>}

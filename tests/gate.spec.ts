@@ -110,7 +110,7 @@ test('the wall explains what a sat is and that the access stays in this browser'
   await requiereDemo(request);
   await page.goto(PAGA);
   await expect(page.locator('[data-gate-sat]')).toContainText('Un sat es la cienmillonésima parte de un bitcoin.');
-  await expect(muro(page)).toContainText('usá tu código de acceso');
+  await expect(muro(page)).toContainText('cuando vuelvas, se abre sola');
   // The explanation stays on the wall while the invoice is open, next to the dollar value.
   await page.locator('[data-gate-pedir]').click();
   await expect(page.locator('[data-gate-pendiente]')).toBeVisible();
@@ -249,14 +249,15 @@ test('a different browser stays locked and cannot read the first invoice', async
   }
 });
 
-/** The access code the reader was shown after paying: the text of the code box. */
+/** The access code the reader can unfold after paying, for reading on another device. */
 async function codigoDeAcceso(page: Page): Promise<string> {
+  await page.locator('.gate-codigo summary').click();
   const valor = page.locator('.gate-codigo__valor');
   await expect(valor).toBeVisible();
   return (await valor.textContent())?.trim() ?? '';
 }
 
-/** Types a code into the wall's "Ya pagué, tengo un código" field and submits it. */
+/** Types a code into the wall's "Pagué en otro navegador" field and submits it. */
 async function restaurarConCodigo(page: Page, codigo: string): Promise<void> {
   await page.locator('[data-gate-ya] summary').click();
   await page.locator('[data-gate-codigo-entrada]').fill(codigo);

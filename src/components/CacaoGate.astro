@@ -72,7 +72,7 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
   >Desbloquear por {precio}</button>
 
   <details class="muro__ya" data-gate-ya>
-    <summary>Ya pagué, tengo un código</summary>
+    <summary>Pagué en otro navegador</summary>
     <form class="muro__ya-form" data-gate-restaurar novalidate>
       <label class="etiqueta" for={`codigo-${slug}`}>Código de acceso</label>
       <textarea
@@ -90,7 +90,7 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
     </form>
   </details>
 
-  <p class="muro__nota">Tu acceso queda guardado en este navegador, sin cuenta ni suscripción. Para abrirla desde otro navegador o celular, usá tu código de acceso: lo ves cuando pagás.</p>
+  <p class="muro__nota">Pagás una vez, sin cuenta ni suscripción. Este navegador la recuerda y, cuando vuelvas, se abre sola.</p>
   {demo && <p class="etiqueta muro__demo-nota">Modo demo · no se cobra nada</p>}
 </aside>
 
@@ -225,15 +225,18 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
   /* The access code, shown at the start of the unlocked text. Global: the text is put in by the script. */
   :global(.gate-codigo) {
     display: grid;
-    gap: 10px;
+    gap: 6px;
     justify-items: start;
     margin: 0 0 2em;
-    padding: clamp(20px, 4vw, 28px);
+    padding: 14px 18px;
     background: var(--tostado);
     color: var(--pulpa);
     border-radius: var(--radio);
     min-width: 0;
   }
+  :global(.gate-codigo .gate-codigo__otro) { display: grid; gap: 10px; justify-items: start; min-width: 0; max-width: 100%; }
+  :global(.gate-codigo .gate-codigo__otro[open]) { margin-top: 6px; }
+  :global(.gate-codigo summary) { cursor: pointer; color: var(--mazorca); font-size: var(--t-etiqueta); min-height: 44px; display: flex; align-items: center; }
   :global(.gate-codigo .gate-codigo__valor) {
     font-family: var(--mono);
     font-size: var(--t-etiqueta);
@@ -245,8 +248,7 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
     user-select: all;
   }
   :global(.gate-codigo p) { margin: 0; color: var(--arena-oscura); }
-  :global(.gate-codigo .gate-codigo__titulo) { color: var(--pulpa); font-weight: 800; font-size: var(--t-h2); }
-  :global(.gate-codigo .gate-codigo__acciones) { display: flex; flex-wrap: wrap; gap: 10px; }
+  :global(.gate-codigo .gate-codigo__titulo) { color: var(--pulpa); font-weight: 800; }
   :global(.gate-codigo .boton) { min-height: 44px; }
 </style>
 
@@ -514,28 +516,33 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
       );
     }
 
-    // The access code: the pass this browser keeps, shown first so the reader can save or copy it.
-    // Built with DOM calls, so nothing from the page is parsed as HTML.
+    // A short note that the story stays open on this browser. The access code is folded away: it is only for
+    // reading on another device. Built with DOM calls, so nothing from the page is parsed as HTML.
     function cajaCodigo(codigo: string, expira: number): HTMLElement {
       const caja = document.createElement('section');
       caja.className = 'gate-codigo';
       caja.dataset.gateCodigo = '';
-      caja.setAttribute('aria-label', 'Código de acceso');
+      caja.setAttribute('aria-label', 'Historia pagada');
 
       const titulo = document.createElement('p');
       titulo.className = 'gate-codigo__titulo';
-      titulo.textContent = 'Tu código de acceso';
+      titulo.textContent = 'Ya es tuya.';
 
       const texto = document.createElement('p');
+      texto.textContent = 'Queda guardada en este navegador: cuando vuelvas, se abre sola.';
+
+      const otro = document.createElement('details');
+      otro.className = 'gate-codigo__otro';
+      const resumen = document.createElement('summary');
+      resumen.textContent = '¿La querés leer en otro celular o computadora?';
+
       const fecha = new Date(expira).toLocaleDateString('es-SV', { day: 'numeric', month: 'long', year: 'numeric' });
-      texto.textContent = `Guardalo o copialo. Sirve en cualquier navegador o celular para esta historia, hasta el ${fecha}. Pegalo en el muro con «Ya pagué, tengo un código».`;
+      const ayuda = document.createElement('p');
+      ayuda.textContent = `Copiá este código y pegalo allá, en «Pagué en otro navegador». Sirve hasta el ${fecha}.`;
 
       const valor = document.createElement('p');
       valor.className = 'gate-codigo__valor';
       valor.textContent = codigo;
-
-      const acciones = document.createElement('div');
-      acciones.className = 'gate-codigo__acciones';
 
       const copia = document.createElement('button');
       copia.type = 'button';
@@ -550,24 +557,8 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
         }
       });
 
-      const guardar = document.createElement('button');
-      guardar.type = 'button';
-      guardar.className = 'boton';
-      guardar.textContent = 'Guardar en un archivo';
-      guardar.addEventListener('click', () => {
-        const cuerpo = `Código de acceso de Cacao Media\nHistoria: ${slug}\nVence: ${fecha}\n\n${codigo}\n`;
-        const url = URL.createObjectURL(new Blob([cuerpo], { type: 'text/plain' }));
-        const enlace = document.createElement('a');
-        enlace.href = url;
-        enlace.download = `cacao-media-codigo-${slug}.txt`;
-        document.body.append(enlace);
-        enlace.click();
-        enlace.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-      });
-
-      acciones.append(copia, guardar);
-      caja.append(titulo, texto, valor, acciones);
+      otro.append(resumen, ayuda, valor, copia);
+      caja.append(titulo, texto, otro);
       return caja;
     }
 

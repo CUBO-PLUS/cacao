@@ -51,6 +51,32 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
   </head>
   <body data-seccion={seccion}>
     <a class="saltar" href="#contenido">Saltar al contenido</a>
+    <!-- In the page flow, not floating: it never covers the story or the pay button. Hidden until the script
+         sees it has not been dismissed on this browser. -->
+    <aside class="aviso-cookies" aria-label="Cookies y almacenamiento" data-aviso-cookies hidden>
+      <p>
+        Usamos una cookie y el almacenamiento del navegador para recordar lo que pagaste y contar visitas sin saber
+        quién sos. Sin publicidad. <a href="https://cacao-grupo.vercel.app/legal.html">Privacidad</a>
+      </p>
+      <button type="button" class="aviso-cookies__ok" data-aviso-cookies-ok>Entendido</button>
+    </aside>
+    <script>
+      const CLAVE_AVISO = 'cacao-aviso-cookies';
+      const aviso = document.querySelector<HTMLElement>('[data-aviso-cookies]');
+      let visto = false;
+      try {
+        visto = localStorage.getItem(CLAVE_AVISO) === '1';
+      } catch {}
+      if (aviso && !visto) {
+        aviso.hidden = false;
+        aviso.querySelector('[data-aviso-cookies-ok]')?.addEventListener('click', () => {
+          aviso.hidden = true;
+          try {
+            localStorage.setItem(CLAVE_AVISO, '1');
+          } catch {}
+        });
+      }
+    </script>
     <div class="hoja">
       <div class="barra">
       <header class="cabecera contenedor">
@@ -111,6 +137,32 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
 <style>
   .saltar { position: absolute; left: -999px; top: 8px; background: var(--mazorca); color: var(--tostado); padding: 0.5em 1em; border-radius: 999px; z-index: 10; }
   .saltar:focus { left: 8px; }
+
+  .aviso-cookies {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px 16px;
+    padding: 10px var(--canal);
+    background: var(--tostado);
+    color: var(--pulpa);
+    font-size: var(--t-etiqueta);
+  }
+  .aviso-cookies[hidden] { display: none; }
+  .aviso-cookies p { margin: 0; max-width: 72ch; }
+  .aviso-cookies a { color: var(--mazorca); }
+  .aviso-cookies__ok {
+    min-height: 40px;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--mazorca);
+    color: var(--tostado);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
 
   /* Dirt-style sheet: Pulpa page with rounded bottom corners on a Tostado ground. */
   .hoja {

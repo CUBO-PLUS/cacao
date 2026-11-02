@@ -18,11 +18,11 @@ CacaoPay sigue la regla de seguridad de todo el grupo Cacao: **el navegador nunc
 | `/rastrear` | `GET` | Público | Buscador por código de transferencia (`CP-XXXX-XXXX`). |
 | `/t/[codigo]` | `GET` (Server Component) | Público | Seguimiento público sin cuenta: muestra solo el monto a recibir, la vía de entrega, el primer nombre del destinatario, el estado y la línea de tiempo. |
 | `/cuenta` | `GET` / Server Actions | Con sesión | Edición del nombre visible y cierre de sesión local. |
-| `/monitor` | `GET` (Server Component) | Administradora | Resumen del período por estado y tabla de liquidación tributaria (F-07 y F-14 v17) sobre envíos entregados. |
-| `/monitor/envios` | `GET` (Server Component) | Administradora | Lista paginada de todos los envíos con filtro por estado y contactos enmascarados. |
-| `/monitor/envios/[id]` | `GET` / Server Action | Administradora | Inspección administrativa de un envío y acciones para procesarlo, marcarlo como entregado o marcarlo como fallido con motivo. |
-| `/monitor/embudo` | `GET` (Server Component) | Administradora | Embudo de conversión (`vio_cotizacion`, `inicio_envio`, `creo_envio`, `envio_completado`) con sesiones, eventos y monto en USD. |
-| `/monitor/tarifas` | `GET` (Server Component) | Administradora | Tabla de comisiones por forma de entrega, código `CAT-017` para DTE y tipos de cambio guardados en `pay_tasas`. |
+| `/admin` | `GET` (Server Component) | Administradora | Resumen del período por estado y tabla de liquidación tributaria (F-07 y F-14 v17) sobre envíos entregados. |
+| `/admin/envios` | `GET` (Server Component) | Administradora | Lista paginada de todos los envíos con filtro por estado y contactos enmascarados. |
+| `/admin/envios/[id]` | `GET` / Server Action | Administradora | Inspección administrativa de un envío y acciones para procesarlo, marcarlo como entregado o marcarlo como fallido con motivo. |
+| `/admin/embudo` | `GET` (Server Component) | Administradora | Embudo de conversión (`vio_cotizacion`, `inicio_envio`, `creo_envio`, `envio_completado`) con sesiones, eventos y monto en USD. |
+| `/admin/tarifas` | `GET` (Server Component) | Administradora | Tabla de comisiones por forma de entrega, código `CAT-017` para DTE y tipos de cambio guardados en `pay_tasas`. |
 
 ## 2. Tipo de respuesta estándar (`src/servidor/resultado.ts`)
 
@@ -56,7 +56,7 @@ export type Resultado<T> =
 - `tasaEurUsd(): Promise<{ tasa: number; fuente: string; actualizadaEn: string }>`
   Lee el par `EUR/USD` de `pay_tasas` (sembrado en `1.08`).
 - `tasasDeCambio(): Promise<TasaDeCambio[]>`
-  Devuelve todos los pares almacenados en `pay_tasas` para `/monitor/tarifas`.
+  Devuelve todos los pares almacenados en `pay_tasas` para `/admin/tarifas`.
 - `cotizarEnServidor(entrada: EntradaCotizacion): Promise<Resultado<Cotizacion & { validaHasta: string }>>`
   Calcula la cotización oficial en el servidor leyendo `pay_tarifas`, `pay_tasas` y, si `entrega === 'lightning'`, el precio de Bitcoin en vivo (`cotizacionUsdBtc()`). Devuelve la cotización con una vigencia de 5 minutos (`validaHasta`).
 
@@ -111,7 +111,7 @@ Cada función verifica primero en la base de datos que `usuarios.es_admin` sea `
 | `src/app/envios/[id]/acciones.ts` | `simularCompletarAccion` | `envioId: string` | Ejecuta `simularCompletar` y refresca la ruta. |
 | `src/app/envios/[id]/acciones.ts` | `simularFallarAccion` | `envioId: string, motivo: string` | Ejecuta `simularFallar` y refresca la ruta. |
 | `src/app/envios/[id]/acciones.ts` | `estadoDeEnvioAccion` | `envioId: string` | Devuelve el estado actual para el sondeo en vivo cuando el envío está `procesando`. |
-| `src/app/monitor/envios/[id]/acciones.ts` | `ejecutarAccion` | `FormData` (`envio`, `accion`, `motivo`) | Ejecuta `procesar`, `completar` o `fallar` como administradora y revalida `/monitor`. |
+| `src/app/admin/envios/[id]/acciones.ts` | `ejecutarAccion` | `FormData` (`envio`, `accion`, `motivo`) | Ejecuta `procesar`, `completar` o `fallar` como administradora y revalida `/admin`. |
 | `src/app/cuenta/acciones.ts` | `guardarNombre` | `FormData` | Guarda el nombre de la cuenta y revalida el layout. |
 | `src/app/cuenta/BotonSalir.tsx` | `BotonSalir` | ninguna | Cliente. Cierra la sesión del dispositivo con `signOut` de Clerk y redirige a `/`. |
 

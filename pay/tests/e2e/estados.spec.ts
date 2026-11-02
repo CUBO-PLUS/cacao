@@ -40,7 +40,7 @@ test('fallar desde el monitor: el remitente ve el motivo y el rastreo dice que n
   const ana = await sesionDe(browser, 'ana');
   const visitante = await browser.newContext(OPCIONES_CONTEXTO);
   try {
-    await ana.goto(`/monitor/envios/${id}`);
+    await ana.goto(`/admin/envios/${id}`);
     await ana.getByRole('button', { name: 'Marcar como fallido' }).click();
     await ana.getByLabel('Motivo').fill('La cuenta destino está cerrada');
     await ana.getByRole('button', { name: 'Sí, marcar como fallido' }).click();
@@ -111,7 +111,7 @@ test('un envío completado no ofrece acciones a nadie', async ({ browser }) => {
     await expect(lucia.locator('article header').getByText('Entregado', { exact: true })).toBeVisible();
     await expect(lucia.getByRole('button', { name: ACCIONES })).toHaveCount(0);
 
-    await ana.goto(`/monitor/envios/${id}`);
+    await ana.goto(`/admin/envios/${id}`);
     await expect(ana.getByText('No hay nada más que hacer: el envío ya terminó.')).toBeVisible();
     await expect(ana.getByRole('button', { name: ACCIONES })).toHaveCount(0);
 

@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   title: 'Resumen',
 };
 
-export default function PaginaResumen(props: PageProps<'/monitor'>) {
+export default function PaginaResumen(props: PageProps<'/admin'>) {
   return (
     <Suspense fallback={<p role="status">Cargando el resumen…</p>}>
       <Resumen busqueda={props.searchParams} />
@@ -29,10 +29,10 @@ export default function PaginaResumen(props: PageProps<'/monitor'>) {
 // The order of the rows is the order of a transfer's life.
 const ORDEN: EstadoEnvio[] = ['creada', 'procesando', 'completada', 'fallida', 'cancelada', 'devuelta'];
 
-async function Resumen({ busqueda }: { busqueda: PageProps<'/monitor'>['searchParams'] }) {
+async function Resumen({ busqueda }: { busqueda: PageProps<'/admin'>['searchParams'] }) {
   await connection();
   const params = await busqueda;
-  const sesion = await exigirAdmin('/monitor');
+  const sesion = await exigirAdmin('/admin');
   const periodo = periodoDe(params, new Date());
   const resultado = await resumenEnvios(sesion.usuario.id, periodo.inicio, periodo.fin);
 
@@ -45,7 +45,7 @@ async function Resumen({ busqueda }: { busqueda: PageProps<'/monitor'>['searchPa
         </p>
       </div>
 
-      <FiltroPeriodo ruta="/monitor" desde={periodo.desde} hasta={periodo.hasta} aviso={periodo.aviso} />
+      <FiltroPeriodo ruta="/admin" desde={periodo.desde} hasta={periodo.hasta} aviso={periodo.aviso} />
 
       {resultado.ok ? (
         <ResumenContenido filas={resultado.dato} />

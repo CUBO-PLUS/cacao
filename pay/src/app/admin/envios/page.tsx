@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   title: 'Envíos',
 };
 
-export default function PaginaEnvios(props: PageProps<'/monitor/envios'>) {
+export default function PaginaEnvios(props: PageProps<'/admin/envios'>) {
   return (
     <Suspense fallback={<p role="status">Cargando los envíos…</p>}>
       <ListaEnvios busqueda={props.searchParams} />
@@ -41,10 +41,10 @@ function paginaDe(valor: string | undefined): number {
   return valor && /^\d+$/.test(valor) && Number(valor) >= 1 ? Number(valor) : 1;
 }
 
-async function ListaEnvios({ busqueda }: { busqueda: PageProps<'/monitor/envios'>['searchParams'] }) {
+async function ListaEnvios({ busqueda }: { busqueda: PageProps<'/admin/envios'>['searchParams'] }) {
   await connection();
   const params = await busqueda;
-  const sesion = await exigirAdmin('/monitor/envios');
+  const sesion = await exigirAdmin('/admin/envios');
   const estado = estadoDe(valorDe(params.estado));
   const pagina = paginaDe(valorDe(params.pagina));
   const resultado = await todosLosEnvios(sesion.usuario.id, { estado, pagina });
@@ -54,7 +54,7 @@ async function ListaEnvios({ busqueda }: { busqueda: PageProps<'/monitor/envios'
     if (estado) query.set('estado', estado);
     if (p > 1) query.set('pagina', String(p));
     const texto = query.toString();
-    return texto ? `/monitor/envios?${texto}` : '/monitor/envios';
+    return texto ? `/admin/envios?${texto}` : '/admin/envios';
   };
 
   return (
@@ -64,7 +64,7 @@ async function ListaEnvios({ busqueda }: { busqueda: PageProps<'/monitor/envios'
         <p className={estilos.leyenda}>Del más nuevo al más viejo. Tocá el código para ver el detalle.</p>
       </div>
 
-      <form action="/monitor/envios" method="get" className={estilos.filtro}>
+      <form action="/admin/envios" method="get" className={estilos.filtro}>
         <div className={estilos.filtroCampo}>
           <label htmlFor="estado" className="campo-etiqueta">
             Estado
@@ -113,7 +113,7 @@ async function ListaEnvios({ busqueda }: { busqueda: PageProps<'/monitor/envios'
                 {resultado.dato.envios.map((e) => (
                   <tr key={e.id}>
                     <th scope="row">
-                      <Link href={`/monitor/envios/${e.id}`} className={estilos.mono}>
+                      <Link href={`/admin/envios/${e.id}`} className={estilos.mono}>
                         {e.codigo}
                       </Link>
                     </th>

@@ -29,7 +29,7 @@ test('sin sesión: las rutas públicas no se corren a los lados en 320 px', asyn
   const visitante = await browser.newContext(OPCIONES_CONTEXTO);
   try {
     const pagina = await visitante.newPage();
-    await recorrer(pagina, ['/', '/hacienda', '/entrar', '/rastrear', `/t/${codigo}`, '/t/CP-ABCD-EFGH', '/enviar', '/envios', '/recibidos', '/cuenta', '/monitor']);
+    await recorrer(pagina, ['/', '/hacienda', '/entrar', '/rastrear', `/t/${codigo}`, '/t/CP-ABCD-EFGH', '/enviar', '/envios', '/recibidos', '/cuenta', '/admin']);
   } finally {
     await visitante.close();
   }
@@ -59,7 +59,7 @@ test('como administradora: el monitor completo no se corre a los lados en 320 px
   const { id } = await envioDeLucia();
   const ana = await sesionDe(browser, 'ana');
   try {
-    await recorrer(ana, ['/monitor', '/monitor/envios', `/monitor/envios/${id}`, '/monitor/embudo', '/monitor/tarifas', '/envios']);
+    await recorrer(ana, ['/admin', '/admin/envios', `/admin/envios/${id}`, '/admin/embudo', '/admin/tarifas', '/envios']);
   } finally {
     await ana.context().close();
   }

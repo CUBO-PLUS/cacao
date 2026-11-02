@@ -18,7 +18,7 @@ export const instant = false;
 
 // Layouts do not run again between sections, so each page checks the administrator flag too.
 export default async function LayoutMonitor({ children }: { children: React.ReactNode }) {
-  await exigirAdmin('/monitor');
+  await exigirAdmin('/admin');
 
   return (
     <div className={estilos.marco}>

@@ -94,7 +94,7 @@ Remitly y Western Union no se comparan en esta tabla: sus comisiones no se verif
 2. **Remitente en Europa ("Diego en Madrid o Milán")**: envía euros (`EUR`). Necesita ver la tasa `EUR/USD` separada de la comisión antes de confirmar.
 3. **Destinataria en El Salvador ("Doña Rosa en San Miguel")**: consulta el estado del envío desde su celular con el código público `/t/CP-XXXX-XXXX` sin necesidad de crear cuenta ni ver datos internos del remitente, y sabe si debe llevar su DUI al punto de pago o esperar el abono en su cuenta o billetera Lightning.
 
-### 4.4 Marco de indicadores (KPIs) en `/monitor`
+### 4.4 Marco de indicadores (KPIs) en `/admin`
 
 | Indicador | Fórmula en CacaoPay | Fuente en base de datos | Meta operativa |
 |---|---|---|---|
@@ -102,4 +102,4 @@ Remitly y Western Union no se comparan en esta tabla: sus comisiones no se verif
 | **Tasa de entrega efectiva** | `completada / total_creadas` | Función RPC `pay_resumen(desde, hasta)` | `> 85%` |
 | **Abandono o fallo post-creación** | `(cancelada + fallida) / total_creadas` | Función RPC `pay_resumen(desde, hasta)` | `< 10%` |
 | **Ticket promedio enviado (USD)** | `monto_origen_usd_centavos / cantidad` | Función RPC `pay_resumen(desde, hasta)` | `$150.00` a `$400.00` |
-| **Recaudación e impuestos por período** | Base sin IVA (supuesto de cálculo), Débito IVA 13% y Pago a Cuenta 1.75% | `desglosarComisionUsd` en `/monitor` | Cuadratura del 100% con F-07 y F-14 |
+| **Recaudación e impuestos por período** | Base sin IVA (supuesto de cálculo), Débito IVA 13% y Pago a Cuenta 1.75% | `desglosarComisionUsd` en `/admin` | Cuadratura del 100% con F-07 y F-14 |

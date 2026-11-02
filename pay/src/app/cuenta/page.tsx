@@ -61,7 +61,7 @@ async function Cuenta({ busqueda }: { busqueda: PageProps<'/cuenta'>['searchPara
         <section className={estilos.bloque} aria-labelledby="titulo-admin">
           <h2 id="titulo-admin">Administración</h2>
           <div className={estilos.acciones}>
-            <Boton href="/monitor" variante="secundario">
+            <Boton href="/admin" variante="secundario">
               Monitor de envíos
             </Boton>
           </div>

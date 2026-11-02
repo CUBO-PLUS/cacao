@@ -129,7 +129,7 @@ test('quien no es administrador no ve el monitor, y sin sesión se va a entrar',
   const lucia = await sesionDe(browser, 'lucia');
   const visitante = await browser.newContext(OPCIONES_CONTEXTO);
   try {
-    for (const ruta of ['/monitor', '/monitor/envios', '/monitor/embudo', '/monitor/tarifas']) {
+    for (const ruta of ['/admin', '/admin/envios', '/admin/embudo', '/admin/tarifas']) {
       const respuesta = await lucia.goto(ruta);
       expect(respuesta?.status(), ruta).toBe(404);
       await expect(lucia.getByRole('heading', { name: 'Esta página no existe.' })).toBeVisible();
@@ -140,7 +140,7 @@ test('quien no es administrador no ve el monitor, y sin sesión se va a entrar',
     }
 
     const anonimo = await visitante.newPage();
-    for (const ruta of ['/monitor', '/monitor/envios']) {
+    for (const ruta of ['/admin', '/admin/envios']) {
       await anonimo.goto(ruta);
       await expect(anonimo).toHaveURL(/\/entrar/);
     }
@@ -189,7 +189,7 @@ test('un nombre y una nota con HTML se muestran como texto, sin ejecutar nada', 
       { pagina: lucia, ruta: '/envios' },
       { pagina: lucia, ruta: `/envios/${id}` },
       { pagina: rosa, ruta: `/recibidos/${id}` },
-      { pagina: ana, ruta: `/monitor/envios/${id}` },
+      { pagina: ana, ruta: `/admin/envios/${id}` },
     ];
     for (const { pagina, ruta } of paginas) {
       await pagina.goto(ruta);

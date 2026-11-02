@@ -4,16 +4,16 @@ import estilos from './estilos.module.css';
 
 // Presentational only (no hooks), so it can be the Suspense fallback as well as the live nav.
 const ENLACES = [
-  { href: '/monitor', texto: 'Resumen' },
-  { href: '/monitor/envios', texto: 'Envíos' },
-  { href: '/monitor/embudo', texto: 'Embudo' },
-  { href: '/monitor/tarifas', texto: 'Tarifas' },
+  { href: '/admin', texto: 'Resumen' },
+  { href: '/admin/envios', texto: 'Envíos' },
+  { href: '/admin/embudo', texto: 'Embudo' },
+  { href: '/admin/tarifas', texto: 'Tarifas' },
 ];
 
-// /monitor is current only on itself. The other sections also cover their detail pages.
+// /admin is current only on itself. The other sections also cover their detail pages.
 function esActual(href: string, ruta: string | null | undefined): boolean {
   if (!ruta) return false;
-  if (href === '/monitor') return ruta === '/monitor';
+  if (href === '/admin') return ruta === '/admin';
   return ruta === href || ruta.startsWith(`${href}/`);
 }
 

@@ -8,7 +8,7 @@ const ENVIAR = { href: '/enviar', texto: 'Enviar' };
 const ENVIOS_BARRA = { href: '/envios', texto: 'Envíos' };
 const ENVIOS_CABECERA = { href: '/envios', texto: 'Mis envíos' };
 const RECIBIDOS = { href: '/recibidos', texto: 'Recibidos' };
-const MONITOR = { href: '/monitor', texto: 'Monitor' };
+const MONITOR = { href: '/admin', texto: 'Monitor' };
 
 // The two navs are never both announced: CSS hides the header nav on phones and the bar on
 // wide screens. Each still has its own name, so the two are told apart when both are in the DOM.

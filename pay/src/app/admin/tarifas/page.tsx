@@ -27,7 +27,7 @@ export default function PaginaTarifas() {
 
 async function Tarifas() {
   await connection();
-  const sesion = await exigirAdmin('/monitor/tarifas');
+  const sesion = await exigirAdmin('/admin/tarifas');
   const resultado = await tarifasYTasas(sesion.usuario.id);
 
   return (

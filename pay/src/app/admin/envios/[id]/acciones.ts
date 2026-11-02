@@ -22,7 +22,7 @@ const LISTO: Record<'procesar' | 'completar' | 'fallar', string> = {
 // One action for the three buttons. The server layer checks the state and the administrator flag
 // again, so a stale page cannot move a transfer twice.
 export async function ejecutarAccion(previo: EstadoAccion, datos: FormData): Promise<EstadoAccion> {
-  const sesion = await exigirAdmin('/monitor/envios');
+  const sesion = await exigirAdmin('/admin/envios');
   const envioId = String(datos.get('envio') ?? '');
   const accion = String(datos.get('accion') ?? '') as AccionEnvio;
   if (!UUID.test(envioId) || !ACCIONES_ADMIN.includes(accion)) {
@@ -41,7 +41,7 @@ export async function ejecutarAccion(previo: EstadoAccion, datos: FormData): Pro
 
   if (!resultado.ok) return { ok: false, mensaje: resultado.mensaje };
   // The list, the detail and the summary all show the state, so every monitor page is read again.
-  revalidatePath('/monitor', 'layout');
+  revalidatePath('/admin', 'layout');
   return { ok: true, mensaje: LISTO[accion as 'procesar' | 'completar' | 'fallar'] };
 }
 
@@ -54,7 +54,7 @@ const MENSAJE_SIN_COBRO = 'Este envío no tiene un cobro por Lightning.';
 // the claim if BTCPay has an answer. "Marcar como fallido" closes it by hand; the reason is shown to the
 // person who claims. Both need the administrator, and both read the claim token from the database.
 export async function ejecutarAccionCobro(previo: EstadoAccion, datos: FormData): Promise<EstadoAccion> {
-  await exigirAdmin('/monitor/envios');
+  await exigirAdmin('/admin/envios');
   const envioId = String(datos.get('envio') ?? '');
   const accion = String(datos.get('accion') ?? '') as AccionCobro;
   if (!UUID.test(envioId) || !ACCIONES_COBRO.includes(accion)) {
@@ -66,7 +66,7 @@ export async function ejecutarAccionCobro(previo: EstadoAccion, datos: FormData)
 
   if (accion === 'revisar') {
     const resultado = await estadoDeCobro(cobro.token);
-    revalidatePath('/monitor', 'layout');
+    revalidatePath('/admin', 'layout');
     if (!resultado.ok) return { ok: false, mensaje: resultado.mensaje };
     const estado = resultado.dato.cobroEstado;
     if (estado === 'pagado') return { ok: true, mensaje: 'BTCPay confirmó el pago. El envío quedó entregado.' };
@@ -76,7 +76,7 @@ export async function ejecutarAccionCobro(previo: EstadoAccion, datos: FormData)
 
   const motivo = String(datos.get('motivo') ?? '');
   const resultado = await marcarCobroFallido(cobro.token, motivo);
-  revalidatePath('/monitor', 'layout');
+  revalidatePath('/admin', 'layout');
   if (!resultado.ok) return { ok: false, mensaje: resultado.mensaje };
   if (resultado.dato.estado === 'pagado') {
     return { ok: true, mensaje: 'BTCPay confirmó el pago. El envío quedó entregado.' };

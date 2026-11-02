@@ -30,10 +30,10 @@ const ETIQUETA_COBRO: Record<EstadoCobroEnvio, string> = {
 };
 
 // Everything about one transfer, with the full contact and the admin's actions.
-export default async function PaginaDetalleEnvio(props: PageProps<'/monitor/envios/[id]'>) {
+export default async function PaginaDetalleEnvio(props: PageProps<'/admin/envios/[id]'>) {
   await connection();
   const { id } = await props.params;
-  const sesion = await exigirAdmin(`/monitor/envios/${id}`);
+  const sesion = await exigirAdmin(`/admin/envios/${id}`);
   const envio = await envioPara(sesion.usuario, id);
   if (!envio) notFound();
   // A lightning transfer is collected by its recipient; the admin only sees how that claim went.
@@ -46,7 +46,7 @@ export default async function PaginaDetalleEnvio(props: PageProps<'/monitor/envi
   return (
     <article className={estilos.seccion} aria-labelledby="titulo-envio">
       <p>
-        <Link href="/monitor/envios" className={estilos.volver}>
+        <Link href="/admin/envios" className={estilos.volver}>
           ← Volver a los envíos
         </Link>
       </p>

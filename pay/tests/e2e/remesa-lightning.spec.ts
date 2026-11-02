@@ -232,9 +232,9 @@ test('6. filtros, búsqueda y Recibidos del destinatario', async ({ browser }) =
 test('7. monitor como administradora: lista, detalle con cobro, sin procesar', async ({ browser }) => {
   const contexto = await contextoDe(browser, 'admin');
   const pagina = await contexto.newPage();
-  await pagina.goto('/monitor/envios');
+  await pagina.goto('/admin/envios');
   await expect(pagina.getByRole('heading', { name: 'Envíos', exact: true }).first()).toBeVisible();
-  await pagina.goto(`/monitor/envios/${envioId}`);
+  await pagina.goto(`/admin/envios/${envioId}`);
   await expect(pagina.getByText('Cobrado por Lightning', { exact: true }).first()).toBeVisible();
   await expect(pagina.getByRole('button', { name: 'Poner en camino' })).toHaveCount(0);
   await contexto.close();

@@ -97,7 +97,7 @@ test('Lucía envía $100.00 en efectivo y la transferencia llega a la página de
     expect(htmlPublica).not.toContain('$3.49');
 
     // 6. Ana marks it delivered in the monitor.
-    await ana.goto(`/monitor/envios/${envioId}`);
+    await ana.goto(`/admin/envios/${envioId}`);
     await ana.getByRole('button', { name: 'Marcar como entregado' }).click();
     await ana.getByRole('button', { name: 'Sí, marcar como entregado' }).click();
     await expect(ana.getByText('Listo: el envío quedó como entregado.')).toBeVisible();

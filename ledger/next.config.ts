@@ -18,6 +18,10 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/**": ["./esquemas/**/*"],
   },
+  // Every Cacao product answers /admin. Here the owner's view is the tablero itself.
+  async redirects() {
+    return [{ source: "/admin", destination: "/", permanent: false }];
+  },
 };
 
 export default nextConfig;

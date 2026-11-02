@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   title: 'Embudo',
 };
 
-export default function PaginaEmbudo(props: PageProps<'/monitor/embudo'>) {
+export default function PaginaEmbudo(props: PageProps<'/admin/embudo'>) {
   return (
     <Suspense fallback={<p role="status">Cargando el embudo…</p>}>
       <Embudo busqueda={props.searchParams} />
@@ -21,10 +21,10 @@ export default function PaginaEmbudo(props: PageProps<'/monitor/embudo'>) {
   );
 }
 
-async function Embudo({ busqueda }: { busqueda: PageProps<'/monitor/embudo'>['searchParams'] }) {
+async function Embudo({ busqueda }: { busqueda: PageProps<'/admin/embudo'>['searchParams'] }) {
   await connection();
   const params = await busqueda;
-  const sesion = await exigirAdmin('/monitor/embudo');
+  const sesion = await exigirAdmin('/admin/embudo');
   const periodo = periodoDe(params, new Date());
   const resultado = await embudoPay(sesion.usuario.id, periodo.inicio, periodo.fin);
 
@@ -37,7 +37,7 @@ async function Embudo({ busqueda }: { busqueda: PageProps<'/monitor/embudo'>['se
         </p>
       </div>
 
-      <FiltroPeriodo ruta="/monitor/embudo" desde={periodo.desde} hasta={periodo.hasta} aviso={periodo.aviso} />
+      <FiltroPeriodo ruta="/admin/embudo" desde={periodo.desde} hasta={periodo.hasta} aviso={periodo.aviso} />
 
       {resultado.ok ? (
         <EmbudoContenido pasos={resultado.dato} />

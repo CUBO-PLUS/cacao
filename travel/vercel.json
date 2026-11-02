@@ -2,6 +2,13 @@
   "framework": "astro",
   "buildCommand": "npm run build",
   "trailingSlash": true,
+  "redirects": [
+    {
+      "source": "/admin",
+      "destination": "https://cacao-cuentas.vercel.app/",
+      "permanent": false
+    }
+  ],
   "headers": [
     {
       "source": "/api/tours.json",

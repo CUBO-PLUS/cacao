@@ -30,7 +30,7 @@ procesando (Lightning) ──cobro vencido, sin cobrar──▶ devuelta
 | Crear | Quien envía | `/enviar`, paso 3 |
 | Pagar (creada → procesando) | Quien envía | Factura Lightning en BTCPay. Es la única vía cuando BTCPay está activo, para cualquier forma de entrega. |
 | Poner en camino sin BTCPay | Quien envía o administración | Botón "Enviar ahora" o "Poner en camino" |
-| Completar (efectivo y cuenta) | Administración en `/monitor`. En la demostración, también quien envía con "Simular que llegó" | No hay pago automático al destinatario: es simulado. |
+| Completar (efectivo y cuenta) | Administración en `/admin`. En la demostración, también quien envía con "Simular que llegó" | No hay pago automático al destinatario: es simulado. |
 | Cobrar (Lightning) | Quien recibe | `/recibidos` o el enlace de cobro |
 | Cancelar | Quien envía | Sólo en `creada` y sin factura vigente |
 

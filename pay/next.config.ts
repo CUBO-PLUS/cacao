@@ -14,6 +14,13 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: raiz,
   },
+  // The admin panel used to live at /monitor. Old links still land on it.
+  async redirects() {
+    return [
+      { source: '/monitor', destination: '/admin', permanent: false },
+      { source: '/monitor/:ruta*', destination: '/admin/:ruta*', permanent: false },
+    ];
+  },
 };
 
 export default nextConfig;

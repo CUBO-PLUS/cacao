@@ -2,7 +2,17 @@ import { randomUUID } from 'node:crypto';
 
 import { expect, type Browser, type Page, test } from '@playwright/test';
 
-import { idDe, OPCIONES_CONTEXTO, type Persona, seDesborda, servicio, sesionDe } from './ayuda';
+import { OPCIONES_CONTEXTO, seDesborda, servicio } from './ayuda';
+import { cafetalDeAdmin, idDe, paginaComo, type Persona } from './roles';
+
+// The Cafetal shop belongs to the admin test account while this file runs, so the provider side can act on it.
+let devolverCafetal: (() => Promise<void>) | undefined;
+test.beforeAll(async () => {
+  devolverCafetal = await cafetalDeAdmin();
+});
+test.afterAll(async () => {
+  await devolverCafetal?.();
+});
 
 // Every new screen at 320 px: no sideways scroll. Data is arranged per test with the database functions.
 const COTIZACION_BTC = 100000;
@@ -136,7 +146,7 @@ async function sinDesborde(pagina: Page, ruta: string) {
 
 // A signed-in page, moved to 320 px after the session is ready.
 async function enPantalla320(browser: Browser, persona: Persona): Promise<Page> {
-  const pagina = await sesionDe(browser, persona);
+  const pagina = await paginaComo(browser, persona);
   await pagina.setViewportSize({ width: 320, height: 640 });
   return pagina;
 }

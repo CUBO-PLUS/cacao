@@ -2,6 +2,10 @@ import { type Browser, type Page, expect, test } from '@playwright/test';
 
 import { codigoDeCorreo, OPCIONES_CONTEXTO, seDesborda, tokenDeEnlace } from './ayuda';
 
+// Omitido: el ingreso por código de correo y por enlace (/auth/confirmar), el ingreso por celular y el panel demo
+// ya no existen; el ingreso ahora es Clerk, y no hay ruta /auth en market/src/app.
+test.skip(true, 'El ingreso por correo, celular y enlace se reemplazó por Clerk; estas pantallas ya no existen.');
+
 // One address for the whole file: the first test creates the account, the second signs in to it.
 const CORREO = `prueba-${Date.now()}@correo.test`;
 const NOMBRE = 'Vera Correo';

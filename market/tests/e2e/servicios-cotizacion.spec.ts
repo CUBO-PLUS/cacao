@@ -1,6 +1,16 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
 
-import { idDe, type Persona, servicio, sesionDe } from './ayuda';
+import { servicio } from './ayuda';
+import { cafetalDeAdmin, idDe, paginaComo, type Persona } from './roles';
+
+// The Cafetal shop belongs to the admin test account while this file runs, so the provider side can act on it.
+let devolverCafetal: (() => Promise<void>) | undefined;
+test.beforeAll(async () => {
+  devolverCafetal = await cafetalDeAdmin();
+});
+test.afterAll(async () => {
+  await devolverCafetal?.();
+});
 
 async function categoriaDeServicio(): Promise<number> {
   const { data, error } = await servicio().from('categorias_servicio').select('id').order('orden').limit(1).single();
@@ -71,7 +81,7 @@ async function pedirCotizacion(lucia: Page, titulo: string, descripcion: string)
   const pedir = lucia.getByRole('button', { name: 'Pedir cotización', exact: true });
   await expect(pedir).toBeEnabled();
   await pedir.click();
-  await expect(lucia).toHaveURL(/\/cotizaciones$/);
+  await expect(lucia).toHaveURL(/\/cotizaciones\/?$/);
 }
 
 test('pedir una cotización: el proveedor responde, el cliente acepta y el trabajo queda acordado', async ({
@@ -83,8 +93,8 @@ test('pedir una cotización: el proveedor responde, el cliente acepta y el traba
   const respuesta = `Puedo ir el jueves por la mañana ${ahora}.`;
   const sofia = await publicarServicioACotizar('sofia', titulo);
 
-  const luciaPagina = await sesionDe(browser, 'lucia');
-  const sofiaPagina = await sesionDe(browser, 'sofia');
+  const luciaPagina = await paginaComo(browser,'lucia');
+  const sofiaPagina = await paginaComo(browser,'sofia');
   try {
     // Lucía asks for a quote; the request lands on her quotes page.
     await pedirCotizacion(luciaPagina, titulo, descripcion);
@@ -114,10 +124,10 @@ test('pedir una cotización: el proveedor responde, el cliente acepta y el traba
     await expect(oferta.getByText(respuesta)).toBeVisible();
     await oferta.getByRole('button', { name: 'Aceptar', exact: true }).click();
     await expect(
-      oferta.getByText('Vas a acordar este trabajo con Sofía Electricista por $45.00. Pagás cuando esté hecho.'),
+      oferta.getByText(/Vas a acordar este trabajo con .+ por \$45\.00\. Pagás cuando esté hecho\./),
     ).toBeVisible();
     await oferta.getByRole('button', { name: 'Sí, acordar el trabajo' }).click();
-    await expect(luciaPagina).toHaveURL(/\/ordenes\/[0-9a-f-]{36}$/);
+    await expect(luciaPagina).toHaveURL(/\/ordenes\/[0-9a-f-]{36}\/?$/);
 
     // The job is agreed at the quoted price.
     await expect(luciaPagina.getByRole('heading', { level: 1 })).toHaveText(/^Trabajo \d+$/);

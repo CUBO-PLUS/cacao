@@ -2,7 +2,17 @@ import { randomUUID } from 'node:crypto';
 
 import { expect, type Page, test } from '@playwright/test';
 
-import { idDe, type Persona, servicio, sesionDe } from './ayuda';
+import { servicio } from './ayuda';
+import { cafetalDeAdmin, idDe, paginaComo, type Persona } from './roles';
+
+// The Cafetal shop belongs to the admin test account while this file runs, so the seller side can act on it.
+let devolverCafetal: (() => Promise<void>) | undefined;
+test.beforeAll(async () => {
+  devolverCafetal = await cafetalDeAdmin();
+});
+test.afterAll(async () => {
+  await devolverCafetal?.();
+});
 
 async function productoDe(vendedor: Persona, stock: number, nombre: string) {
   const usuario = await idDe(vendedor);
@@ -65,7 +75,7 @@ test('disputa: abre, la admin resuelve con reembolso total, se paga y se confirm
   const abiertas: Page[] = [];
   try {
     // Buyer opens the dispute with a reason.
-    let comprador = await sesionDe(browser, 'lucia');
+    let comprador = await paginaComo(browser,'lucia');
     abiertas.push(comprador);
     await comprador.goto(`/ordenes/${orden.id}`);
     await comprador.waitForLoadState('networkidle');
@@ -76,7 +86,7 @@ test('disputa: abre, la admin resuelve con reembolso total, se paga y se confirm
     await comprador.context().close();
 
     // Admin resolves it with a full refund and a note.
-    const admin = await sesionDe(browser, 'ana');
+    const admin = await paginaComo(browser,'ana');
     abiertas.push(admin);
     await admin.goto('/admin/disputas');
     await admin.waitForLoadState('networkidle');
@@ -91,7 +101,7 @@ test('disputa: abre, la admin resuelve con reembolso total, se paga y se confirm
     await admin.context().close();
 
     // Seller marks the refund as paid outside the app.
-    const vendedora = await sesionDe(browser, 'rosa');
+    const vendedora = await paginaComo(browser,'rosa');
     abiertas.push(vendedora);
     await vendedora.goto(`/ordenes/${orden.id}`);
     await vendedora.waitForLoadState('networkidle');
@@ -100,7 +110,7 @@ test('disputa: abre, la admin resuelve con reembolso total, se paga y se confirm
     await expect(vendedora.getByText(/Marcado por el vendedor el/)).toBeVisible();
 
     // Buyer confirms receipt of the refund.
-    comprador = await sesionDe(browser, 'lucia');
+    comprador = await paginaComo(browser,'lucia');
     abiertas.push(comprador);
     await comprador.goto(`/ordenes/${orden.id}`);
     await comprador.waitForLoadState('networkidle');

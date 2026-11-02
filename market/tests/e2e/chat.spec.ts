@@ -2,7 +2,17 @@ import { randomUUID } from 'node:crypto';
 
 import { expect, test } from '@playwright/test';
 
-import { idDe, type Persona, servicio, sesionDe } from './ayuda';
+import { servicio } from './ayuda';
+import { cafetalDeAdmin, idDe, paginaComo, type Persona } from './roles';
+
+// The Cafetal shop belongs to the admin test account while this file runs, so the seller side can act on it.
+let devolverCafetal: (() => Promise<void>) | undefined;
+test.beforeAll(async () => {
+  devolverCafetal = await cafetalDeAdmin();
+});
+test.afterAll(async () => {
+  await devolverCafetal?.();
+});
 
 // Creates a product of a seller through the database function.
 async function productoDe(vendedor: Persona, stock: number, nombre: string) {
@@ -62,8 +72,8 @@ async function ordenPorRpc(comprador: Persona, producto: { id: string; negocioId
 test('chat: el mensaje llega a la otra parte sin recargar', async ({ browser }) => {
   const producto = await productoDe('rosa', 5, `Prueba chat ${Date.now()}`);
   const ordenId = await ordenPorRpc('lucia', producto, true);
-  const comprador = await sesionDe(browser, 'lucia');
-  const vendedora = await sesionDe(browser, 'rosa');
+  const comprador = await paginaComo(browser, 'lucia');
+  const vendedora = await paginaComo(browser, 'rosa');
 
   try {
     await comprador.goto(`/ordenes/${ordenId}`);
@@ -100,7 +110,7 @@ test('chat: el mensaje llega a la otra parte sin recargar', async ({ browser }) 
 test('chat: no se puede enviar un mensaje vacío', async ({ browser }) => {
   const producto = await productoDe('rosa', 5, `Prueba chat vacio ${Date.now()}`);
   const ordenId = await ordenPorRpc('lucia', producto, true);
-  const comprador = await sesionDe(browser, 'lucia');
+  const comprador = await paginaComo(browser, 'lucia');
 
   try {
     await comprador.goto(`/ordenes/${ordenId}`);

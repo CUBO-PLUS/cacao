@@ -3,6 +3,7 @@ import { esMX } from '@clerk/localizations/es-MX';
 import type { Metadata, Viewport } from 'next';
 import { Bricolage_Grotesque, JetBrains_Mono } from 'next/font/google';
 
+import { AvisoCookies } from '@/componentes/AvisoCookies';
 import { BarraInferior } from '@/componentes/BarraInferior';
 import { Cabecera } from '@/componentes/Cabecera';
 import { GrupoCacao } from '@/componentes/GrupoCacao';
@@ -96,6 +97,7 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
           <a className="saltar" href="#contenido">
             Saltar al contenido
           </a>
+          <AvisoCookies />
           <div className="hoja">
             <Cabecera />
             <main id="contenido" tabIndex={-1} className="principal">

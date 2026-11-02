@@ -116,6 +116,39 @@ select:focus-visible {
   outline-offset: 2px;
 }
 
+/* Cookie notice: in the page flow at the top of the body (never fixed), on the Papel ground with the Texto ink. */
+.aviso-cookies {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 16px;
+  padding: 10px 16px;
+  background: var(--papel);
+  color: var(--texto);
+  border-bottom: 1px solid var(--linea);
+  font-size: 0.9rem;
+}
+.aviso-cookies p {
+  margin: 0;
+  max-width: 72ch;
+}
+.aviso-cookies a {
+  color: var(--texto);
+  font-weight: 700;
+}
+.aviso-cookies__ok {
+  min-height: 40px;
+  padding: 0 18px;
+  border: 1.5px solid var(--texto);
+  border-radius: 999px;
+  background: var(--acento);
+  color: var(--sobre-acento);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .saltar {
   position: absolute;
   left: -9999px;
@@ -658,6 +691,7 @@ select {
     --sobre-acento: #000;
   }
   .cabecera,
+  .aviso-cookies,
   .pie,
   .nav,
   .no-imprimir,

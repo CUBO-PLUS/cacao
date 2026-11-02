@@ -5,6 +5,7 @@ import { Bricolage_Grotesque, JetBrains_Mono } from "next/font/google";
 import Link from "next/link";
 import { Suspense } from "react";
 
+import { AvisoCookies } from "./_componentes/AvisoCookies.tsx";
 import { URL_GRUPO, URL_TERMINOS } from "../src/grupo.ts";
 import { sesionActual } from "../src/servidor/sesion.ts";
 
@@ -114,6 +115,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="es-SV" className={`${bricolage.variable} ${mono.variable}`}>
       <body>
+        <AvisoCookies />
         <ClerkProvider localization={localizacion} appearance={apariencia}>
           <a className="saltar" href="#contenido">
             Saltar al contenido

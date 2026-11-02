@@ -2,10 +2,11 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { raizLedger } from "../datos.ts";
+import { verificarJwsLocal } from "./firma-local.ts";
 
 const CLI = join(raizLedger(), "src", "cli.ts");
 const PEM = join(raizLedger(), "fixtures/comercio-prueba/clave-privada.pem");
@@ -91,6 +92,46 @@ test("dte firmar uses a fake firmador; transmitir --simulado still works without
     assert.match(t.out, /SIMULADO-/);
   } finally {
     fake.close();
+    rmSync(datos, { recursive: true, force: true });
+  }
+});
+
+test("dte firmar without a firmador URL signs with the local test key", async () => {
+  const datos = mkdtempSync(join(tmpdir(), "ledger-firma-local-"));
+  try {
+    assert.equal(
+      (
+        await ledgerAsync(datos, [
+          "comercio",
+          "registrar",
+          "principal",
+          "--nit",
+          "06141901010013",
+          "--password-pri",
+          "password-123456",
+          "--clave-privada",
+          PEM,
+        ])
+      ).code,
+      0,
+    );
+    const nuevo = await ledgerAsync(datos, ["ticket", "nuevo", "--desde", "fixtures/ticket-consumidor.json"]);
+    const id = idDe(nuevo.out);
+    await ledgerAsync(datos, ["pagar", id, "--efectivo"]);
+    await ledgerAsync(datos, ["dte", "construir", id]);
+    const f = await ledgerAsync(datos, ["dte", "firmar", id], { LEDGER_FIRMADOR_URL: "" });
+    assert.equal(f.code, 0, f.err);
+    assert.match(f.out, /clave de prueba local/);
+    const ver = await ledgerAsync(datos, ["ticket", "ver", id]);
+    assert.match(ver.out, /clave de prueba, no válida ante Hacienda/);
+    // The stored JWS verifies with the test public key kept next to it.
+    const publica = readFileSync(join(datos, "firma-prueba", "clave-publica.pem"), "utf8");
+    const archivo = readdirSync(join(datos, "dte", "firmas"))[0];
+    assert.ok(archivo);
+    const { jws } = JSON.parse(readFileSync(join(datos, "dte", "firmas", archivo), "utf8")) as { jws: string };
+    const dte = verificarJwsLocal(jws, publica) as { identificacion: { tipoDte: string } };
+    assert.equal(dte.identificacion.tipoDte, "01");
+  } finally {
     rmSync(datos, { recursive: true, force: true });
   }
 });

@@ -1020,18 +1020,33 @@ type FilaInventarioBD = {
   negocios: { nombre: string } | null;
 };
 
-/** The products of every shop, sold-out first. Stock falls when an order is placed and comes back when it lapses or is cancelled. */
+// Every product, paged by id. A single request returns at most 1000 rows, and a cut-off list would
+// hide products without any sign on the page.
+async function todosLosProductos(db: Db): Promise<FilaInventarioBD[]> {
+  const filas: FilaInventarioBD[] = [];
+  for (let desde = 0; ; desde += LOTE) {
+    const { data, error } = await db
+      .from('productos')
+      .select('id, nombre, unidad, precio_usd_centavos, stock, activo, negocios(nombre)')
+      .order('id', { ascending: true })
+      .range(desde, desde + LOTE - 1);
+    if (error) throw new Error(`No pudimos leer el inventario: ${error.message}`);
+    const lote = (data ?? []) as unknown as FilaInventarioBD[];
+    filas.push(...lote);
+    if (lote.length < LOTE) return filas;
+  }
+}
+
+/**
+ * The products of every shop: sold out first, then paused, then the rest, names A to Z inside each group.
+ * Stock falls when an order is placed and comes back when it lapses or is cancelled. Expired orders are
+ * swept first, so the count never includes stock that is already free again.
+ */
 export async function inventarioAdmin(actorId: string): Promise<ProductoInventarioAdmin[]> {
   await exigirAdminBD(actorId);
-  const { data, error } = await clienteServicio()
-    .from('productos')
-    .select('id, nombre, unidad, precio_usd_centavos, stock, activo, negocios(nombre)')
-    .order('stock', { ascending: true })
-    .order('nombre', { ascending: true })
-    .limit(1000);
-  if (error) throw new Error(`No pudimos leer el inventario: ${error.message}`);
-
-  return ((data ?? []) as unknown as FilaInventarioBD[]).map((f) => ({
+  await barrer();
+  const grupo = (p: ProductoInventarioAdmin) => (p.stock === 0 ? 0 : p.activo ? 2 : 1);
+  const productos = (await todosLosProductos(clienteServicio())).map((f) => ({
     id: f.id,
     nombre: f.nombre,
     negocio: f.negocios?.nombre ?? '',
@@ -1040,4 +1055,5 @@ export async function inventarioAdmin(actorId: string): Promise<ProductoInventar
     stock: f.stock,
     activo: f.activo,
   }));
+  return productos.sort((a, b) => grupo(a) - grupo(b) || a.nombre.localeCompare(b.nombre, 'es'));
 }

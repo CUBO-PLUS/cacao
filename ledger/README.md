@@ -81,7 +81,7 @@ Puntos opcionales:
 
 | # | Punto | Estado | Por qué |
 |---|---|---|---|
-| 7 | Firma con el firmador SVFE (JWS) | Parcial | `dte firmar <id>` llama a `svfe-api-firmador` (`LEDGER_FIRMADOR_URL`). Las pruebas usan un servidor falso. No se corrió el firmador real. No hay firma local. |
+| 7 | Firma con el firmador SVFE (JWS) | Parcial | `dte firmar <id>` llama a `svfe-api-firmador` (`LEDGER_FIRMADOR_URL`). Sin URL, firma en local con una clave de prueba (no válida ante Hacienda). Las pruebas usan un servidor falso. No se corrió el firmador real. |
 | 8 | Libros de consumidor final y de contribuyentes; cifras de F-07 y F-14 | Cumple | `mes <YYYY-MM>` y `--csv <carpeta>`. |
 | 9 | Convención defendida para la referencia de 50 caracteres | Cumple | `BTC-LN\|<sats>sat\|<tasa>\|<12 primeros del hash>`, con prueba de largo. Argumentos en `docs/hallazgos.md`, sección 8. |
 | 10 | Credenciales por comercio, con cifrado | Parcial | Varios comercios con sobre cifrado (`comercio registrar`, `comercio lista`) y `LEDGER_CLAVE_MAESTRA`. La demo usa un comercio. Ver `docs/firma-y-comercios.md`. |

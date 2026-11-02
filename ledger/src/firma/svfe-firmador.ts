@@ -20,16 +20,6 @@ export function urlFirmadorDesdeEntorno(): string | null {
   return null;
 }
 
-export function resolverUrlFirmador(explicita?: string): string {
-  const url = explicita?.trim() || urlFirmadorDesdeEntorno();
-  if (!url) {
-    throw new ErrorLedger(
-      "No hay URL del firmador. Configurá LEDGER_FIRMADOR_URL o pasá --firmador-url <url> (por ejemplo http://127.0.0.1:8113/firma/firmardocumento/).",
-    );
-  }
-  return url;
-}
-
 export function extraerJwsDeRespuesta(cuerpo: unknown): string {
   if (typeof cuerpo === "string" && cuerpo.includes(".")) return cuerpo.trim();
   if (typeof cuerpo !== "object" || cuerpo === null) {

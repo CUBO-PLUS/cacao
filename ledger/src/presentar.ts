@@ -1,7 +1,7 @@
 // Plain-text views for the terminal. Lines stay within 80 columns.
 import { formatoSats, formatoUsd } from "./dinero.ts";
 import type { Fallo, ResultadoValidacion } from "./validar.ts";
-import { totalDeTicket, type Ticket } from "./ticket.ts";
+import { descripcionSello, totalDeTicket, type Ticket } from "./ticket.ts";
 import { fechaHoraSalvador } from "./tiempo.ts";
 
 const ANCHO = 80;
@@ -59,10 +59,11 @@ export function vistaTicket(ticket: Ticket): string[] {
   }
   if (ticket.firma) {
     const prefijo = ticket.firma.jws.slice(0, 24);
-    lineas.push(`Firma JWS: ${prefijo}… (${ticket.firma.comercioId}, ${ticket.firma.momento})`);
+    const prueba = ticket.firma.firmaDePrueba ? " · clave de prueba, no válida ante Hacienda" : "";
+    lineas.push(`Firma JWS: ${prefijo}… (${ticket.firma.comercioId}, ${ticket.firma.momento})${prueba}`);
   }
   if (ticket.sello) {
-    lineas.push(`Sello: sello simulado ${ticket.sello.valor} (recibido ${ticket.sello.momento})`);
+    lineas.push(`Sello: ${descripcionSello(ticket.sello)} ${ticket.sello.valor} (recibido ${ticket.sello.momento})`);
   }
   if (ticket.rechazo) {
     lineas.push(`Rechazo: sello simulado no emitido; ${ticket.rechazo.observaciones.length} observación(es) el ${ticket.rechazo.momento}`);

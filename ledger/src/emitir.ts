@@ -4,11 +4,11 @@ import type { AlmacenTickets } from "./almacen/tipos.ts";
 import type { AlmacenDtes, RegistroDte } from "./almacen/dtes.ts";
 import { codigoGeneracionNuevo } from "./azar.ts";
 import type { DatosAtestacion } from "./atestacion.ts";
-import { aceptarDte, adjuntarDte, rechazarDte, tipoDteDe, type Contingencia, type DteRef, type Ticket } from "./ticket.ts";
+import { aceptarDte, adjuntarDte, rechazarDte, tipoDteDe, type Contingencia, type DteRef, type FuenteSello, type Ticket } from "./ticket.ts";
 import { construirDte, numeroControl, type Emisor } from "./dte/construir.ts";
 import { ErrorLedger } from "./errores.ts";
 import type { Generacion } from "./generacion.ts";
-import { recibir } from "./recepcion-simulada.ts";
+import { recepcionDeEntorno, type Recepcion } from "./hacienda/recepcion.ts";
 import { emisorPara } from "./servidor/vista-dte.ts";
 import { validarDte } from "./validar.ts";
 
@@ -48,6 +48,8 @@ export type OpcionesEmision = {
   contingencia?: { desde: Date } | null;
   // Chain of rate attestations. When set, each Lightning payment gets its record.
   atestaciones?: AlmacenAtestaciones | null;
+  // Reception of the document. Default: the test mock when LEDGER_HACIENDA_* is set, else the local simulator.
+  recepcion?: Recepcion;
 };
 
 // Every ticket the web emits goes on the 2026 schemas. The caso schemas are a community mirror (herson/dte-json-schemas)
@@ -195,21 +197,32 @@ export async function emitirTicket(
 
   let estado: "aceptado" | "rechazado" | "contingencia";
   let sello: string | null = null;
+  let fuente: FuenteSello = "simulador-local";
   let momento = instante.toISOString();
+  // Set when the reception gave no answer: the document waits in contingencia, not simulated.
+  let sinRespuesta: string | null = null;
   if (observaciones !== null) {
     estado = "rechazado";
   } else if (contingencia !== null) {
     // The reception is not reached during the outage: the document waits.
     estado = "contingencia";
   } else {
-    const respuesta = recibir(documento, instante, { generacion });
-    if (respuesta.aceptado && respuesta.sello) {
+    const recepcion = opciones.recepcion ?? recepcionDeEntorno();
+    const respuesta = await recepcion(documento, instante, generacion);
+    if (respuesta.estado === "aceptado") {
       sello = respuesta.sello;
       momento = respuesta.momento;
+      fuente = respuesta.fuente;
       estado = "aceptado";
-    } else {
+    } else if (respuesta.estado === "rechazado") {
       observaciones = respuesta.observaciones;
+      momento = respuesta.momento;
+      fuente = respuesta.fuente;
       estado = "rechazado";
+    } else {
+      sinRespuesta = respuesta.motivo;
+      momento = respuesta.momento;
+      estado = "contingencia";
     }
   }
 
@@ -217,17 +230,20 @@ export async function emitirTicket(
   const conDte = adjuntarDte(ticket, ref, instante);
   let final: Ticket;
   if (estado === "aceptado") {
-    final = aceptarDte(conDte, { valor: sello as string, momento, simulado: true }, instante);
+    final = aceptarDte(conDte, { valor: sello as string, momento, simulado: true, fuente }, instante);
   } else if (estado === "rechazado") {
     final = rechazarDte(conDte, observaciones ?? [], instante);
   } else {
-    const cont: Contingencia = {
-      desde: instante.toISOString(),
-      simulada: true,
-      tipoContingencia: 1,
-      motivo: MOTIVO_CONTINGENCIA_SIMULADA,
-      transmitida: null,
-    };
+    const cont: Contingencia =
+      sinRespuesta === null
+        ? { desde: instante.toISOString(), simulada: true, tipoContingencia: 1, motivo: MOTIVO_CONTINGENCIA_SIMULADA, transmitida: null }
+        : {
+            desde: instante.toISOString(),
+            simulada: false,
+            tipoContingencia: 1,
+            motivo: `Sin respuesta del servicio de recepción (${sinRespuesta}); el documento espera ser transmitido de nuevo.`,
+            transmitida: null,
+          };
     final = { ...conDte, contingencia: cont };
   }
 
@@ -304,17 +320,18 @@ export type ResultadoRetransmision = { transmitidos: number; pendientes: number 
 export async function retransmitirContingencias(
   almacen: AlmacenTickets,
   dtes: AlmacenDtes,
-  opciones: { ahora: Date },
+  opciones: { ahora: Date; recepcion?: Recepcion },
 ): Promise<ResultadoRetransmision> {
   const resultado: ResultadoRetransmision = { transmitidos: 0, pendientes: 0 };
+  const recepcion = opciones.recepcion ?? recepcionDeEntorno();
   for (const fila of await dtes.contingencias()) {
     const ticket = await almacen.porId(fila.ticketId);
     if (ticket === null || ticket.estado !== "pagado" || ticket.dte === null) {
       resultado.pendientes += 1;
       continue;
     }
-    const respuesta = recibir(fila.documento, opciones.ahora, { generacion: "2026" });
-    if (!respuesta.aceptado || respuesta.sello === null) {
+    const respuesta = await recepcion(fila.documento, opciones.ahora, "2026");
+    if (respuesta.estado !== "aceptado") {
       resultado.pendientes += 1;
       continue;
     }
@@ -326,7 +343,9 @@ export async function retransmitirContingencias(
       ...ticket,
       contingencia: ticket.contingencia ? { ...ticket.contingencia, transmitida: { momento: respuesta.momento, sello: respuesta.sello } } : null,
     };
-    await almacen.guardar(aceptarDte(enviado, { valor: respuesta.sello, momento: respuesta.momento, simulado: true }, opciones.ahora));
+    await almacen.guardar(
+      aceptarDte(enviado, { valor: respuesta.sello, momento: respuesta.momento, simulado: true, fuente: respuesta.fuente }, opciones.ahora),
+    );
     resultado.transmitidos += 1;
   }
   return resultado;

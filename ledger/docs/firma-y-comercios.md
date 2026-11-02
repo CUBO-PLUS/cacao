@@ -34,6 +34,20 @@ La URL por defecto esperada es la del contenedor oficial:
 
 Podés cambiarla con `--firmador-url` o con la variable de entorno `LEDGER_FIRMADOR_URL`.
 
+### Firma local de prueba (sin firmador)
+
+Si no hay `--firmador-url` ni `LEDGER_FIRMADOR_URL`, `dte firmar` firma en local con una clave de
+prueba (`src/firma/firma-local.ts`):
+
+- La primera vez genera un par RSA de 2048 bits y lo guarda en `datos/firma-prueba/`, carpeta
+  ignorada por git. La clave privada queda con permisos 0600 y nunca se imprime.
+- Produce un JWS compacto con `alg` RS512 sobre el JSON del DTE, con la misma forma que devuelve
+  el firmador.
+- `ticket ver` y la salida de `dte firmar` marcan ese JWS como clave de prueba, no válida ante
+  Hacienda. No es un certificado del Ministerio y no se transmite.
+
+Con una URL configurada, el comportamiento es el de siempre.
+
 ### Cómo correría el firmador real (fuera de CacaoLedger)
 
 El Ministerio publica el proyecto **svfe-api-firmador** y la imagen Docker

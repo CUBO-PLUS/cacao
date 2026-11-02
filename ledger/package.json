@@ -14,6 +14,7 @@
     "ledger": "node src/cli.ts",
     "demo": "node src/cli.ts demo",
     "sitio": "node src/sitio.ts",
+    "hacienda:registrar": "node src/hacienda/registrar-mock.ts",
     "dev": "next dev -p 4325",
     "build": "next build",
     "start": "next start -p 4325"

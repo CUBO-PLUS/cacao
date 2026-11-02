@@ -50,6 +50,7 @@ export default async function PaginaOrden(props: { params: Promise<{ id: string 
         ['Entregada', orden.entregadaEn],
         ['Cerrada', orden.cerradaEn],
         ['Expirada', orden.expiradaEn],
+        ['Cancelada', orden.canceladaEn],
         ['Disputada', orden.disputadaEn],
         ['Resuelta', orden.resueltaEn],
       ];
@@ -90,7 +91,7 @@ export default async function PaginaOrden(props: { params: Promise<{ id: string 
               <dd>{orden.modoEntrega === null ? '—' : (ETIQUETA_MODO[orden.modoEntrega] ?? orden.modoEntrega)}</dd>
             </div>
           )}
-          {esTrabajo && orden.motivoCancelacion !== null && (
+          {orden.motivoCancelacion !== null && (
             <div className={estilos.ancho}>
               <dt>Motivo de la cancelación</dt>
               <dd className={estilos.textoLargo}>{orden.motivoCancelacion}</dd>

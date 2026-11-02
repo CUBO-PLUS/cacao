@@ -190,6 +190,13 @@ export async function negociosDelMes(mes: string): Promise<{ ventas: number; cen
   return resumenNegocios(filas, mes);
 }
 
+export type ClienteApiVista = { id: string; nombre: string; prefijo: string; grupo: boolean; creado_en: string; revocado_en: string | null };
+
+// The API clients for the owner's /comercios page. Only the key prefix leaves here; the hash is not selected.
+export async function clientesApi(): Promise<ClienteApiVista[]> {
+  return leer<ClienteApiVista>("ledger_clientes_api?select=id,nombre,prefijo,grupo,creado_en,revocado_en&order=creado_en.asc");
+}
+
 export function mesActualSv(ahora: Date): string {
   return fechaHoraSalvador(ahora).fecEmi.slice(0, 7);
 }

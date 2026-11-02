@@ -99,6 +99,7 @@ async function NavegacionSesion() {
         <>
           <Link href="/tickets">Tickets</Link>
           <Link href="/cierre">Cierre</Link>
+          <Link href="/comercios">Comercios</Link>
           <Link href="/mes">Mes</Link>
         </>
       ) : null}

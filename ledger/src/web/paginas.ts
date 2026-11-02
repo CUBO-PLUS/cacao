@@ -5,7 +5,7 @@ import { formatoSats, formatoUsd } from "../dinero.ts";
 import { CONFIG, GENERACIONES, type Generacion } from "../generacion.ts";
 import { documentoDesde, informeMes, nombresLibros, type InformeMes } from "../mes.ts";
 import { fechaHoraSalvador } from "../tiempo.ts";
-import { totalDeTicket, type Ticket } from "../ticket.ts";
+import { descripcionSello, totalDeTicket, type Ticket } from "../ticket.ts";
 import type { ResultadoValidacion } from "../validar.ts";
 import { escapar } from "./escapar.ts";
 
@@ -236,7 +236,7 @@ function seccionDocumento(ticket: Ticket, doc: DocumentoSitio | undefined): stri
   ];
   let sello = "";
   if (ticket.sello) {
-    sello = `<p class="sello"><span class="chip chip-simulado">sello simulado</span> ${cod(ticket.sello.valor)}</p>`;
+    sello = `<p class="sello"><span class="chip chip-simulado">${t(descripcionSello(ticket.sello))}</span> ${cod(ticket.sello.valor)}</p>`;
   } else if (ticket.rechazo) {
     sello = `<p class="rechazo">Rechazado el ${t(fechaHoraSalvador(new Date(ticket.rechazo.momento)).fecEmi)}. Observaciones:</p><ul>${ticket.rechazo.observaciones.map((o) => `<li>${t(o)}</li>`).join("")}</ul>`;
   }

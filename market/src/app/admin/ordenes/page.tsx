@@ -145,7 +145,9 @@ export default async function PaginaOrdenes(props: Props) {
 
         <p className={estilos.ayuda} aria-live="polite">
           {datos.total === 0
-            ? 'No hay órdenes con este filtro.'
+            ? estado === null && tipo === null
+              ? 'Todavía no hay órdenes.'
+              : 'No hay órdenes con este filtro.'
             : `Mostrando ${desde} a ${hasta} de ${datos.total}.`}
         </p>
       </section>
@@ -182,20 +184,20 @@ export default async function PaginaOrdenes(props: Props) {
         <div className={estilos.paginacionFila}>
           {datos.pagina > 1 ? (
             <Link href={enlace(filtros, datos.pagina - 1)} className={estilos.paginacionBoton}>
-              Anteriores
+              Página anterior
             </Link>
           ) : (
             <span className={estilos.paginacionBoton} aria-disabled="true">
-              Anteriores
+              Página anterior
             </span>
           )}
           {datos.pagina < paginas ? (
             <Link href={enlace(filtros, datos.pagina + 1)} className={estilos.paginacionBoton}>
-              Siguientes
+              Página siguiente
             </Link>
           ) : (
             <span className={estilos.paginacionBoton} aria-disabled="true">
-              Siguientes
+              Página siguiente
             </span>
           )}
         </div>

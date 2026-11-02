@@ -249,9 +249,10 @@ proveedor del pago, el hash completo (no cabe), el monto en dólares (ya está e
 
 ## 11. Límites del entorno de demostración
 
-- **Firma JWS.** CacaoLedger no firma en local. Tiene el cliente HTTP para `svfe-api-firmador`
-  (`src/firma/svfe-firmador.ts`), probado contra un servidor falso. Sin firmador configurado, el documento
-  queda sin JWS y `dte transmitir --simulado` sigue igual. No se corrió el firmador real del Ministerio.
+- **Firma JWS.** Con firmador configurado, CacaoLedger usa el cliente HTTP para `svfe-api-firmador`
+  (`src/firma/svfe-firmador.ts`), probado contra un servidor falso. Sin firmador, firma en local con RS512 y
+  una clave de prueba (`src/firma/firma-local.ts`); el documento lo dice: no es válida ante Hacienda. No se
+  corrió el firmador real del Ministerio.
   La transmisión del ciclo de demostración usa recepción simulada (`SIMULADO-...`) para no enviar datos de
   prueba a los servidores reales del Ministerio de Hacienda.
 - **Municipios del esquema `caso`.** Ver la sección 4 (D.L. 762).

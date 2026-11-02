@@ -163,7 +163,9 @@ function DocumentoEmitido({ registro }: { registro: RegistroDte }) {
       </dl>
       {aceptado ? (
         <p className="nota" style={{ marginTop: "0.5rem" }}>
-          El sello es simulado: ningún servicio del Ministerio de Hacienda lo emitió.
+          {registro.sello?.startsWith("SIMULADO-")
+            ? "El sello es simulado: ningún servicio del Ministerio de Hacienda lo emitió."
+            : "El sello es de prueba: lo dio el mock comunitario svfe-mock-api, no el Ministerio de Hacienda."}
         </p>
       ) : (
         <div className="aviso" style={{ marginTop: "0.75rem" }}>
@@ -322,11 +324,15 @@ export default async function PaginaTicket({ params }: PageProps<"/tickets/[id]"
             </Fila>
           ) : null}
           {ticket.contingencia ? (
-            <Fila titulo="Contingencia (simulada)">
-              <span className="aviso-simulado">SIMULADO</span>{" "}
-              {ticket.contingencia.transmitida
-                ? `Emitida durante la caída simulada de Hacienda; transmitida (simulada) el ${fechaHoraSv(ticket.contingencia.transmitida.momento)}.`
-                : `Emitida durante la caída simulada de Hacienda el ${fechaHoraSv(ticket.contingencia.desde)}; espera la transmisión.`}
+            <Fila titulo={ticket.contingencia.simulada ? "Contingencia (simulada)" : "Contingencia"}>
+              {ticket.contingencia.simulada ? <span className="aviso-simulado">SIMULADO</span> : null}{" "}
+              {ticket.contingencia.simulada
+                ? ticket.contingencia.transmitida
+                  ? `Emitida durante la caída simulada de Hacienda; transmitida (simulada) el ${fechaHoraSv(ticket.contingencia.transmitida.momento)}.`
+                  : `Emitida durante la caída simulada de Hacienda el ${fechaHoraSv(ticket.contingencia.desde)}; espera la transmisión.`
+                : ticket.contingencia.transmitida
+                  ? `Sin respuesta del servicio de recepción; transmitida el ${fechaHoraSv(ticket.contingencia.transmitida.momento)}.`
+                  : `Sin respuesta del servicio de recepción el ${fechaHoraSv(ticket.contingencia.desde)}; espera ser transmitida de nuevo.`}
             </Fila>
           ) : null}
           {ticket.receptor ? (

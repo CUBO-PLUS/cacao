@@ -46,20 +46,34 @@ export interface DteRef {
   archivo: string; // path relative to the data directory
 }
 
-// Reception of the document. Simulated until real transmission exists.
+// Who answered the reception. "simulador-local" is recibir() in recepcion-simulada.ts (valor starts with SIMULADO-).
+// "mock-svfe" is the community test mock svfe-mock-api, reached when LEDGER_HACIENDA_URL is set. Neither is Hacienda.
+// Absent on seals written before the field existed: those came from the local simulator.
+export type FuenteSello = "simulador-local" | "mock-svfe";
+
+// Reception of the document. Never a seal of Hacienda: simulado is always true.
 export interface Sello {
-  valor: string; // always starts with SIMULADO-
+  valor: string; // SIMULADO-... from the local simulator, or the selloRecibido the test mock returned
   momento: string; // ISO-8601
   simulado: true;
+  fuente?: FuenteSello;
 }
 
-// JWS from SVFE-API-Firmador. Optional; transmission can still use the simulated seal alone.
+// The words that say where a seal came from. Used in every place a seal is shown.
+export function descripcionSello(sello: Pick<Sello, "fuente">): string {
+  return sello.fuente === "mock-svfe"
+    ? "sello de prueba del mock svfe-mock-api (no es de Hacienda)"
+    : "sello simulado";
+}
+
+// JWS from SVFE-API-Firmador, or from the local test signer (firmaDePrueba). Optional; transmission can still use the simulated seal alone.
 export interface FirmaDte {
   jws: string;
   momento: string;
-  firmadorUrl: string;
+  firmadorUrl: string | null; // null when the local test signer signed it
   comercioId: string;
   archivo: string; // path relative to the data directory
+  firmaDePrueba?: boolean; // true: signed with the local test key, not valid before Hacienda
 }
 
 export interface Rechazo {
@@ -97,10 +111,11 @@ export interface Ticket {
   contingencia?: Contingencia | null;
 }
 
-// A document issued in contingency (tipoOperacion 2). simulada is always true: nothing reached the Ministry.
+// A document issued in contingency. simulada is true for the demo outage (tipoOperacion 2, nothing sent). It is false
+// when the reception gave no answer (timeout or dropped connection) and the document waits to be sent again.
 export interface Contingencia {
   desde: string;
-  simulada: true;
+  simulada: boolean;
   // CAT-008 code (1 to 5). The demo uses 1: no availability of the Ministry's system.
   tipoContingencia: 1 | 2 | 3 | 4 | 5;
   motivo: string;

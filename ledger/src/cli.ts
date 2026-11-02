@@ -6,6 +6,7 @@ import {
   adjuntarFirma,
   aceptarDte,
   crearTicket,
+  descripcionSello,
   guardarTicket,
   leerTicket,
   listarTickets,
@@ -29,7 +30,8 @@ import {
   registrarComercio,
   resolverComercioActivo,
 } from "./comercio/almacen.ts";
-import { firmarDocumentoSvfe, resolverUrlFirmador } from "./firma/svfe-firmador.ts";
+import { firmarDocumentoSvfe, urlFirmadorDesdeEntorno } from "./firma/svfe-firmador.ts";
+import { cargarOCrearClavePrueba, firmarDteLocal } from "./firma/firma-local.ts";
 import { importarOrdenMarket } from "./market.ts";
 import { importarFacturaBtcpay, leerFacturasArchivo } from "./btcpay.ts";
 import { almacenArchivos } from "./almacen/archivos.ts";
@@ -50,6 +52,8 @@ import { fechaHoraSalvador } from "./tiempo.ts";
 import { ahora } from "./azar.ts";
 import { resolverGeneracion, type Generacion } from "./generacion.ts";
 import { recibir } from "./recepcion-simulada.ts";
+import { recepcionDePrueba } from "./hacienda/recepcion.ts";
+import { configuracionHaciendaDeEntorno } from "./hacienda/transmitir.ts";
 import { atestacionesDeTicket, exportarCabeza, leerAtestaciones, registrarAtestacion, verificarCadena } from "./atestacion.ts";
 import { AYUDA_CIERRE, clasificarCierre, lineasCierre } from "./cierre.ts";
 import { ejecutarDemo } from "./demo.ts";
@@ -371,31 +375,49 @@ async function cmdDteFirmar(id: string, a: Argumentos, datos: string): Promise<R
   if (!ticket.dte) throw new ErrorLedger(`El ticket ${id} todavía no tiene documento; construilo con dte construir.`);
   if (ticket.firma) throw new ErrorLedger(`El ticket ${id} ya tiene firma JWS.`);
   const comercioId = resolverComercioActivo(datos, unico(a, "comercio"));
-  const claveMaestra = claveMaestraDeEntorno();
-  const material = descifrarMaterialComercio(datos, comercioId, claveMaestra);
   const nitComercio = leerIndiceComercios(datos).comercios.find((c) => c.id === comercioId)!.nit;
   const doc = leerJson(join(datos, ticket.dte.archivo));
-  const url = resolverUrlFirmador(unico(a, "firmador-url"));
+  // With no firmador URL (flag or env), the local test signer signs the document instead.
+  const url = unico(a, "firmador-url")?.trim() || urlFirmadorDesdeEntorno();
+  let jws: string;
+  if (url) {
+    const claveMaestra = claveMaestraDeEntorno();
+    const material = descifrarMaterialComercio(datos, comercioId, claveMaestra);
+    jws = await firmarDocumentoSvfe(url, {
+      nit: nitComercio,
+      passwordPri: material.passwordPri,
+      dteJson: doc,
+    });
+  } else {
+    // Test key kept under datos/ (git-ignored). It is not the contributor's certificate.
+    const claves = cargarOCrearClavePrueba(join(datos, "firma-prueba"));
+    jws = firmarDteLocal(doc, claves.privada);
+  }
+  const firmaDePrueba = !url;
   const instante = ahora();
-  const jws = await firmarDocumentoSvfe(url, {
-    nit: nitComercio,
-    passwordPri: material.passwordPri,
-    dteJson: doc,
-  });
   const nombre = `dte/firmas/${ticket.dte.codigoGeneracion}.jws.txt`;
-  escribirJson(join(datos, nombre), { jws, comercioId, firmadorUrl: url, momento: instante.toISOString() });
+  escribirJson(join(datos, nombre), {
+    jws,
+    comercioId,
+    firmadorUrl: url ?? null,
+    firmaDePrueba,
+    momento: instante.toISOString(),
+  });
   const firma: FirmaDte = {
     jws,
     momento: instante.toISOString(),
-    firmadorUrl: url,
+    firmadorUrl: url ?? null,
     comercioId,
     archivo: nombre,
+    firmaDePrueba,
   };
   guardarTicket(datos, adjuntarFirma(ticket, firma, instante));
   return {
-    datos: { ticket: id, comercioId, firmadorUrl: url, jwsPrefijo: jws.slice(0, 32), archivo: join(datos, nombre) },
+    datos: { ticket: id, comercioId, firmadorUrl: url ?? null, firmaDePrueba, jwsPrefijo: jws.slice(0, 32), archivo: join(datos, nombre) },
     lineas: [
-      `Documento firmado con el firmador en ${url}.`,
+      firmaDePrueba
+        ? "Documento firmado con clave de prueba local: no es válido ante Hacienda."
+        : `Documento firmado con el firmador en ${url}.`,
       `JWS (inicio): ${jws.slice(0, 48)}…`,
       `Comercio: ${comercioId} (NIT ${nitComercio}).`,
       `Archivo: ${join(datos, nombre)}`,
@@ -404,8 +426,11 @@ async function cmdDteFirmar(id: string, a: Argumentos, datos: string): Promise<R
   };
 }
 
-function cmdDteTransmitir(id: string, a: Argumentos, datos: string): Resultado {
-  if (!a.interruptores.has("simulado")) {
+async function cmdDteTransmitir(id: string, a: Argumentos, datos: string): Promise<Resultado> {
+  // With LEDGER_HACIENDA_* configured, the document goes to the test mock (svfe-mock-api). --simulado always uses the local simulator.
+  const configHacienda = configuracionHaciendaDeEntorno();
+  const usaMock = configHacienda !== null && !a.interruptores.has("simulado");
+  if (!a.interruptores.has("simulado") && configHacienda === null) {
     throw new ErrorLedger(
       "La transmisión real a Hacienda no está implementada. Para probar el ciclo completo usá: ledger dte transmitir <id> --simulado",
     );
@@ -419,6 +444,60 @@ function cmdDteTransmitir(id: string, a: Argumentos, datos: string): Resultado {
   }
   const doc = leerJson(join(datos, ticket.dte.archivo));
   const instante = ahora();
+  if (usaMock) {
+    const respuesta = await recepcionDePrueba(configHacienda!)(doc, instante, "2026");
+    if (respuesta.estado === "aceptado") {
+      const contingenciaResuelta = ticket.contingencia ? { ...ticket.contingencia, transmitida: { momento: respuesta.momento, sello: respuesta.sello } } : ticket.contingencia;
+      const emitido = aceptarDte(
+        { ...ticket, contingencia: contingenciaResuelta },
+        { valor: respuesta.sello, momento: respuesta.momento, simulado: true, fuente: respuesta.fuente },
+        instante,
+      );
+      guardarTicket(datos, emitido);
+      return {
+        datos: { ticket: id, estado: "emitido", sello: respuesta.sello, fuente: respuesta.fuente, recepcion: respuesta.momento, simulado: true },
+        lineas: [
+          "Recepción del servicio de prueba (mock svfe-mock-api): documento aceptado.",
+          `Sello: ${descripcionSello({ fuente: respuesta.fuente })} ${respuesta.sello}`,
+          `Recibido: ${respuesta.momento} (UTC)`,
+          `Ticket ${id} emitido. Ese sello lo dio el mock comunitario; no es un sello de Hacienda.`,
+        ],
+      };
+    }
+    if (respuesta.estado === "sin-respuesta") {
+      // Timeout or dropped connection: the document waits in contingencia and is sent again with the same command.
+      const enContingencia: Ticket = {
+        ...ticket,
+        contingencia: {
+          desde: respuesta.momento,
+          simulada: false,
+          tipoContingencia: 1,
+          motivo: `Sin respuesta del servicio de recepción (${respuesta.motivo}).`,
+          transmitida: null,
+        },
+        actualizado: respuesta.momento,
+      };
+      guardarTicket(datos, enContingencia);
+      return {
+        datos: { ticket: id, estado: "contingencia", motivo: respuesta.motivo, momento: respuesta.momento, simulado: false },
+        lineas: [
+          `Sin respuesta del servicio de prueba (${respuesta.motivo}).`,
+          `Ticket ${id} queda en contingencia. Volvé a correr dte transmitir ${id} para enviarlo de nuevo.`,
+        ],
+      };
+    }
+    const rechazadoMock = rechazarDte(ticket, respuesta.observaciones, instante);
+    guardarTicket(datos, rechazadoMock);
+    return {
+      datos: { ticket: id, estado: "rechazado", observaciones: respuesta.observaciones, momentoRechazo: respuesta.momento, fuente: respuesta.fuente, simulado: true },
+      lineas: [
+        "Recepción del servicio de prueba (mock svfe-mock-api): documento rechazado.",
+        ...respuesta.observaciones.map((o) => `  - ${o}`),
+        `Ticket ${id} rechazado el ${respuesta.momento} (UTC). Tiene 24 horas (cifra por confirmar) para reenviarlo.`,
+      ],
+      fallo: `El documento fue rechazado; el ticket ${id} queda rechazado con 24 horas de plazo (cifra por confirmar).`,
+    };
+  }
   const respuesta = recibir(doc, instante);
   if (respuesta.aceptado && respuesta.sello) {
     const emitido = aceptarDte(ticket, { valor: respuesta.sello, momento: respuesta.momento, simulado: true }, instante);
@@ -630,7 +709,7 @@ Opciones generales:
   --esquemas caso|2026  generación de esquemas (por defecto caso, o LEDGER_ESQUEMAS)
   --datos <carpeta>     carpeta de datos (por defecto ledger/datos, o LEDGER_DATOS)
   --emisor <archivo>    datos del emisor (por defecto fixtures/emisor.json o fixtures/caso/emisor.json)
-  --firmador-url <url>  firmador SVFE (o LEDGER_FIRMADOR_URL)
+  --firmador-url <url>  firmador SVFE (o LEDGER_FIRMADOR_URL); sin ninguno, firma con clave de prueba local
   --comercio <id>       comercio para firmar (por defecto el activo en datos/comercios/indice.json)
   --json                salida en JSON
 
@@ -679,7 +758,7 @@ async function main(argv: string[]): Promise<number> {
   else if (grupo === "pagar") r = cmdPagar(needArg(orden, "identificador del ticket"), a, datos);
   else if (grupo === "dte" && orden === "construir") r = await cmdDteConstruir(needArg(resto[0], "identificador del ticket"), a, datos);
   else if (grupo === "dte" && orden === "validar") r = cmdDteValidar(needArg(resto[0], "archivo o identificador"), a, datos);
-  else if (grupo === "dte" && orden === "transmitir") r = cmdDteTransmitir(needArg(resto[0], "identificador del ticket"), a, datos);
+  else if (grupo === "dte" && orden === "transmitir") r = await cmdDteTransmitir(needArg(resto[0], "identificador del ticket"), a, datos);
   else if (grupo === "atestacion") r = cmdAtestacion(orden, resto, a, datos);
   else if (grupo === "cierre") r = cmdCierre(orden, a, datos);
   else if (grupo === "importar") r = cmdImportar(orden, resto[0], datos);

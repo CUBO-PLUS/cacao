@@ -437,6 +437,18 @@ describe('crearEnvio', () => {
     expect(llamadas('pay_crear_transferencia')).toHaveLength(0);
   });
 
+  it('si la base rechaza un código repetido (23505), responde un error limpio y no lanza', async () => {
+    rpc.mockResolvedValueOnce({
+      data: null,
+      error: { code: '23505', message: 'duplicate key value violates unique constraint "pay_transferencias_codigo_key"' },
+    });
+
+    const r = await crearEnvio(USUARIO, mostrado(USD_BTC));
+
+    expect(r).toEqual({ ok: false, codigo: 'ERROR', mensaje: 'Algo falló de nuestro lado. Probá de nuevo en un momento.' });
+    expect(llamadas('pay_crear_transferencia')).toHaveLength(1);
+  });
+
   it('con la misma clave devuelve el envío que ya existe, aunque el precio se haya movido', async () => {
     tablas.pay_transferencias = { id: ENVIO, codigo: 'CP-2345-ABCD' };
     cotizacionUsdBtc.mockResolvedValue(90_000);

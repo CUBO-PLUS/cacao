@@ -15,6 +15,7 @@ Para llevar el stack a una VM en la nube (Oracle Cloud, siempre gratis), ver [nu
 | `preparar.sh` | Mina monedas, fondea al comprador y abre un canal Lightning de 5,000,000 sats hacia Cacao. |
 | `tunel.ps1` | Abre una dirección pública con Cloudflare Quick Tunnel. La dirección cambia cada vez que arranca. |
 | `vigia.ps1` | Vigía: mantiene el stack y el túnel arriba, y publica la dirección actual en Supabase. Lo corre una tarea programada. |
+| `vigia-oculto.vbs` | Lanza `vigia.ps1` sin ventana. Es lo que ejecuta la tarea programada. |
 | `instalar-vigia.ps1` / `desinstalar-vigia.ps1` | Registran o quitan la tarea programada del vigía. |
 | `btcpay.ts` | Cliente de la API Greenfield. Cada producto tiene una copia idéntica. |
 

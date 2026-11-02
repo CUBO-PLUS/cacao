@@ -6,15 +6,19 @@
 $ErrorActionPreference = 'Continue'
 $nombreTarea = 'Cacao BTCPay vigia'
 $vigia = Join-Path $PSScriptRoot 'vigia.ps1'
+$lanzador = Join-Path $PSScriptRoot 'vigia-oculto.vbs'
 $usuario = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 
-if (-not (Test-Path $vigia)) {
-  Write-Host "No encontramos $vigia."
-  exit 1
+foreach ($archivo in @($vigia, $lanzador)) {
+  if (-not (Test-Path $archivo)) {
+    Write-Host "No encontramos $archivo."
+    exit 1
+  }
 }
 
-$accion = New-ScheduledTaskAction -Execute 'powershell.exe' `
-  -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$vigia`""
+# wscript.exe has no console, so no window flashes on each run. vigia-oculto.vbs starts vigia.ps1 hidden.
+$accion = New-ScheduledTaskAction -Execute 'wscript.exe' `
+  -Argument "//B //Nologo `"$lanzador`""
 
 # Every 2 minutes, for ten years, and again at each logon.
 $cada2 = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) `

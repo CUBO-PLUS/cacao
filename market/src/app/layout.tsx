@@ -3,6 +3,7 @@ import { esMX } from '@clerk/localizations/es-MX';
 import type { Metadata, Viewport } from 'next';
 import { Bricolage_Grotesque, JetBrains_Mono } from 'next/font/google';
 
+import { AvisoCookies } from '@/componentes/AvisoCookies';
 import { BarraInferior } from '@/componentes/BarraInferior';
 import { Cabecera } from '@/componentes/Cabecera';
 import { GrupoCacao } from '@/componentes/GrupoCacao';
@@ -93,6 +94,7 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
     <html lang="es-SV" className={`${bricolage.variable} ${mono.variable}`}>
       <body>
+        <AvisoCookies />
         <ClerkProvider localization={localizacion} appearance={apariencia}>
           <SesionNavegador />
           <a className="saltar" href="#contenido">

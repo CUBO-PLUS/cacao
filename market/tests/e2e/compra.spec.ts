@@ -24,7 +24,10 @@ test('compra entregada: el comprador confirma que la recibió y deja su reseña'
     await pagina.getByRole('button', { name: 'Sí, ya lo recibí', exact: true }).click();
 
     await expect(pagina.getByRole('heading', { name: 'Dejá tu reseña' })).toBeVisible({ timeout: 60_000 });
-    await pagina.locator('input[name="puntuacion"][value="5"]').check({ force: true });
+    // Centered first: at the bottom edge the fixed bottom bar would take the forced click.
+    const cinco = pagina.locator('input[name="puntuacion"][value="5"]');
+    await cinco.evaluate((e) => e.scrollIntoView({ block: 'center' }));
+    await cinco.check({ force: true });
     await pagina.getByLabel('Comentario (opcional)').fill('Muy buen café, prueba de reseña.');
     await pagina.getByRole('button', { name: 'Enviar reseña', exact: true }).click();
 

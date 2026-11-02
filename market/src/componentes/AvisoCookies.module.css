@@ -1,0 +1,33 @@
+/* Storage notice in the page flow: tostado bar, pulpa text, mazorca link and button. */
+.aviso {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 16px;
+  padding: 10px var(--canal);
+  background: var(--tostado);
+  color: var(--pulpa);
+  font-size: 0.875rem;
+}
+
+.texto {
+  margin: 0;
+  max-width: 72ch;
+}
+
+.texto a {
+  color: var(--mazorca);
+}
+
+.ok {
+  min-height: 40px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--mazorca);
+  color: var(--tostado);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}

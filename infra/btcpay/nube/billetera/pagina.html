@@ -20,12 +20,27 @@
   .ok { color: var(--ok); border-color: var(--ok); }
   .error { color: var(--error); border-color: var(--error); }
   small { display: block; margin-top: 2rem; color: var(--suave); }
+  .acciones { display: flex; gap: .5rem; margin-bottom: .75rem; }
+  .acciones button, .acciones label { flex: 1; margin: 0; padding: .7rem; border: 1px solid var(--cacao); border-radius: .5rem; background: transparent; color: var(--cacao); font: inherit; font-weight: 600; text-align: center; cursor: pointer; }
+  .acciones input { display: none; }
+  .camara { position: relative; margin-bottom: .75rem; border-radius: .5rem; overflow: hidden; background: #000; }
+  .camara video { display: block; width: 100%; max-height: 60vh; object-fit: cover; }
+  .camara button { position: absolute; left: .5rem; right: .5rem; bottom: .5rem; width: auto; margin: 0; }
 </style>
 </head>
 <body>
 <main>
   <h1>Billetera de prueba</h1>
   <p>Paga facturas Lightning del demo de Grupo Cacao. Usa bitcoin de prueba (regtest), que no tiene valor.</p>
+  <div class="acciones">
+    <button type="button" id="escanear">Escanear QR</button>
+    <label for="foto">Subir foto del QR</label>
+    <input type="file" id="foto" accept="image/*">
+  </div>
+  <div class="camara" id="camara" hidden>
+    <video id="video" playsinline muted></video>
+    <button type="button" id="cerrar">Cerrar cámara</button>
+  </div>
   <label for="factura"><p>Factura Lightning</p></label>
   <textarea id="factura" placeholder="lnbcrt…" spellcheck="false" autocomplete="off"></textarea>
   <div class="monto" id="monto" hidden></div>
@@ -69,6 +84,98 @@
       else { avisar('Pagado: ' + formato.format(d.sats) + ' sats. Ya podés volver a Cacao.', 'ok'); }
     } catch { avisar('El pago no salió. Probá de nuevo.', 'error'); boton.disabled = false; }
     boton.textContent = 'Pagar';
+  });
+
+  // QR: the browser's BarcodeDetector where it exists (Chrome, Android); jsQR from a CDN elsewhere (Safari, Firefox).
+  const caja = document.getElementById('camara');
+  const video = document.getElementById('video');
+  const lienzo = document.createElement('canvas');
+  const ctx = lienzo.getContext('2d', { willReadFrequently: true });
+  let flujo = null;
+  let detector = null;
+  let jsqr = null;
+
+  async function lector() {
+    if (detector || jsqr) return;
+    if ('BarcodeDetector' in window) {
+      try {
+        if ((await BarcodeDetector.getSupportedFormats()).includes('qr_code')) { detector = new BarcodeDetector({ formats: ['qr_code'] }); return; }
+      } catch {}
+    }
+    await new Promise((listo, fallo) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
+      s.onload = listo; s.onerror = fallo;
+      document.head.append(s);
+    });
+    jsqr = window.jsQR;
+  }
+
+  // Reads a QR from a video frame or an image. Null when there is none.
+  async function leerQr(fuente, ancho, alto) {
+    if (detector) {
+      const r = await detector.detect(fuente);
+      return r[0]?.rawValue ?? null;
+    }
+    lienzo.width = ancho; lienzo.height = alto;
+    ctx.drawImage(fuente, 0, 0, ancho, alto);
+    return jsqr(ctx.getImageData(0, 0, ancho, alto).data, ancho, alto)?.data ?? null;
+  }
+
+  // Wallet QRs often carry "lightning:" and upper case; the field takes the bare invoice.
+  function usar(texto) {
+    const factura = texto.trim().replace(/^lightning:/i, '').split('?')[0].toLowerCase();
+    campo.value = factura;
+    ver();
+  }
+
+  function cerrarCamara() {
+    flujo?.getTracks().forEach((t) => t.stop());
+    flujo = null;
+    caja.hidden = true;
+  }
+
+  document.getElementById('escanear').addEventListener('click', async () => {
+    aviso.hidden = true;
+    try {
+      await lector();
+      flujo = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    } catch {
+      return avisar('No se pudo abrir la cámara. Probá con «Subir foto del QR» o pegá la factura.', 'error');
+    }
+    video.srcObject = flujo;
+    caja.hidden = false;
+    await video.play();
+    const buscar = async () => {
+      if (!flujo) return;
+      if (video.readyState >= 2) {
+        try {
+          const texto = await leerQr(video, video.videoWidth, video.videoHeight);
+          if (texto) { cerrarCamara(); return usar(texto); }
+        } catch {}
+      }
+      setTimeout(buscar, 250);
+    };
+    buscar();
+  });
+  document.getElementById('cerrar').addEventListener('click', cerrarCamara);
+
+  document.getElementById('foto').addEventListener('change', async (e) => {
+    const archivo = e.target.files?.[0];
+    e.target.value = '';
+    if (!archivo) return;
+    aviso.hidden = true;
+    try {
+      await lector();
+      const imagen = await createImageBitmap(archivo);
+      // Phone photos are large; jsQR reads a scaled copy much faster.
+      const k = Math.min(1, 1600 / Math.max(imagen.width, imagen.height));
+      const texto = await leerQr(imagen, Math.round(imagen.width * k), Math.round(imagen.height * k));
+      if (!texto) return avisar('No encontramos un QR en esa imagen. Probá con una foto más cerca.', 'error');
+      usar(texto);
+    } catch {
+      avisar('No se pudo leer la imagen.', 'error');
+    }
   });
 
   let espera;

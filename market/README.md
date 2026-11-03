@@ -1,6 +1,8 @@
 # CacaoMarket
 
-CacaoMarket es un mercado de productos y servicios locales en El Salvador. Se paga en sats por Lightning. La aplicación no guarda dinero: cada pago va a la billetera Lightning del vendedor. En la versión de demostración todos los pagos son simulados y no se mueve dinero real.
+CacaoMarket es un mercado de productos y servicios locales en El Salvador. Se paga en sats por Lightning. Cada cobro pasa por CacaoPay, el motor de pagos del grupo, que crea la factura en la tienda de BTCPay del negocio y avisa a Market cuando se paga (ver [docs/pagos.md](docs/pagos.md#cacaopay)). La aplicación no guarda dinero. En la versión de demostración las facturas son de bitcoin de prueba (regtest), sin valor: no se mueve dinero real.
+
+Cada orden guarda una comisión teórica del 1 % para la plataforma, que el panel de administración suma pero ningún flujo cobra todavía. Cómo encaja en el modelo del grupo: [docs/business-model.md](../docs/business-model.md).
 
 CacaoMarket es parte del grupo Cacao, junto con Cacao Media, Cacao Travel, CacaoPay y CacaoLedger. Media, Market y Pay comparten un mismo proyecto de Supabase: las tablas de Market no llevan prefijo, las de Media empiezan con `media_`, las de Pay con `pay_`, y `eventos` es compartida.
 

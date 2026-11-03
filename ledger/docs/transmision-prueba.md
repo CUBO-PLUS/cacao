@@ -9,7 +9,7 @@ El servicio de prueba es el mock comunitario [svfe-mock-api](https://github.com/
 Sin Docker, usando el Postgres local de Supabase (puerto 54322) con una base propia `svfe_mock`:
 
 ```powershell
-cd C:\Users\joshb\Documents\svfe-mock-api
+cd svfe-mock-api   # un clon de https://github.com/antonio0x/svfe-mock-api
 # .env (no se versiona): PORT=3100 y DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/svfe_mock
 npm install
 npx prisma generate
@@ -48,7 +48,7 @@ La transmisión se activa con variables de entorno. Si falta cualquiera de las c
 2. Registrar la clave pública en el mock (hay que hacerlo una vez por clave):
 
    ```powershell
-   cd C:\Users\joshb\Documents\CacaoMedia\ledger
+   cd cacao\ledger
    $env:LEDGER_HACIENDA_URL = "http://127.0.0.1:3100"
    $env:LEDGER_HACIENDA_NIT = "06141234567890"
    $env:LEDGER_HACIENDA_CLAVE = "password123"

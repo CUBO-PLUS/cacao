@@ -67,7 +67,8 @@ Lo que existe hoy:
 
 - **Acceso permanente por historia y por navegador.** Al pagar, se crea una fila en `media_accesos` para ese lector y esa historia. La cookie del lector dura un año. Si el lector vuelve al mismo navegador, la historia se abre sin pagar otra vez.
 - **Pase firmado de 7 días.** El navegador guarda un token que vence a los 7 días. Si vence, el servidor emite uno nuevo solo a quien ya tiene acceso.
-- **Sin acceso entre dispositivos.** El acceso vive en la cookie y en el token de un navegador. Si el lector cambia de celular o de navegador, tiene que pagar otra factura. **No hay forma de recuperar el acceso en otro dispositivo.** Esto es un límite real, no un detalle.
+- **La historia se vuelve a abrir sola.** En el mismo navegador, la historia pagada se abre sin pedir nada: el acceso está ligado a la cookie y el pase se renueva solo.
+- **Acceso en otro dispositivo con el código.** Al pagar, el texto abierto trae, plegado bajo «¿La querés leer en otro celular o computadora?», un código de acceso: el pase firmado de esa historia, que se puede copiar o guardar. En otro celular o navegador, el muro tiene «Pagué en otro navegador»: se pega el código y el servidor lo verifica (firma, vencimiento e historia). El código vence a los 7 días y abre una sola historia. Pasado ese plazo, en otro dispositivo hay que pagar otra vez: sin cuenta no hay otra forma de recuperar el acceso.
 
 Ideas para la compra repetida (hipótesis, sin implementar):
 
@@ -121,7 +122,7 @@ Los eventos del embudo ya existen en la base de datos y el panel de administraci
 ## 12. Riesgos
 
 - **Precio de bitcoin.** Un cambio fuerte cambia el valor en dólares del muro. El muro lo muestra en el momento, pero el lector puede sentir que el precio se movió.
-- **Acceso atado al navegador.** Un lector que pierde su celular pierde el acceso. Sin cuenta no hay forma de recuperarlo.
+- **Acceso atado al navegador.** El código de acceso abre la historia en otro dispositivo durante 7 días. Pasado ese plazo, un lector que pierde su celular pierde el acceso: sin cuenta no hay otra forma de recuperarlo.
 - **Historias de muestra.** El contenido es de muestra y no pasó por verificación editorial. No se debe vender como producción.
 - **Dinero simulado.** Hoy los pagos usan bitcoin de prueba (regtest), sin valor. Antes de cobrar de verdad hay que cambiar de red y pasar revisión legal.
 

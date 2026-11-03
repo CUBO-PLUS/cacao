@@ -1,12 +1,31 @@
 # CacaoPay
 
-CacaoPay es el simulador de remesas familiares del grupo Cacao para El Salvador. Una persona envía dinero a su familiar en El Salvador, ve por separado la comisión, el tipo de cambio con su fuente y el monto exacto que llega antes de confirmar, y sigue la transferencia con un código único hasta que se entrega en efectivo, en cuenta bancaria o en bitcoin por Lightning.
+CacaoPay es el motor de pagos del grupo Cacao. Todo cobro del grupo pasa por acá: cada historia de Cacao Media, cada reserva de Cacao Travel y cada pedido de CacaoMarket se cobran con su API. Encima de esa API hay tres cosas más:
 
-Todos los pagos son simulados: no se mueve dinero ni bitcoin real, y la aplicación no guarda llaves privadas ni frases semilla.
+- **CacaoPay para negocios:** un comercio activa su cuenta, imprime su QR de mostrador y cobra en sats. Cada cobro pagado se reporta solo a CacaoLedger, que le hace la factura electrónica.
+- **Dónde gastar:** un mapa de lugares reales de El Salvador que aceptan bitcoin, con los que cobran con CacaoPay marcados.
+- **Remesas, el plus:** una persona envía dinero a su familiar en El Salvador, ve por separado la comisión, el tipo de cambio con su fuente y el monto exacto que llega antes de confirmar, y sigue la transferencia con un código único hasta que se entrega en efectivo, en cuenta bancaria o en bitcoin por Lightning.
 
-Versión en línea: https://cacao-pay.vercel.app
+Los cobros son facturas Lightning reales de un BTCPay Server propio, pero en **regtest**: bitcoin de prueba, sin valor. No se mueve dinero real. La entrega de remesas en efectivo y en cuenta es simulada. La aplicación no guarda llaves privadas ni frases semilla de los usuarios.
 
-## Qué incluye
+Versión en línea: https://cacao-pay.vercel.app. La presentación del grupo y su modelo de negocio están en el [README de la raíz](../README.md) y en [docs/business-model.md](../docs/business-model.md).
+
+## El motor de pagos
+
+| Pieza | Dónde | Qué hace |
+|---|---|---|
+| API de cobros v1 | `/api/v1/cobros/` ([`src/servidor/api-cobros.ts`](src/servidor/api-cobros.ts)) | Crea un cobro por `Idempotency-Key`, hace su factura en BTCPay con el id del cobro como `orderId` y le pregunta a BTCPay su estado. Cada cliente tiene su clave y su límite de peticiones. |
+| Avisos firmados | [`src/servidor/avisos.ts`](src/servidor/avisos.ts) | Cuando un cobro cambia de estado, avisa al producto que lo creó con un `POST` firmado (`Cacao-Firma`, HMAC-SHA256). Un aviso fallido se reintenta y nunca toca el cobro. |
+| Webhook de BTCPay | `/api/v1/btcpay/aviso/` | Solo dice "volvé a mirar": el estado siempre se lee de BTCPay. |
+| Negocios | `/negocios`, `/negocios/qr`, `/negocios/cobrar`, `/negocios/panel` ([`src/servidor/negocios.ts`](src/servidor/negocios.ts)) | El comercio cobra en su mostrador con las mismas funciones de la API, así que las reglas, la idempotencia y los estados son los mismos. |
+| Pago del cliente | `/pagar/[negocio]`, `/cobrar/[token]` | La pantalla que ve quien paga: QR, factura y confirmación. |
+| Reporte a CacaoLedger | [`src/servidor/ledger.ts`](src/servidor/ledger.ts) | Cada cobro pagado de un negocio se registra en la API v1 de CacaoLedger (`POST /api/v1/ventas`). La clave de idempotencia es el id del aviso, así que un reintento nunca crea una segunda venta. |
+| Devolución | [`src/servidor/devolucion.ts`](src/servidor/devolucion.ts) | Quien envió una remesa por Lightning que nadie reclamó a tiempo la recupera pegando una factura por los sats pagados. |
+| Dónde gastar | `/donde-gastar` | Lugares que aceptan bitcoin, cerca de quien mira, con los que cobran con CacaoPay. |
+
+La referencia completa de la API, con ejemplos, está en [docs/api.md](docs/api.md#7-api-de-cobros-v1-apiv1).
+
+## Remesas: qué incluye
 
 - **Cotizador público en `/`** que funciona sin iniciar sesión. La aritmética entera vive en [`src/lib/cotizacion.ts`](src/lib/cotizacion.ts) y está cubierta por [`src/lib/cotizacion.test.ts`](src/lib/cotizacion.test.ts).
 - **Ingreso con Clerk** en `/entrar` (celular `+503` o correo) y alta en `/registrarse`. Clerk guarda la sesión; Supabase guarda los datos, y la fila de `usuarios` se enlaza por `clerk_id` con el RPC `vincular_clerk`.
@@ -98,7 +117,7 @@ Toma unos dos minutos desde el teléfono o en una ventana angosta:
 | Conversión con tasa definida y fuente | `src/lib/cotizacion.ts`, `pay_tasas` (`EUR/USD 1.08`) y oráculo `Coinbase + Kraken` para `BTC/USD` | Cumple |
 | Comisiones separadas del tipo de cambio | Línea de comisión independiente con su fórmula explícita | Cumple |
 | Monto final recibido por el destinatario | Línea **Recibe**, redondeada hacia abajo | Cumple |
-| Creación de transferencias simuladas con código único | `pay_crear_transferencia` y código `CP-XXXX-XXXX` | Parcial: la unicidad del código no tiene prueba directa |
+| Creación de transferencias simuladas con código único | `pay_crear_transferencia` y código `CP-XXXX-XXXX` | Cumple: la base exige un código único (`pay_transferencias_codigo_key`) y `src/servidor/transferencias.test.ts` prueba que un código repetido se rechaza con un error limpio |
 | Máquina de estados (`Created`, `Processing`, `Completed`, `Failed`, `Cancelled`) | `creada`, `procesando`, `completada`, `fallida`, `cancelada` (`src/lib/transferencias.ts`) | Cumple |
 | Historial e inspección individual | `/envios`, `/recibidos`, `/envios/[id]` y `pay_historial` | Cumple |
 | Mecanismo simulado para completar o fallar envíos | Botones de modo demo y acciones del monitor administrativo | Cumple |

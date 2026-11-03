@@ -5,10 +5,15 @@ factura 01 para consumidor final o comprobante de crédito fiscal 03 para contri
 pagó cada venta, guarda en una cadena de registros lo que el DTE no puede contener (la tasa de un pago en
 bitcoin), arma el cierre del día, produce los libros de IVA del mes y muestra todo en una web para el dueño.
 
-Es parte del grupo Cacao (CacaoMedia, CacaoTravel, CacaoMarket, CacaoPay).
+Es parte del grupo Cacao (CacaoMedia, CacaoTravel, CacaoMarket, CacaoPay); la presentación del grupo y su modelo de
+negocio están en el [README de la raíz](../README.md) y en [docs/business-model.md](../docs/business-model.md). CacaoPay le
+reporta cada cobro pagado de un negocio por la API v1 (`POST /api/v1/ventas`), así que la venta llega sin que nadie la escriba.
 
-**Nada se transmite a Hacienda.** El sello de recepción de la demo es simulado y empieza por `SIMULADO-`.
-Ningún servicio del Ministerio lo emitió.
+**Nada se transmite a Hacienda.** Con las variables de [docs/transmision-prueba.md](docs/transmision-prueba.md), el
+documento se firma (JWS RS512 con una clave de prueba) y se transmite al mock comunitario
+[svfe-mock-api](https://github.com/antonio0x/svfe-mock-api), que imita la recepción del Ministerio y devuelve un sello.
+Ese sello se muestra siempre como «sello de prueba del mock svfe-mock-api (no es de Hacienda)». Sin esas variables, el
+sello es del simulador local y empieza por `SIMULADO-`. Ningún sello de este repositorio tiene validez fiscal.
 
 ## Estado: qué funciona, qué no, qué sigue
 
@@ -20,7 +25,9 @@ Ningún servicio del Ministerio lo emitió.
 | Funciona en la web (dueño) | Venta en efectivo marcada a mano (`/tickets/nueva`), con un token por envío: un doble envío no hace dos tickets. La cadena de atestaciones se guarda en `ledger_atestaciones` y «Verificar cadena» la recalcula en el servidor. |
 | Simulado | Caída de Hacienda (`/cierre`, «Simular caída de Hacienda»): los documentos nuevos salen con `tipoOperacion` 2 y `tipoContingencia` 1, esperan 24 horas y «Simular que Hacienda volvió» los transmite con sello simulado. Todo se rotula SIMULADO. |
 | Parcial | Los esquemas `2026` se validan con el paquete oficial del Ministerio, pero el servicio de recepción real no se probó. Firma: solo el cliente, contra un firmador falso. |
-| No funciona | Transmisión a Hacienda, ni real ni de prueba. Firma con el firmador real del Ministerio (no se corrió). Contingencia real: lo de arriba es solo una simulación. Verificación del dígito del NIT y del NRC. Validación del par departamento-municipio contra CAT-013 de 2026. |
+| Funciona, contra un mock | Firma local JWS RS512 con clave de prueba (`src/firma/firma-local.ts`) y transmisión al mock comunitario svfe-mock-api (`src/hacienda/`): el comprobante 03 sale sellado. La factura 01 la rechaza el mock por su regla BIZ_004, que suma el IVA encima de un precio que ya lo incluye (ver `docs/transmision-prueba.md`). |
+| Funciona en la web | API v1 para que otro sistema registre sus ventas (`docs/api.md`) y la página `/comercios`, con los comercios registrados y los clientes de la API. |
+| No funciona | Transmisión a Hacienda real o a su servicio de pruebas. Firma con el firmador real del Ministerio (no se corrió). Contingencia real: lo de arriba es solo una simulación. Verificación del dígito del NIT y del NRC. Validación del par departamento-municipio contra CAT-013 de 2026. |
 | Qué sigue | Probar la recepción con el servicio de pruebas del Ministerio, con credenciales de un NIT registrado. Contingencia de la CLI. Revisar con un contador las cifras de F-07 y F-14 antes de usarlas. |
 
 Lo que no está probado en este repositorio se dice en la sección «Límites».
@@ -87,7 +94,7 @@ Puntos opcionales:
 | 10 | Credenciales por comercio, con cifrado | Parcial | Varios comercios con sobre cifrado (`comercio registrar`, `comercio lista`) y `LEDGER_CLAVE_MAESTRA`. La demo usa un comercio. Ver `docs/firma-y-comercios.md`. |
 | 11 | Contingencia (`tipoOperacion` 2) con cola de reenvío | Simulada (web) | Control del dueño en `/cierre`: documentos con `tipoOperacion` 2, en espera de 24 horas, y reenvío con sello simulado. Falta el canal real y la CLI lo tiene solo como texto. |
 | 12 | Recibo para el cliente con QR y versión legible | Cumple, en web y sitio | En `/tickets/[id]` y en el sitio del cierre: versión legible con QR en SVG y enlace a la consulta pública. |
-| 13 | Transmisión a la prueba del Ministerio, o un mock | Parcial | Hay un servicio de recepción simulado propio (`src/recepcion-simulada.ts`), no el mock comunitario. Nada sale a la red. |
+| 13 | Transmisión a la prueba del Ministerio, o un mock | Cumple, con el mock | `dte transmitir` envía el documento firmado al mock comunitario svfe-mock-api (`docs/transmision-prueba.md`): el 03 sale sellado y el 01 lo rechaza una regla del mock, con sus observaciones campo por campo. Sin configurarlo, queda el servicio simulado propio (`src/recepcion-simulada.ts`). No se probó contra el servicio de pruebas del Ministerio. |
 
 ## Riel de pago: por qué BTCPay y no Blink
 
@@ -207,7 +214,7 @@ Opciones generales: `--esquemas caso|2026` (o `LEDGER_ESQUEMAS`), `--datos <carp
 
 ## Límites
 
-- **No transmite a Hacienda.** `dte transmitir` solo usa la recepción simulada. Ningún sello de la demo es válido.
+- **No transmite a Hacienda.** `dte transmitir` usa el mock comunitario o la recepción simulada. Ningún sello de la demo es válido.
 - **El firmador real no se corrió.** La firma se prueba contra un servidor falso con la forma de respuesta esperada.
 - **Los pagos de demostración son fixtures.** Siguen la forma del webhook de Blink; no mueven fondos.
 - **Los esquemas `2026` no se probaron contra el servicio de recepción.** Solo contra el paquete oficial.
@@ -227,6 +234,9 @@ Opciones generales: `--esquemas caso|2026` (o `LEDGER_ESQUEMAS`), `--datos <carp
 - `docs/atestacion.md`: qué prueba la cadena SHA-256 de tasas USD/BTC y cómo se audita.
 - `docs/importar-market.md`, `docs/importar-btcpay.md`: formatos de importación.
 - `docs/firma-y-comercios.md`: firmador SVFE, comercios y cifrado AES-256-GCM.
+- `docs/varios-comercios.md`: qué credenciales se guardan por comercio y cuáles faltan.
+- `docs/transmision-prueba.md`: cómo firmar y transmitir al mock svfe-mock-api, y sus límites conocidos.
+- `docs/api.md`: la API v1 de ventas y reportes, con sus claves, límites e idempotencia.
 - `docs/web-datos.md`: datos, acceso y sincronización de la web.
 - `esquemas/README.md`: origen y huellas SHA-256 de cada esquema.
 - `fixtures/README.md`: qué es cada dato de prueba.

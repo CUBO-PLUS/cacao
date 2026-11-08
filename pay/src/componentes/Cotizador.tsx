@@ -137,7 +137,6 @@ export function Cotizador({ usdBtc, fuenteBtc }: { usdBtc: number | null; fuente
       ) : (
         <Boton disabled>Enviar dinero</Boton>
       )}
-      <p className={estilos.demo}>Demo: el bitcoin es de prueba y no tiene valor real.</p>
     </div>
   );
 }
@@ -154,9 +153,15 @@ function Recibe({ cotizacion: c, usdBtc }: { cotizacion: Cotizacion | null; usdB
   }
 
   const enSats = c.monedaDestino === 'SATS';
-  // A sats amount is shown with its dollar value next to it, as the price is shown everywhere else.
-  const aproximado =
-    enSats && usdBtc !== null ? `aprox. ${formatoUsd(Math.floor((c.montoDestino * usdBtc) / 1_000_000))}` : null;
+  // A sats amount is shown with its dollar value next to it, as the price is shown everywhere else. Every amount
+  // carries its currency code, so a dollar amount can never be read as euros next to a euro amount.
+  const aproximadoUsd =
+    enSats && usdBtc !== null ? formatoUsd(Math.floor((c.montoDestino * usdBtc) / 1_000_000)) : null;
+  const montoPrincipal = enSats
+    ? aproximadoUsd
+      ? `${aproximadoUsd} USD`
+      : formatoMonto(c.montoDestino, c.monedaDestino)
+    : `${formatoUsd(c.montoDestino)} USD`;
   const minutos = c.minutosEstimados === 1 ? 'Llega en un minuto.' : `Llega en unos ${c.minutosEstimados} minutos.`;
 
   let tipo: string | null = null;
@@ -169,9 +174,7 @@ function Recibe({ cotizacion: c, usdBtc }: { cotizacion: Cotizacion | null; usdB
     <>
       <div className={estilos.recibe} aria-live="polite">
         <span className={estilos.recibeEtiqueta}>Recibe</span>
-        <span className={estilos.recibeMonto}>
-          {enSats && aproximado ? aproximado.replace('aprox. ', '') : formatoMonto(c.montoDestino, c.monedaDestino)}
-        </span>
+        <span className={estilos.recibeMonto}>{montoPrincipal}</span>
         {enSats && (
           <small className={estilos.nota}>En bitcoin: {formatoMonto(c.montoDestino, c.monedaDestino)}</small>
         )}

@@ -6,7 +6,7 @@ import styles from './AvisoCookies.module.css';
 
 const CLAVE_AVISO = 'cacao-aviso-cookies';
 
-// Storage notice in the page flow, at the top of the page. It renders nothing on the server and on the
+// Storage notice: a slim bar fixed above the phone tab bar. It renders nothing on the server and on the
 // first client render, so the markup matches; it appears only if this browser has not dismissed it.
 export function AvisoCookies() {
   const [mostrar, setMostrar] = useState(false);
@@ -37,8 +37,8 @@ export function AvisoCookies() {
   return (
     <aside className={styles.aviso} aria-label="Cookies y almacenamiento">
       <p className={styles.texto}>
-        Usamos cookies para tu sesión y el almacenamiento del navegador para tu carrito. Contamos visitas sin saber
-        quién sos. Sin publicidad. <a href="https://cacao-grupo.vercel.app/legal.html">Privacidad</a>
+        Usamos cookies y el almacenamiento del navegador solo para que el sitio funcione. Sin publicidad ni rastreo.{' '}
+        <a href="https://cacao-grupo.vercel.app/legal.html">Privacidad</a>
       </p>
       <button type="button" className={styles.ok} onClick={entendido}>
         Entendido

@@ -58,7 +58,11 @@ The split is computed on the server for every booking (`travel/src/lib/reparto.t
 
 The fee is always shown on its own line, never hidden in the exchange rate. **Assumption:** these are the simulator's fees. They have not been compared with a real provider's (see `pay/docs/modelo-comisiones-y-conversion.md` and `pay/docs/competidores.md`).
 
-**Market size, from the BCR:** El Salvador received **US$8,181.8 million** in remittances in 2023, of which **US$82.9 million** came in bitcoin (BCR note of January 2024, cited in `pay/docs/investigacion-mercado.md`). Even a small share of a market that size matters, and Lightning delivery is the cheapest line for the family.
+**Market size, from the BCR:** El Salvador received **US$8,181.8 million** in remittances in 2023, of which **US$82.9 million** came in bitcoin (BCR note of January 2024, cited in `pay/docs/investigacion-mercado.md`).
+
+**2025 picture, from the BCR:** total remittances were **US$9,987.91 million**, of which **US$57.67 million** (0.57%) came through crypto wallets, down from US$85.5 million in 2024 (figures reported by [El Mundo, 28 January 2026](https://diario.elmundo.sv/economia/remesas-por-criptomonedas-cayeron-32-5-en-2025-en-el-salvador)). The BCR series now counts crypto-wallet remittances, which is not identical to the 2023 "bitcoin" line, so the two are close but not strictly comparable. The bitcoin share is small and falling.
+
+Even a small share of a market that size matters, and Lightning delivery is the cheapest line for the family.
 
 **Processing for businesses:** CacaoPay already charges for Media, Travel and Market, and for any shop that activates its counter QR or uses the API. **Today it takes no fee on those charges.** A processing fee is the natural next revenue line. It has to stay well below card rates, because being cheaper than a card is the reason a business switches.
 
@@ -75,7 +79,11 @@ Proposed plans (from `ledger/docs/estrategia-y-hacienda.md`):
 | Despacho Contable | $65.00 / month + VAT | A console for accountants serving up to 15 merchants |
 
 - **Cost to serve:** under $1.50 per merchant per month (light compute, 10 years of DTE storage, deadline monitoring). **Assumption**, from the same document.
-- **Break-even:** 120 merchants on Semilla/Cosecha plus 15 accounting firms bring more than $2,500 a month in recurring revenue, with a gross margin above 85%.
+- **Break-even (prices before VAT):** 120 merchants and 15 accounting firms bring in:
+  - all 120 on Semilla: 120 × $9 = $1,080, plus 15 × $65 = $975, a total of **$2,055 a month**;
+  - all 120 on Cosecha: 120 × $24 = $2,880, plus $975, a total of **$3,855 a month**.
+  
+  Any mix of the two plans falls between those figures. The earlier "more than $2,500" assumed a mix that was never shown, and an all-Semilla base does not reach it. Gross margin, at a cost to serve of $1.50 per merchant (not counting the accounting firms' cost), is about 83% on Semilla ($7.50 of $9) and about 94% on Cosecha ($22.50 of $24).
 - **The argument for the merchant:** a full year of Semilla ($108) costs about 34 times less than the minimum fine for invoicing failures under Art. 239-A of the Tax Code ($3,679.20, nine monthly minimum wages). The legal figures are marked "to confirm" in the source document.
 
 ## 4. The flywheel

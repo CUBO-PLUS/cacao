@@ -238,7 +238,7 @@ test.describe('BTCPay caído', () => {
     await expect(page.locator('[data-reserva]')).toBeVisible();
     await page.locator('[data-reservar]').click();
     const error = page.locator('[data-reserva] [data-error]');
-    await expect(error).toHaveText('Los pagos están en pausa por unos minutos. Probá de nuevo en un rato.');
+    await expect(error).toHaveText('Los pagos no están disponibles en este momento. Probá de nuevo más tarde.');
     await expect(page.locator('[data-pago]')).toBeHidden();
     await expect(page.locator('[data-reservar]')).toBeEnabled();
     await expect(page.locator('body')).not.toContainText('Error:');

@@ -116,6 +116,14 @@ p { margin: 0; }
 .grano { grid-column: 2; grid-row: 1 / span 2; display: flex; }
 .grano svg { width: clamp(80px, 19vw, 380px); height: auto; overflow: visible; display: block; }
 
+/* One line under the hero, between the wordmark and the scroll cue. */
+.presentacion {
+  max-width: 46ch;
+  font-size: clamp(16px, 1.5vw, 20px);
+  line-height: 1.4;
+  text-align: center;
+}
+
 .bajar {
   display: block;
   position: relative;
@@ -222,8 +230,7 @@ p { margin: 0; }
   color: var(--tostado);
   transition: background 0.3s, color 0.3s;
 }
-.panel-dinero .puerta,
-.nota { border-top-color: rgba(42, 25, 18, 0.22); }
+.panel-dinero .puerta { border-top-color: rgba(42, 25, 18, 0.22); }
 .puerta:hover { color: inherit; }
 .puerta-media:hover,
 .puerta-media:focus-visible { background: var(--mazorca); color: var(--tostado); }
@@ -256,16 +263,6 @@ p { margin: 0; }
   transition: transform 0.35s var(--ease);
 }
 .puerta.activa .flecha { transform: translate(4px, -4px) scale(1.25); }
-.nota {
-  display: flex;
-  align-items: center;
-  padding: 20px clamp(20px, 3vw, 40px);
-  border-top: 1px solid rgba(42, 25, 18, 0.22);
-  font-family: var(--mono);
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--tostado);
-}
 
 .pie {
   display: flex;
@@ -274,6 +271,8 @@ p { margin: 0; }
   padding: clamp(56px, 8vw, 120px) clamp(16px, 3vw, 40px) 28px;
   overflow: hidden;
 }
+/* The only demo notice on the page, kept in the footer. */
+.pie-demo { color: var(--pulpa); }
 .pie-meta {
   display: flex;
   flex-wrap: wrap;
@@ -444,6 +443,7 @@ p { margin: 0; }
   .word { font-size: clamp(32px, 10vw, 48px); }
   .pie { padding: 40px 18px 16px; }
   .gigante { font-size: clamp(64px, 22vw, 128px); }
+  .presentacion { text-align: left; }
   .probar { padding: 40px 16px 28px; }
   .paso { padding: 20px 18px; }
 }

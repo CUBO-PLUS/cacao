@@ -103,7 +103,8 @@ test('paid story starts locked with its price and the unlock button', async ({ p
   // The USD value comes from the server's price, beside the sats.
   await expect(page.locator('[data-gate-usd]')).toBeVisible();
   await expect(page.locator('[data-gate-usd]')).toHaveText(/^· \$\d+\.\d{2}$/);
-  await expect(muro(page)).toContainText('Modo demo');
+  // The demo notice is the one line in the footer, not a banner on the wall.
+  await expect(page.locator('.pie__demo')).toContainText('Demostración: los pagos usan bitcoin de prueba.');
 });
 
 test('the wall explains what a sat is and that the access stays in this browser', async ({ page, request }) => {

@@ -2,11 +2,12 @@
 import Base from '../layouts/Base.astro';
 import { PARTES } from '../lib/reparto';
 import { CATEGORIAS, ZONAS, DIAS_SEMANA } from '../content.config';
+import { MEDIA_URL } from '../lib/tours';
 
-// The operator panel is for signed-in people only. Signed-out visitors go to /entrar/, which brings them back here.
+// The operator panel is for signed-in people only. Signed-out visitors read the public explanation below, which links to /entrar/.
 export const prerender = false;
 Astro.response.headers.set('Cache-Control', 'no-store');
-if (!Astro.locals.auth().isAuthenticated) return Astro.redirect('/entrar/');
+const autenticado = Astro.locals.auth().isAuthenticated;
 
 // Day codes are the ones stored in the content collection; these are the labels shown to the operator.
 const ETIQUETA_DIA: Record<string, string> = {
@@ -19,7 +20,50 @@ const porcentaje = (n: number) => `${Math.round(n * 100)}%`;
 const OPERADOR_SIN_HISTORIA = PARTES.operador + PARTES.autor;
 ---
 
-<Base titulo="Panel de operadores" descripcion="Publicá una experiencia en Cacao Travel y mirá cuánto recibís por cada reserva.">
+<Base
+  titulo={autenticado ? 'Panel de operadores' : 'Operadores'}
+  descripcion={autenticado ? 'Publicá una experiencia en Cacao Travel y mirá cuánto recibís por cada reserva.' : 'Cómo sumarte a Cacao Travel como operador, cómo se reparte cada reserva y cómo entrar a tu panel.'}
+>
+  {!autenticado && (
+    <section class="contenedor publico" aria-labelledby="titulo-operadores">
+      <header class="publico__cabeza">
+        <h1 id="titulo-operadores">Llevá tu experiencia a Cacao Travel</h1>
+        <p class="publico__bajada">
+          Si ofrecés caminatas, tours, talleres o escapadas en El Salvador, podés publicarlas aquí y recibir tu parte de cada reserva en sats.
+        </p>
+        <a class="boton" href="/entrar/">Entrar a tu panel</a>
+      </header>
+
+      <div class="publico__grid">
+        <section class="tarjeta-publica" aria-labelledby="publico-quien">
+          <h2 id="publico-quien">Quién puede sumarse</h2>
+          <p>Personas o empresas que ofrecen experiencias reales en El Salvador. Publicar en el catálogo exige un operador verificado.</p>
+          <p class="publico__nota">Demo: hoy no hay operadores verificados, así que las publicaciones se quedan como borradores.</p>
+        </section>
+
+        <section class="tarjeta-publica" aria-labelledby="publico-reparto">
+          <h2 id="publico-reparto">Cómo se reparte cada reserva</h2>
+          <dl class="publico__reparto">
+            <div><dt>Operador</dt><dd>{porcentaje(PARTES.operador)}</dd></div>
+            <div><dt>Cacao Travel</dt><dd>{porcentaje(PARTES.plataforma)}</dd></div>
+            <div><dt>Autor de la historia</dt><dd>{porcentaje(PARTES.autor)}</dd></div>
+          </dl>
+          <p>
+            El {porcentaje(PARTES.autor)} va al autor solo cuando la reserva viene de una historia de Cacao Media. Sin historia, el operador recibe {porcentaje(OPERADOR_SIN_HISTORIA)}.
+          </p>
+          <p class="publico__nota">El pago al autor se acredita al activar los pagos reales.</p>
+        </section>
+
+        <section class="tarjeta-publica" aria-labelledby="publico-contacto">
+          <h2 id="publico-contacto">Cómo contactarnos</h2>
+          <p>Para sumarte o hacer preguntas sobre el panel, escribinos desde <a href={`${MEDIA_URL}/`}>Cacao Media</a>.</p>
+          <a class="boton boton--secundario" href="/entrar/">Entrar a tu panel</a>
+        </section>
+      </div>
+    </section>
+  )}
+
+  {autenticado && (
   <div class="contenedor operadores">
     <header class="operadores__cabeza">
       <p class="aviso-demo dato"><span class="demo-etiqueta">Demo</span> Los borradores se guardan en este navegador y se pueden descargar en JSON. Todavía no se publican en el catálogo: publicar exige un operador verificado, y esta demo no tiene ninguno.</p>
@@ -165,7 +209,7 @@ const OPERADOR_SIN_HISTORIA = PARTES.operador + PARTES.autor;
               <dd data-r-total>Calculando</dd>
             </div>
           </dl>
-          <p class="reparto__explica">Si una historia de Cacao Media trae al viajero, {porcentaje(PARTES.autor)} va para quien la escribió: vos recibís <span data-r-explica-operador>Calculando</span> ({porcentaje(PARTES.operador)}) y el autor <span data-r-explica-autor>Calculando</span>.</p>
+          <p class="reparto__explica">Si una historia de Cacao Media trae al viajero, {porcentaje(PARTES.autor)} va para quien la escribió: vos recibís <span data-r-explica-operador>Calculando</span> ({porcentaje(PARTES.operador)}) y el autor <span data-r-explica-autor>Calculando</span>. El pago al autor se acredita al activar los pagos reales.</p>
         </section>
       </aside>
     </div>
@@ -179,9 +223,40 @@ const OPERADOR_SIN_HISTORIA = PARTES.operador + PARTES.autor;
       <ul class="lista-borradores" data-borradores></ul>
     </section>
   </div>
+  )}
 </Base>
 
 <style>
+  /* Public explanation for signed-out visitors. Same cards as the panel, without the form. */
+  .publico { display: grid; gap: clamp(28px, 4vw, 48px); padding-block: 16px clamp(40px, 6vw, 80px); }
+  .publico__cabeza { display: grid; gap: 14px; max-width: 46rem; }
+  .publico__cabeza h1 { font-size: var(--t-h1); max-width: 20ch; }
+  .publico__bajada { font-size: 1.125rem; line-height: 1.45; max-width: 60ch; color: var(--tinta-suave); }
+  .publico__cabeza .boton { justify-self: start; margin-top: 4px; }
+  .publico__grid { display: grid; gap: clamp(16px, 2.5vw, 24px); }
+  @media (min-width: 860px) {
+    .publico__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; }
+  }
+  .tarjeta-publica {
+    display: grid;
+    gap: 12px;
+    align-content: start;
+    min-width: 0;
+    padding: clamp(18px, 3vw, 28px);
+    background: var(--pulpa);
+    color: var(--tostado);
+    border-radius: var(--radio);
+  }
+  .tarjeta-publica h2 { font-size: var(--t-h2); }
+  .tarjeta-publica p { margin: 0; line-height: 1.5; }
+  .tarjeta-publica a { color: var(--mazorca); }
+  .tarjeta-publica .boton { justify-self: start; }
+  .publico__nota { font-size: 0.875rem; color: var(--tinta-suave); }
+  .publico__reparto { display: grid; gap: 8px; margin: 0; }
+  .publico__reparto > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .publico__reparto dt { font-weight: 600; }
+  .publico__reparto dd { margin: 0; font-family: var(--mono); font-size: 1.125rem; }
+
   .operadores { padding-bottom: clamp(40px, 6vw, 80px); }
   .operadores__cabeza { display: grid; gap: 12px; padding-block: 16px clamp(24px, 4vw, 40px); }
   .aviso-demo { color: var(--arena-oscura); }

@@ -9,6 +9,8 @@ import { seccionPorId, slugTag } from '../../lib/secciones';
 import { autorPorNombre, urlAutor } from '../../lib/autores';
 import WidgetTravel from '../../components/WidgetTravel.astro';
 import PagarBitcoin from '../../components/PagarBitcoin.astro';
+import CompartirHistoria from '../../components/CompartirHistoria.astro';
+import { TRAVEL_URL } from '../../lib/travel';
 
 export async function getStaticPaths() {
   const todas = await todasLasHistorias();
@@ -34,6 +36,8 @@ const d = historia.data;
 const seccion = seccionPorId(d.seccion);
 const autor = autorPorNombre(d.autor);
 const tipo = d.seccion === 'guia' ? 'guía' : d.seccion === 'cronica' ? 'crónica' : 'historia';
+// The absolute address of this story, for the share row.
+const urlHistoria = new URL(`/historias/${historia.id}/`, Astro.site).href;
 ---
 
 <Base titulo={d.titulo} descripcion={d.bajada} seccion={d.seccion} imagen={d.portada}>
@@ -78,6 +82,15 @@ const tipo = d.seccion === 'guia' ? 'guía' : d.seccion === 'cronica' ? 'crónic
 
     <WidgetTravel historia={historia.id} lugar={d.lugar} seccion={d.seccion} />
 
+    {
+      !d.gratis && (
+        <aside class="historia__viaje" aria-label="Cacao Travel">
+          <p>¿Querés ir? Mirá experiencias para vivirlo.</p>
+          <a class="boton" href={`${TRAVEL_URL}/`}>Ver experiencias</a>
+        </aside>
+      )
+    }
+
     <PagarBitcoin coords={d.coords} />
 
     {
@@ -98,6 +111,8 @@ const tipo = d.seccion === 'guia' ? 'guía' : d.seccion === 'cronica' ? 'crónic
       ))}
       <a href="/">Volver al inicio</a>
     </footer>
+
+    <CompartirHistoria titulo={d.titulo} url={urlHistoria} />
   </article>
   <GrillaHistorias titulo="Seguí leyendo" historias={relacionadas} />
 </Base>
@@ -175,6 +190,21 @@ const tipo = d.seccion === 'guia' ? 'guía' : d.seccion === 'cronica' ? 'crónic
   .historia__autor-nombre { font-size: var(--t-h2); font-weight: 800; }
   .historia__autor-nombre a { text-decoration: none; }
   .historia__autor-nombre a:hover { color: inherit; text-decoration: underline; }
+
+  /* The Travel card under a paid story: same width as the text, on the arena ground the other side cards use. */
+  .historia__viaje {
+    width: min(100% - 2 * var(--canal), var(--ancho-lectura));
+    margin: clamp(32px, 5vw, 56px) auto 0;
+    padding: clamp(20px, 3vw, 32px);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px 24px;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--arena);
+    border-radius: var(--radio-chico);
+  }
+  .historia__viaje p { margin: 0; font-size: var(--t-h2); font-weight: 800; line-height: 1.15; letter-spacing: -0.01em; }
 
   .historia__pie {
     width: min(100% - 2 * var(--canal), var(--ancho-lectura));

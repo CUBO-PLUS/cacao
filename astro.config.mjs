@@ -30,6 +30,8 @@ const localizacion = {
 
 // Same palette as the site styles: chocolate for buttons and links, tostado for text.
 const apariencia = {
+  // The "Development mode" label is hidden on the public site. The keys are read from the environment.
+  layout: { unsafe_disableDevelopmentModeWarnings: true },
   variables: {
     colorPrimary: '#5a3221',
     colorText: '#2a1912',

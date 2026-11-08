@@ -76,6 +76,12 @@ async function CatalogoServicios({ busqueda }: { busqueda: PageProps<'/servicios
     cotizacionSegura(),
   ]);
 
+  // A category chip shows only when it has services for the search text. The list above is already
+  // narrowed by category, so the other categories need the search alone. The active chip always stays.
+  const deLaBusqueda = categoriaId === undefined ? servicios : await catalogoServicios({ busqueda: texto });
+  const conServicios = new Set(deLaBusqueda.map((s) => s.categoriaId));
+  const categoriasConServicios = listaCategorias.filter((c) => c.id === categoriaId || conServicios.has(c.id));
+
   const hayFijos = servicios.some((s) => s.tipoPrecio === 'fijo');
 
   return (
@@ -108,7 +114,7 @@ async function CatalogoServicios({ busqueda }: { busqueda: PageProps<'/servicios
                 Todo
               </Chip>
             </li>
-            {listaCategorias.map((c) => (
+            {categoriasConServicios.map((c) => (
               <li key={c.id}>
                 <Chip href={enlaceServicios(texto, c.id)} activo={categoriaId === c.id}>
                   {c.nombre}

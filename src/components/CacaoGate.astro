@@ -91,7 +91,6 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
   </details>
 
   <p class="muro__nota">Pagás una vez, sin cuenta ni suscripción. Este navegador la recuerda y, cuando vuelvas, se abre sola.</p>
-  {demo && <p class="etiqueta muro__demo-nota">Modo demo · no se cobra nada</p>}
 </aside>
 
 <style>
@@ -136,7 +135,6 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
   .muro__nota { font-size: 1rem; color: var(--arena-oscura); }
   .muro__nota--fuerte { color: var(--pulpa); max-width: 42ch; }
   .muro__cerrado { color: var(--arena-oscura); max-width: 40ch; }
-  .muro__demo-nota { color: var(--arena-oscura); }
 
   .muro__precio {
     display: flex;

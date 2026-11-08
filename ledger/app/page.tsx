@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { after, connection } from "next/server";
 
 import { formatoSats, formatoUsd } from "../src/dinero.ts";
-import { URL_GRUPO } from "../src/grupo.ts";
+import { URL_CACAOPAY_NEGOCIOS, URL_GRUPO } from "../src/grupo.ts";
 import { completarAtestaciones } from "../src/emitir.ts";
 import { almacenAtestacionesDeEntorno, almacenDeEntorno } from "../src/servidor/configuracion.ts";
 import { mesActualSv, negociosDelMes } from "../src/servidor/api.ts";
@@ -39,6 +39,30 @@ function plural(n: number, uno: string, varios: string): string {
 function mesEnCurso(ahora: Date): string {
   const texto = new Intl.DateTimeFormat("es-SV", { month: "long", year: "numeric", timeZone: "America/El_Salvador" }).format(ahora);
   return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+// For a merchant: what CacaoLedger does for a business that takes payments with CacaoPay, in three steps and two ways in.
+function ParaNegocios() {
+  return (
+    <section className="bloque para-negocios" aria-labelledby="titulo-negocios-inicio">
+      <h2 id="titulo-negocios-inicio">Para negocios</h2>
+      <p className="intro-negocios">
+        Cada venta pagada en bitcoin o en efectivo se convierte en su documento electrónico (factura 01 o CCF 03), se firma
+        y se envía. CacaoLedger también arma el cierre del día y los libros de IVA del mes.
+      </p>
+      <ol className="pasos">
+        <li>Cobrás con CacaoPay</li>
+        <li>Ledger arma y firma la factura</li>
+        <li>Cerrás el día y el mes sin copiar datos</li>
+      </ol>
+      <div className="acciones-negocios">
+        <Link href="/entrar" className="boton">
+          Entrar
+        </Link>
+        <a href={URL_CACAOPAY_NEGOCIOS}>CacaoPay para negocios</a>
+      </div>
+    </section>
+  );
 }
 
 // The headline figure: what the group sold this month.
@@ -162,6 +186,7 @@ export default async function PaginaTablero() {
           <h1>Tablero</h1>
         </div>
         {intro}
+        <ParaNegocios />
         {estadoSincro}
         <SinDatos />
       </>
@@ -251,6 +276,7 @@ export default async function PaginaTablero() {
         <h1>Tablero</h1>
       </div>
       {intro}
+      <ParaNegocios />
 
       <div className="inicio">
         <MesEnCurso cifras={r.mes} ahora={ahora} />

@@ -120,6 +120,7 @@ const datos = [
                 <div><dt>Cacao Travel</dt><dd data-r-plataforma></dd></div>
                 <div data-fila-autor><dt>Autor de la historia</dt><dd data-r-autor></dd></div>
               </dl>
+              <p class="reserva__autor-nota" data-nota-autor>El pago al autor se acredita al activar los pagos reales.</p>
             </details>
             <p class="reserva__error" id="error-reserva" role="alert" data-error hidden></p>
             <button class="boton" type="submit" data-reservar>Reservar</button>
@@ -373,6 +374,7 @@ const datos = [
   .reserva__total dd { font-size: 1.5rem; letter-spacing: -0.03em; }
   .reserva__reparto summary { cursor: pointer; font-size: 0.875rem; font-weight: 600; min-height: 36px; display: flex; align-items: center; }
   .reserva__reparto dl { margin-top: 8px; }
+  .reserva__autor-nota { margin: 8px 0 0; font-size: 0.8125rem; color: var(--tinta-suave); }
   .reserva__reparto [hidden] { display: none; }
   .reserva__error { padding: 10px 12px; border-radius: 10px; background: var(--criollo); color: var(--pulpa); font-size: 0.9375rem; }
   .reserva__error[hidden], .reserva__lista[hidden] { display: none; }
@@ -505,6 +507,7 @@ const datos = [
       poner('[data-r-plataforma]', sats(plataforma));
       poner('[data-r-autor]', sats(autor));
       caja.querySelector<HTMLElement>('[data-fila-autor]')!.hidden = !conAutor;
+      caja.querySelector<HTMLElement>('[data-nota-autor]')!.hidden = !conAutor;
       menos.disabled = personas <= min;
       mas.disabled = personas >= max;
     };

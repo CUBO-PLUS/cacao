@@ -22,6 +22,15 @@ export function etiquetaTipo(clave: string | null | undefined): string {
   return TIPOS_NEGOCIO.find((t) => t.clave === clave)?.etiqueta ?? 'Otro';
 }
 
+/**
+ * A test business, made to try the flow and not a real shop: its name starts with "Prueba", in any case or accent.
+ * There is no flag for it in the database, so the name is the rule. Public lists leave these out.
+ */
+export function esNegocioDePrueba(nombre: string): boolean {
+  const sinAcentos = nombre.normalize('NFD').replace(/\p{Diacritic}/gu, '').trim();
+  return /^prueba\b/i.test(sinAcentos);
+}
+
 /** A counter sale: one US cent is the smallest amount, $10,000 the largest. Same as the payments API. */
 export const COBRO_MIN_CENTAVOS = 100;
 export const COBRO_MAX_CENTAVOS = 1_000_000;

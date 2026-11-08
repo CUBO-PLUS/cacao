@@ -17,9 +17,11 @@ async function entrar(page: Page): Promise<void> {
   if (!page.url().endsWith('/operadores/')) await page.goto('/operadores/');
 }
 
-test('/operadores sin sesión redirige a /entrar/', async ({ page }) => {
+test('/operadores sin sesión muestra la explicación pública y el panel no aparece', async ({ page }) => {
   await page.goto('/operadores/');
-  await expect(page).toHaveURL(/\/entrar\/?$/);
+  await expect(page.getByRole('heading', { name: 'Llevá tu experiencia a Cacao Travel', level: 1 })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Entrar a tu panel' }).first()).toHaveAttribute('href', '/entrar/');
+  await expect(page.locator('[data-form]')).toHaveCount(0);
 });
 
 test('/entrar/ muestra un solo título visible, centrado', async ({ page }) => {

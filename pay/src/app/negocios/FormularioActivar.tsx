@@ -56,7 +56,7 @@ export function FormularioActivar({ nombre, ubicacion, tipo, pideDatos, pideTipo
               defaultValue={estado.ubicacion}
               required
             />
-            <p className={estilos.ayuda}>Colonia, calle o zona, por ejemplo "Colonia Escalón, San Salvador".</p>
+            <p className={estilos.ayuda}>Colonia, calle o zona, por ejemplo &ldquo;Colonia Escalón, San Salvador&rdquo;.</p>
           </div>
         </>
       )}

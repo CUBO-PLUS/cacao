@@ -13,7 +13,7 @@ const CACHE_FALLO_MS = 10_000;
 const FORMATO = /^https?:\/\/[^/\s]+$/;
 
 // Shown to the payer when BTCPay cannot be reached or fails on its side.
-export const MENSAJE_PAUSA = 'Los pagos están en pausa por unos minutos. Probá de nuevo en un rato.';
+export const MENSAJE_PAUSA = 'Los pagos no están disponibles en este momento. Probá de nuevo más tarde.';
 
 type Entorno = Record<string, string | undefined>;
 

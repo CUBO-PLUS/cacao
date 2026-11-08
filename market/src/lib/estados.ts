@@ -199,6 +199,12 @@ function disputaPosible(orden: OrdenParaAcciones, ahora: Date): boolean {
   return false;
 }
 
+// A review is for a real sale. A demo order never takes one, and that includes a delivery the buyer
+// simulated: the database cannot tell a simulated delivery apart, so every demo order is covered.
+function puedeResenar(orden: OrdenParaAcciones): boolean {
+  return !orden.tieneResena && orden.demo !== true;
+}
+
 // Refund steps after a dispute is resolved with a refund. Products and paid jobs share them.
 function accionesDeReembolso(orden: OrdenParaAcciones, rol: Rol): Accion[] {
   const acciones: Accion[] = [];
@@ -251,7 +257,7 @@ function accionesDeProducto(orden: OrdenParaAcciones, rol: Rol, ahora: Date): Ac
       break;
     case 'entregada':
     case 'cerrada':
-      if (comprador && !orden.tieneResena) acciones.push('resenar');
+      if (comprador && puedeResenar(orden)) acciones.push('resenar');
       break;
     case 'disputada':
       if (admin) acciones.push('resolver_disputa');
@@ -291,7 +297,7 @@ function accionesDeTrabajo(orden: OrdenParaAcciones, rol: Rol, ahora: Date): Acc
       break;
     case 'entregada':
     case 'cerrada':
-      if (comprador && !orden.tieneResena) acciones.push('resenar');
+      if (comprador && puedeResenar(orden)) acciones.push('resenar');
       break;
     case 'disputada':
       if (admin) acciones.push('resolver_disputa');

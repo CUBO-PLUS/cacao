@@ -4,6 +4,7 @@ import {
   agregarDigito,
   centavosDesdeTexto,
   COBRO_MAX_CENTAVOS,
+  esNegocioDePrueba,
   esTipoNegocio,
   estadoAMostrar,
   etiquetaTipo,
@@ -59,6 +60,20 @@ describe('montos de un cobro', () => {
     expect(formatoDolares(350)).toBe('$3.50');
     expect(formatoDolares(1_000_000)).toBe('$10,000.00');
     expect(formatoDolares(123_456_78)).toBe('$123,456.78');
+  });
+});
+
+describe('negocios de prueba fuera de las listas públicas', () => {
+  it('reconoce un nombre que empieza con Prueba, sin importar mayúsculas ni acentos', () => {
+    expect(esNegocioDePrueba('Prueba Cafe Escalon')).toBe(true);
+    expect(esNegocioDePrueba('PRUEBA tienda')).toBe(true);
+    expect(esNegocioDePrueba('  prueba  ')).toBe(true);
+    expect(esNegocioDePrueba('Pruebas Café')).toBe(false);
+  });
+
+  it('no toma por prueba un nombre donde la palabra aparece en medio', () => {
+    expect(esNegocioDePrueba('Cafetería La Prueba')).toBe(false);
+    expect(esNegocioDePrueba('Pupusería Doña Ana')).toBe(false);
   });
 });
 

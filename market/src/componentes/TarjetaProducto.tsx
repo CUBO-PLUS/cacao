@@ -36,7 +36,10 @@ export function TarjetaProducto({
           </Link>
         </h3>
         <p className="tarjeta__dato">
-          {producto.negocioNombre} <EtiquetaEjemplo activo={esDemo(producto.btcmapId)} />
+          <Link href={`/negocios/${producto.negocioId}`} className="tarjeta__negocio" prefetch={false}>
+            {producto.negocioNombre}
+          </Link>{' '}
+          <EtiquetaEjemplo activo={esDemo(producto.btcmapId)} />
         </p>
         {producto.negocioPromedio !== null && producto.negocioResenas > 0 && (
           <Estrellas valor={producto.negocioPromedio} cantidad={producto.negocioResenas} />

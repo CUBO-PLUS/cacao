@@ -6,11 +6,13 @@ Este documento consolida el análisis legal, contable, operativo y estratégico 
 
 ## 1. Marco regulatorio y límite frente a la CNAD y la Ley Bitcoin (§4.1)
 
+> **Nota sobre la billetera de cobro:** los productos que corren hoy cobran con BTCPay Server autoalojado (ver `infra/btcpay/README.md`). Blink queda solo como el adaptador de webhook que sugirió el reto de facturación. Donde esta sección dice "billetera de Blink", léase la billetera de BTCPay del comercio.
+
 ### 1.1 Naturaleza no custodial de CacaoLedger
 CacaoLedger es software de punto de venta, facturación electrónica y libros auxiliares de IVA. En ningún punto del flujo recibe, retiene, convierte ni transfiere fondos de terceros:
 
 1. **Pagos en efectivo (`01`)**: el comercio recibe los dólares directamente en su caja.
-2. **Pagos por Lightning (`11` / `99`)**: el pago entra directamente a la billetera de **Blink** perteneciente al propio comercio. Cuando el comercio configura una llave de API de Blink para verificar cobros o suscribir el webhook `receive.lightning`, el alcance de permisos exigido es exclusivamente de **lectura y recepción (`READ` y `RECEIVE`)**, nunca de envío (`WRITE`).
+2. **Pagos por Lightning (`11` / `99`)**: el cobro se hace con una factura de **BTCPay Server**, el servidor de pagos autoalojado de Grupo Cacao (ver `infra/btcpay/README.md`). Cada tienda recibe en su propia billetera, y BTCPay no custodia dinero. Si un comercio conecta el adaptador de **Blink** para verificar cobros o suscribir el webhook `receive.lightning`, el alcance de permisos exigido es exclusivamente de **lectura y recepción (`READ` y `RECEIVE`)**, nunca de envío (`WRITE`).
 3. **Certificado de firma electrónica**: la llave privada del certificado de Hacienda permanece bajo control exclusivo del comercio contribuyente. Es una decisión de diseño. No pudimos recuperar el texto de MTIST 2.0 §6.4, así que no afirmamos que ese manual lo exija.
 
 ### 1.2 Exclusión del registro como PSAD ante la CNAD y como Proveedor de Servicios Bitcoin
@@ -20,7 +22,7 @@ CacaoLedger es software de punto de venta, facturación electrónica y libros au
 ### 1.3 Qué cambiaría si CacaoLedger agregara liquidación agrupada o conversión en nombre del comercio
 Si en el futuro CacaoLedger recibiera los satoshis de varios comercios en una billetera concentradora propia para luego liquidarles dólares en cuenta bancaria una vez por semana:
 - Pasaría a actuar como custodio e intermediario financiero de activos digitales.
-- Requeriría inscripción previa como **PSAD** ante la **CNAD**, programa de cumplimiento antilavado ante la **Unidad de Investigación Financiera (UIF)** de la Fiscalía General de la República y segregación patrimonial de cuentas. Por diseño arquitectónico, CacaoLedger evita ese modelo y mantiene la liquidación directa en la cuenta de Blink de cada comercio.
+- Requeriría inscripción previa como **PSAD** ante la **CNAD**, programa de cumplimiento antilavado ante la **Unidad de Investigación Financiera (UIF)** de la Fiscalía General de la República y segregación patrimonial de cuentas. Por diseño arquitectónico, CacaoLedger evita ese modelo y mantiene la liquidación directa en la cuenta de billetera de cada comercio (BTCPay hoy; la cuenta de Blink solo si se usa el adaptador).
 
 ---
 
@@ -63,7 +65,7 @@ Al operar sobre archivos JSON/JSONL deterministas, validación local Ajv y gener
   1. **Comercio Semilla (`$9.00 / mes` + IVA)**: hasta 300 DTE mensuales (`01` y `03`), cierre diario con alerta de huérfanos y plazos de 24 horas, cadena de atestación de tasa BTC/USD y generación automática de Libros de IVA y Anexos 1 y 2 para F-07 y F-14 v17.
   2. **Comercio Cosecha (`$24.00 / mes` + IVA)**: hasta 2,500 DTE mensuales, múltiples puntos de venta (`M001P001`, `M001P002`), importación automática de pedidos de CacaoMarket y exportación directa para despacho contable.
   3. **Despacho Contable (`$65.00 / mes` + IVA)**: consola multi-NRC para contadores que atienden hasta 15 comercios, descargando en un clic los 4 CSV mensuales de cada cliente antes del día 10 hábil.
-- **Punto de equilibrio**: con 120 comercios en el plan Semilla/Cosecha y 15 despachos contables, el ingreso recurrente mensual supera los `$2,500.00` con margen bruto superior al 85 %. Para el comercio, un año completo del plan Semilla (`$108.00`) cuesta **34 veces menos** que el piso de 9 salarios mínimos del Art. 239-A lit. c (`$3,679.20`).
+- **Punto de equilibrio**: con 120 comercios y 15 despachos contables (precios sin IVA): si los 120 están en Semilla, el ingreso recurrente es 120 × $9 + 15 × $65 = `$2,055.00` al mes; si los 120 están en Cosecha, 120 × $24 + 15 × $65 = `$3,855.00`. Cualquier mezcla cae entre esas dos cifras, así que la cifra anterior de más de `$2,500.00` suponía una mezcla que no se mostró. Con un costo de `$1.50` por comercio (sin contar el costo de los despachos), el margen bruto es cerca de 83 % en Semilla (`$7.50` de `$9`) y 94 % en Cosecha (`$22.50` de `$24`). Para el comercio, un año completo del plan Semilla (`$108.00`) cuesta **34 veces menos** que el piso de 9 salarios mínimos del Art. 239-A lit. c (`$3,679.20`).
 
 ---
 
@@ -77,7 +79,7 @@ A continuación se presenta el texto íntegro de la consulta vinculante redactad
 **MINISTERIO DE HACIENDA**
 **PRESENTE.**
 
-Yo, **[NOMBRE DEL REPRESENTANTE LEGAL]**, mayor de edad, **[profesión u oficio]**, del domicilio de San Salvador, departamento de San Salvador, portador de mi Documento Único de Identidad número **[00000000-0]**, actuando en nombre y representación en mi calidad de Administrador Único Propietario y Representante Legal de la sociedad **CACAO DE EL SALVADOR, SOCIEDAD ANÓNIMA DE CAPITAL VARIABLE**, que puede abreviarse **CACAO DE EL SALVADOR, S.A. DE C.V.**, con Número de Identificación Tributaria (NIT) **[0614-120826-104-9]** y Número de Registro de Contribuyente (NRC) **[314820-7]**, señalando para oír notificaciones la dirección ubicada en Colonia Escalón, San Salvador Centro, departamento de San Salvador, y el buzón electrónico registrado en el Sistema de Notificación Electrónica del Ministerio de Hacienda; con el debido respeto y con fundamento en los **Artículos 26 (no verificado), 119-A (no verificado), 119-B, 119-C, 119-G y 141 (no verificado) del Código Tributario**, formulo **CONSULTA VINCULANTE** sobre la aplicación de las normas tributarias y los esquemas técnicos de Documentos Tributarios Electrónicos (DTE) a las operaciones de venta cobradas mediante la red Lightning de Bitcoin, con base en los hechos y consideraciones siguientes:
+Yo, **[NOMBRE DEL REPRESENTANTE LEGAL]**, mayor de edad, **[profesión u oficio]**, del domicilio de San Salvador, departamento de San Salvador, portador de mi Documento Único de Identidad número **[00000000-0]**, actuando en nombre y representación en mi calidad de Administrador Único Propietario y Representante Legal de la sociedad **CACAO DE EL SALVADOR, SOCIEDAD ANÓNIMA DE CAPITAL VARIABLE**, que puede abreviarse **CACAO DE EL SALVADOR, S.A. DE C.V.**, con Número de Identificación Tributaria (NIT) **[NIT]** y Número de Registro de Contribuyente (NRC) **[NRC]**, señalando para oír notificaciones la dirección ubicada en Colonia Escalón, San Salvador Centro, departamento de San Salvador, y el buzón electrónico registrado en el Sistema de Notificación Electrónica del Ministerio de Hacienda; con el debido respeto y con fundamento en los **Artículos 26 (no verificado), 119-A (no verificado), 119-B, 119-C, 119-G y 141 (no verificado) del Código Tributario**, formulo **CONSULTA VINCULANTE** sobre la aplicación de las normas tributarias y los esquemas técnicos de Documentos Tributarios Electrónicos (DTE) a las operaciones de venta cobradas mediante la red Lightning de Bitcoin, con base en los hechos y consideraciones siguientes:
 
 ### I. EXPOSICIÓN DE LOS HECHOS Y OPERACIÓN TÉCNICA
 1. Mi representada desarrolla actividades comerciales gravadas con el Impuesto a la Transferencia de Bienes Muebles y a la Prestación de Servicios (IVA) al trece por ciento (`13 %`), emitiendo **Facturas de Consumidor Final (`tipoDte = "01"`)** y **Comprobantes de Crédito Fiscal (`tipoDte = "03"`)** en dólares de los Estados Unidos de América (`USD`).

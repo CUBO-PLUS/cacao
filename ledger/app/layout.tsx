@@ -55,6 +55,8 @@ const apariencia = {
     card: { boxShadow: "none" },
     headerTitle: { display: "none" },
   },
+  // The Development mode badge is not shown to visitors. The keys and environment variables stay as they are.
+  layout: { unsafe_disableDevelopmentModeWarnings: true },
 };
 
 export const metadata: Metadata = {
@@ -139,7 +141,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
               {children}
             </main>
             <footer className="pie">
-              <p>Demo de Grupo Cacao. Sellos de Hacienda simulados; pagos en bitcoin de prueba.</p>
+              <p>Demostración: sellos de prueba, no de Hacienda; pagos en bitcoin de prueba.</p>
               <p>
                 <a href={URL_GRUPO}>Grupo Cacao</a> · <a href={URL_TERMINOS}>Términos y privacidad</a>
               </p>

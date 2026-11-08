@@ -578,6 +578,10 @@ export async function crearResena(
   comentario: string,
 ): Promise<Resultado<null>> {
   if (!esUuid(ordenId) || !esUuid(usuarioId)) return NO_ENCONTRADA();
+  // A demo order (or one whose delivery was simulated) is not a real sale, so it takes no review.
+  if (await esOrdenDemo(ordenId)) {
+    return fallo('NO_PERMITIDO', 'Los pedidos de demostración no admiten reseñas.');
+  }
   if (!Number.isInteger(puntuacion) || puntuacion < 1 || puntuacion > 5) {
     return fallo('DATOS_INVALIDOS', 'Elegí una puntuación de 1 a 5.');
   }

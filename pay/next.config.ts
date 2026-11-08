@@ -14,6 +14,19 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: raiz,
   },
+  // Plain security headers on every route. No Content-Security-Policy here.
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+        ],
+      },
+    ];
+  },
   // The admin panel used to live at /monitor. Old links still land on it.
   async redirects() {
     return [

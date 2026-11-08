@@ -51,6 +51,10 @@ const localizacion = {
 
 // Same palette as globals.css: chocolate for buttons and links, tostado for text.
 const apariencia = {
+  // Hides Clerk's "Development mode" label. The keys are unchanged.
+  layout: {
+    unsafe_disableDevelopmentModeWarnings: true,
+  },
   variables: {
     colorPrimary: '#5a3221',
     colorText: '#2a1912',
@@ -101,14 +105,16 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
             Saltar al contenido
           </a>
           <div className="hoja">
-            <p className="cinta">Demo: los pagos usan bitcoin de prueba.</p>
             <Cabecera />
             <main id="contenido" tabIndex={-1} className="principal">
               <div className="contenedor">{children}</div>
             </main>
             <footer className="pie">
               <div className="contenedor">
-                <a href="https://cacao-grupo.vercel.app/legal.html">Términos y privacidad</a>
+                <p>
+                  <a href="https://cacao-grupo.vercel.app/legal.html">Términos y privacidad</a>
+                </p>
+                <p className="pie__nota">Demostración: los pagos usan bitcoin de prueba.</p>
               </div>
             </footer>
           </div>

@@ -233,6 +233,26 @@ describe('demo sellers: the buyer may simulate a pickup delivery', () => {
   });
 });
 
+describe('demo orders never take a review', () => {
+  it('a demo order delivered or closed offers the buyer no review, simulated or not', () => {
+    for (const estado of ['entregada', 'cerrada'] as EstadoOrden[]) {
+      expect(ver(orden({ demo: true, estado, entregadaEn: ENTREGA }), 'comprador', AHORA)).not.toContain('resenar');
+      expect(ver(orden({ demo: true, estado, tipo: 'servicio', entregadaEn: ENTREGA }), 'comprador', AHORA)).not.toContain(
+        'resenar',
+      );
+    }
+  });
+
+  it('a real order delivered or closed still offers the review', () => {
+    expect(ver(orden({ demo: false, estado: 'entregada', entregadaEn: ENTREGA }), 'comprador', AHORA)).toContain('resenar');
+    expect(ver(orden({ estado: 'cerrada', entregadaEn: ENTREGA }), 'comprador', AHORA)).toContain('resenar');
+  });
+
+  it('a real order that already has a review offers no second one', () => {
+    expect(ver(orden({ demo: false, estado: 'cerrada', tieneResena: true }), 'comprador', AHORA)).not.toContain('resenar');
+  });
+});
+
 describe('product orders: buyer cancellation before payment', () => {
   it('the buyer cancels while creada or esperando_pago, and never once paid', () => {
     for (const estado of ['creada', 'esperando_pago'] as EstadoOrden[]) {

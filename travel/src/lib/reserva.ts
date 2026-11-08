@@ -7,7 +7,7 @@ import { ErrorPay } from './cacaopay';
 import { urlBtcpay } from './url-btcpay';
 
 /** What the reader sees when BTCPay cannot be reached. Never a stack trace. */
-export const PAUSA_BTCPAY = 'Los pagos están en pausa por unos minutos. Probá de nuevo en un rato.';
+export const PAUSA_BTCPAY = 'Los pagos no están disponibles en este momento. Probá de nuevo más tarde.';
 
 /**
  * True when the payment service did not answer (status 0), failed on its side (5xx) or is rate limited (429).

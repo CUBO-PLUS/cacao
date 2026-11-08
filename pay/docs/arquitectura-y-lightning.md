@@ -56,13 +56,15 @@ Todo el dinero se almacena y opera en enteros para evitar errores de punto flota
 
 ## 4. Camino de integración con Bitcoin y Lightning en producción
 
+> **Nota:** los productos que corren hoy cobran con BTCPay Server autoalojado, descrito en las secciones 5 y 6 (y en `infra/btcpay/README.md`). Esta sección conserva el diseño original, que pensaba en Blink para el cobro y el pago. Blink queda solo como un adaptador posible; el código implementado no lo usa para cobrar.
+
 El simulador ya conserva la estructura de estados (`creada` → `procesando` → `completada` / `fallida` / `cancelada`), las tasas con marca de tiempo y las validaciones del servidor que requiere un corredor real sobre Lightning. Para conectar pagos reales sin alterar las pantallas ni el contrato de las funciones actuales, la integración se divide en tres etapas:
 
 ### 4.1 Etapa 1: Cobro en origen (Funding)
 
 Cuando el remitente pulsa **"Enviar ahora"** en `/envios/[id]` (transición de `creada` a `procesando`):
 1. **Riel fiat (ACH, tarjeta con 3DS o SEPA en euros)**: se crea un `PaymentIntent` en el procesador de entrada con `metadata.transferencia_id = envio.id` y `idempotencyKey = envio.clave_idempotencia`.
-2. **Riel Lightning de entrada (si el remitente fondea con Bitcoin)**: se solicita una factura BOLT11 a través de la API de **Blink** (`lnInvoiceCreateOnBehalfOfRecipient` o `lnUsdInvoiceCreate` con Stablesats en USD) por el monto exacto de la transferencia, almacenando el `paymentHash` y la fecha de expiración.
+2. **Riel Lightning de entrada (si el remitente fondea con Bitcoin)**: se solicita una factura BOLT11 por el monto exacto de la transferencia, almacenando el `paymentHash` y la fecha de expiración. En el diseño original esa factura venía de la API de **Blink**; hoy la factura es de **BTCPay** (sección 5), con `crearFactura` y solo `BTC-LN`.
 3. Al confirmarse el cobro mediante webhook firmado del proveedor (`payment_intent.succeeded` o `receive.lightning`), el servidor invoca `pay_procesar(envioId, actorId)` y la transferencia pasa a **"En camino" (`procesando`)**.
 
 ### 4.2 Etapa 2: Liquidación al destinatario en El Salvador (Payout)
@@ -71,7 +73,7 @@ Una vez que la transferencia entra en `procesando`, el despachador de pagos ejec
 
 1. **`entrega = 'lightning'` (Liquidación en satoshis)**:
    - El campo `destinatario_contacto` o la dirección Lightning configurada por el destinatario se resuelve mediante **LNURL-pay (LUD-06 / LUD-16)** para obtener una factura BOLT11 por exactamente `envio.monto_destino` satoshis.
-   - El nodo o cuenta operativa en **Blink** / **LND** / **NWC** paga la factura verificando antes que:
+   - El nodo o cuenta operativa paga la factura (en el diseño original, **Blink**, **LND** o **NWC**; hoy el cobro del destinatario usa la API Pay de **BTCPay**, sección 6) verificando antes que:
      - el monto de la factura coincida exactamente con `envio.monto_destino` sats;
      - la comisión de enrutamiento de la red Lightning (`max_fee_sats`) no supere el presupuesto de ruta (por ejemplo `0.15%`).
    - Al recibir el `payment_preimage` criptográfico que demuestra la liquidación atómica en Lightning, el webhook o trabajador del servidor invoca `pay_completar(envioId, null)` y guarda el `payment_hash` en el detalle de `pay_historial`.

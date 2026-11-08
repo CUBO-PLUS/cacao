@@ -166,18 +166,6 @@ main:focus {
   border-radius: 0 0 var(--radio) var(--radio);
 }
 
-.cinta {
-  padding: 4px var(--canal);
-  background: var(--arena);
-  color: var(--tostado);
-  font-family: var(--mono);
-  font-size: 0.75rem;
-  line-height: 1.4;
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 
 /* Header */
 .cabecera {
@@ -374,6 +362,16 @@ main:focus {
   padding-block: 0 20px;
   font-size: 0.875rem;
   text-align: center;
+}
+
+.pie p {
+  margin: 0;
+}
+
+/* The one short demo line under the legal link. */
+.pie__nota {
+  margin-top: 4px;
+  font-size: 0.75rem;
 }
 
 /* Buttons and chips */
@@ -669,6 +667,16 @@ main:focus {
 .tarjeta__dato {
   font-size: 0.875rem;
   overflow-wrap: anywhere;
+}
+
+/* The seller's shop link. It sits above the card's stretched title link, so it can be tapped. */
+.tarjeta__negocio {
+  position: relative;
+  z-index: 1;
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
 }
 
 .tarjeta__estados {

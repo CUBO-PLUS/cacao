@@ -1,19 +1,29 @@
-/* Storage notice in the page flow: tostado bar, pulpa text, mazorca link and button. */
+/* Storage notice: a slim bar fixed above the phone tab bar (64px), so it never covers the tabs. */
 .aviso {
+  position: fixed;
+  inset: auto 0 calc(var(--barra-alto) + env(safe-area-inset-bottom)) 0;
+  z-index: 9;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
-  gap: 8px 16px;
-  padding: 10px var(--canal);
+  gap: 10px;
+  padding: 8px var(--canal);
   background: var(--tostado);
   color: var(--pulpa);
-  font-size: 0.875rem;
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+/* Wide screens have no tab bar, so the notice sits on the bottom edge. */
+@media (min-width: 900px) {
+  .aviso {
+    bottom: 0;
+  }
 }
 
 .texto {
+  flex: 1 1 auto;
+  min-width: 0;
   margin: 0;
-  max-width: 72ch;
 }
 
 .texto a {
@@ -21,8 +31,9 @@
 }
 
 .ok {
-  min-height: 40px;
-  padding: 0 18px;
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 14px;
   border: 0;
   border-radius: 999px;
   background: var(--mazorca);

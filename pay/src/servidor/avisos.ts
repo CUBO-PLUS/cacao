@@ -141,6 +141,8 @@ export async function publicarAviso(
   const pedir = destino.protocol === 'https:' ? pedirHttps : pedirHttp;
   await new Promise<void>((entregar, rechazar) => {
     let terminado = false;
+    // Assigned once the request is started, below; the finish handler needs it declared before that.
+    // eslint-disable-next-line prefer-const -- set after the handler is declared, so it stays a let
     let reloj: ReturnType<typeof setTimeout> | undefined;
     const terminar = (error?: Error) => {
       if (terminado) return;

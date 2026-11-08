@@ -1,28 +1,35 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 
 import styles from './AvisoCookies.module.css';
 
 const CLAVE_AVISO = 'cacao-aviso-cookies';
 
-// Cookie notice in the page flow. Renders nothing on the server and on the first client render, so the
-// markup matches; it shows itself after mount unless this browser already dismissed it.
+// The browser's own answer is read from storage; nothing changes it while the page is open, so there is nothing to
+// subscribe to.
+function suscribir() {
+  return () => {};
+}
+
+function yaVisto(): boolean {
+  try {
+    return localStorage.getItem(CLAVE_AVISO) === '1';
+  } catch {
+    return false;
+  }
+}
+
+// Cookie notice: a slim bar fixed above the phone tab bar. The server and the first client render count it as seen,
+// so the markup matches and nothing flashes; the bar shows itself once the browser says it was not dismissed.
 export function AvisoCookies() {
-  const [visible, setVisible] = useState(false);
+  const visto = useSyncExternalStore(suscribir, yaVisto, () => true);
+  const [cerrado, setCerrado] = useState(false);
 
-  useEffect(() => {
-    let visto = false;
-    try {
-      visto = localStorage.getItem(CLAVE_AVISO) === '1';
-    } catch {}
-    if (!visto) setVisible(true);
-  }, []);
-
-  if (!visible) return null;
+  if (visto || cerrado) return null;
 
   function entender() {
-    setVisible(false);
+    setCerrado(true);
     try {
       localStorage.setItem(CLAVE_AVISO, '1');
     } catch {}
@@ -31,7 +38,7 @@ export function AvisoCookies() {
   return (
     <aside className={styles.aviso} aria-label="Cookies y almacenamiento">
       <p className={styles.texto}>
-        Usamos cookies para tu sesión y contamos visitas sin saber quién sos. Sin publicidad.{' '}
+        Usamos cookies y el almacenamiento del navegador solo para que el sitio funcione. Sin publicidad ni rastreo.{' '}
         <a className={styles.enlace} href="https://cacao-grupo.vercel.app/legal.html">
           Privacidad
         </a>

@@ -22,6 +22,19 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: raiz,
   },
+  // Response headers for every route. No Content-Security-Policy here.
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+        ],
+      },
+    ];
+  },
   async rewrites() {
     return [
       { source: `/productos/:id(${ID_NO_UUID})`, destination: '/no-existe' },

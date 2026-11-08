@@ -56,6 +56,10 @@ const apariencia = {
     colorBackground: '#fffaf4',
     fontFamily: 'var(--font-bricolage), system-ui, sans-serif',
   },
+  // Hides Clerk's "Development mode" text. The keys stay as they are.
+  layout: {
+    unsafe_disableDevelopmentModeWarnings: true,
+  },
   // The page shows its own title, so the card keeps only the step's instructions. A flat card with a thin
   // border matches the other cards of the site.
   elements: {
@@ -104,7 +108,7 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
               <div className="contenedor">{children}</div>
             </main>
             <p className="pie-demo">
-              Demo de Grupo Cacao · bitcoin de prueba (regtest), sin valor · tasas de demostración ·{' '}
+              Demostración: los pagos usan bitcoin de prueba.{' '}
               <a href="https://cacao-grupo.vercel.app/legal.html">Términos y privacidad</a>
             </p>
           </div>

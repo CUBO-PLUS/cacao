@@ -125,7 +125,7 @@ describe('devolverEnvio: the sender takes the money back, once, through BTCPay',
     expect(r).toEqual({
       ok: false,
       codigo: 'NO_DISPONIBLE',
-      mensaje: 'Los pagos están en pausa por unos minutos. Probá de nuevo en un rato.',
+      mensaje: 'Los pagos no están disponibles en este momento. Probá de nuevo más tarde.',
     });
     expect(rpc).toHaveBeenCalledTimes(1);
     expect(rpc).toHaveBeenCalledWith('pay_iniciar_devolucion', expect.any(Object));

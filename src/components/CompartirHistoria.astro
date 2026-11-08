@@ -1,0 +1,93 @@
+---
+// Share row at the end of a story: a WhatsApp link, the native share sheet where the browser has one, and a copy-link button.
+interface Props {
+  titulo: string;
+  /** Absolute address of the story page. */
+  url: string;
+}
+const { titulo, url } = Astro.props;
+// The share text is the title and the address, encoded once for the wa.me query string.
+const whatsapp = `https://wa.me/?text=${encodeURIComponent(`${titulo} ${url}`)}`;
+---
+
+<section class="compartir" aria-labelledby="compartir-titulo" data-compartir data-url={url} data-titulo={titulo}>
+  <h2 id="compartir-titulo" class="etiqueta">Compartir esta historia</h2>
+  <div class="compartir__acciones">
+    <a class="compartir__boton compartir__boton--wa" href={whatsapp} rel="noopener">WhatsApp</a>
+    <button type="button" class="compartir__boton" data-compartir-nativo hidden>Compartir</button>
+    <button type="button" class="compartir__boton" data-compartir-copiar>Copiar enlace</button>
+  </div>
+  <p class="compartir__estado" role="status" aria-live="polite" data-compartir-estado></p>
+</section>
+
+<style>
+  .compartir {
+    width: min(100% - 2 * var(--canal), var(--ancho-lectura));
+    margin: clamp(32px, 5vw, 56px) auto 0;
+    display: grid;
+    gap: 12px;
+    justify-items: start;
+  }
+  .compartir__acciones { display: flex; flex-wrap: wrap; gap: 8px; }
+  .compartir__boton {
+    min-height: 44px;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--tostado);
+    color: var(--pulpa);
+    font: inherit;
+    font-size: var(--t-etiqueta);
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+  }
+  .compartir__boton:hover { background: var(--mazorca); color: var(--tostado); }
+  .compartir__boton--wa { background: var(--chocolate); color: var(--pulpa); }
+  .compartir__boton[hidden] { display: none; }
+  .compartir__estado { margin: 0; min-height: 1.4em; color: var(--tinta-suave); font-size: var(--t-etiqueta); }
+</style>
+
+<script>
+  // How long the copy button keeps its "Copiado" label before it goes back to "Copiar enlace".
+  const CONFIRMACION_MS = 2000;
+
+  for (const bloque of document.querySelectorAll<HTMLElement>('[data-compartir]')) {
+    const url = bloque.dataset.url ?? location.href;
+    const titulo = bloque.dataset.titulo ?? document.title;
+    const estado = bloque.querySelector<HTMLElement>('[data-compartir-estado]');
+    const nativo = bloque.querySelector<HTMLButtonElement>('[data-compartir-nativo]');
+    const copiar = bloque.querySelector<HTMLButtonElement>('[data-compartir-copiar]');
+    const etiquetaCopiar = copiar?.textContent ?? 'Copiar enlace';
+    let reinicio: number | undefined;
+
+    // The native sheet only where the browser has one; elsewhere the WhatsApp and copy buttons are enough.
+    if (nativo && typeof navigator.share === 'function') {
+      nativo.hidden = false;
+      nativo.addEventListener('click', async () => {
+        try {
+          await navigator.share({ title: titulo, url });
+        } catch {
+          // The reader closed the sheet or the browser refused it: nothing to show.
+        }
+      });
+    }
+
+    copiar?.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(url);
+        if (copiar) copiar.textContent = 'Copiado';
+        if (estado) estado.textContent = 'Enlace copiado.';
+      } catch {
+        if (estado) estado.textContent = 'No pudimos copiar el enlace. Copialo desde la barra del navegador.';
+      }
+      window.clearTimeout(reinicio);
+      reinicio = window.setTimeout(() => {
+        if (copiar) copiar.textContent = etiquetaCopiar;
+        if (estado) estado.textContent = '';
+      }, CONFIRMACION_MS);
+    });
+  }
+</script>

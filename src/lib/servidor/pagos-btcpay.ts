@@ -4,7 +4,7 @@ import { configDesdeEntorno, ErrorBtcpay, type ConfigBtcpay } from './btcpay';
 import { urlBtcpay } from './url-btcpay';
 
 /** What the reader sees when BTCPay cannot be reached. Never a stack trace. */
-export const PAUSA_BTCPAY = 'Los pagos están en pausa por unos minutos. Probá de nuevo en un rato.';
+export const PAUSA_BTCPAY = 'Los pagos no están disponibles en este momento. Probá de nuevo más tarde.';
 
 function variable(nombre: string): string | undefined {
   const deAstro = (import.meta.env as Record<string, string | undefined>)[nombre];

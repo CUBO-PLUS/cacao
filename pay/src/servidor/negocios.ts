@@ -8,7 +8,7 @@ import 'server-only';
 import { randomBytes } from 'node:crypto';
 
 import { hashClave, LIMITES, type Producto } from '@/lib/api-cobros';
-import { estadoAMostrar } from '@/lib/cobro-negocio';
+import { esNegocioDePrueba, estadoAMostrar } from '@/lib/cobro-negocio';
 import {
   inicioDelDiaSV,
   inicioDelMesSV,
@@ -349,7 +349,7 @@ export async function nombrePublico(negocioId: string): Promise<string | null> {
   return Array.isArray(negocio) ? (negocio[0]?.nombre ?? null) : negocio.nombre;
 }
 
-/** The businesses that charge with CacaoPay, for the "Dónde gastar" list. */
+/** The businesses that charge with CacaoPay, for the "Dónde gastar" list. Test businesses ("Prueba...") are left out. */
 export async function negociosQueCobran(): Promise<{ id: string; nombre: string; ubicacion: string; tipo: string | null }[]> {
   const { data, error } = await clienteServicio()
     .from('pay_negocios')
@@ -363,7 +363,9 @@ export async function negociosQueCobran(): Promise<{ id: string; nombre: string;
       | { id: string; nombre: string; ubicacion: string; tipo_negocio: string | null }[]
       | null;
     const uno = Array.isArray(n) ? n[0] : n;
-    if (uno) lista.push({ id: uno.id, nombre: uno.nombre, ubicacion: uno.ubicacion, tipo: uno.tipo_negocio });
+    if (uno && !esNegocioDePrueba(uno.nombre)) {
+      lista.push({ id: uno.id, nombre: uno.nombre, ubicacion: uno.ubicacion, tipo: uno.tipo_negocio });
+    }
   }
   return lista.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
 }

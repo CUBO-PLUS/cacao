@@ -21,7 +21,7 @@ The idea fits in one sentence: *a payment shouldn't stop at the payment.* When s
 
 ## The problem
 
-El Salvador made bitcoin legal tender in 2021, and thousands of businesses can take a Lightning payment. Getting paid in bitcoin was the easy part. What comes after it is not:
+El Salvador made bitcoin legal tender in 2021, and thousands of businesses can take a Lightning payment. In January 2025 a reform tied to the IMF agreement made accepting bitcoin voluntary for private businesses, so tools that make accepting it easy and compliant matter more, not less. Getting paid in bitcoin was the easy part. What comes after it is not:
 
 1. **The tools are scattered.** A reader, a traveller and a shopper use three unrelated apps, and none of them knows about the others. Money that comes in through one never meets the places where it could be spent.
 2. **Small payments don't work on cards.** A $0.12 story or a single pupusa can't carry a card fee. Most online content falls back on ads or monthly subscriptions.

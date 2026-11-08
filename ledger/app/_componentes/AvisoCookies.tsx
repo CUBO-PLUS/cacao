@@ -30,7 +30,7 @@ export function AvisoCookies() {
   return (
     <aside className="aviso-cookies" aria-label="Cookies y almacenamiento">
       <p>
-        Usamos cookies solo para tu sesión cuando entrás. Sin publicidad ni rastreo.{" "}
+        Usamos cookies y el almacenamiento del navegador solo para que el sitio funcione. Sin publicidad ni rastreo.{" "}
         <a href="https://cacao-grupo.vercel.app/legal.html">Privacidad</a>
       </p>
       <button type="button" className="aviso-cookies__ok" onClick={ocultar}>

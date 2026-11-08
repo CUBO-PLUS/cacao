@@ -67,6 +67,21 @@ async function Recibo({ params }: { params: Promise<{ id: string }> }) {
           </Link>
         </p>
         <ImprimirBoton />
+        {/* People here keep receipts in WhatsApp. The delivery code stays out on purpose: it is shown only at delivery. */}
+        <a
+          className="boton boton--secundario"
+          target="_blank"
+          rel="noopener"
+          href={`https://wa.me/?text=${encodeURIComponent(
+            [
+              `Comprobante de pago en CacaoMarket`,
+              `${trabajo ? 'Trabajo' : 'Orden'} ${detalle.numero} · ${vendedor}`,
+              `${formatoUsd(detalle.totalUsdCentavos)} · ${formatoSats(detalle.totalSats)} · ${formaDePago}`,
+            ].join('\n'),
+          )}`}
+        >
+          Guardar en WhatsApp
+        </a>
       </div>
 
       <article className={styles.comprobante} aria-labelledby="comprobante-titulo">

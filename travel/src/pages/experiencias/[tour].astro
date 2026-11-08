@@ -157,6 +157,7 @@ const datos = [
             <ul data-lecturas-lista></ul>
           </div>
           <a class="boton" href="/reservas/">Ver mis reservas</a>
+          <a class="boton" data-comprobante href="#" target="_blank" rel="noopener">Guardar comprobante en WhatsApp</a>
           <section class="reserva__ahora" aria-label="¿Y ahora?">
             <h3 class="reserva__ahora-titulo">¿Y ahora?</h3>
             <a class="reserva__tarjeta" href="https://cacao-market.vercel.app">
@@ -737,6 +738,18 @@ const datos = [
         poner('[data-codigo]', reserva.codigo);
         const cuando = new Date(`${reserva.fecha}T12:00:00`).toLocaleDateString('es-SV', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
         poner('[data-resumen]', `${cuando} · ${reserva.personas} personas · ${sats(reserva.total)}`);
+        // The receipt goes where people in El Salvador keep them: a WhatsApp message they send to themselves or the group.
+        const comprobante = caja.querySelector<HTMLAnchorElement>('[data-comprobante]');
+        if (comprobante) {
+          const titulo = document.querySelector('h1')?.textContent?.trim() ?? 'Cacao Travel';
+          const mensaje = [
+            `Mi reserva en Cacao Travel: ${titulo}`,
+            `${cuando} · ${reserva.personas} personas · ${sats(reserva.total)}`,
+            `${reserva.pagada ? 'Pagada' : 'Confirmada'} · código ${reserva.codigo}`,
+            location.href.split('?')[0],
+          ].join('\n');
+          comprobante.href = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
+        }
         const ul = caja.querySelector<HTMLElement>('[data-lecturas-lista]')!;
         const media = caja.closest('main')?.querySelector<HTMLElement>('[data-lecturas]')?.dataset.api ?? '';
         const origen = media ? new URL(media).origin : '';

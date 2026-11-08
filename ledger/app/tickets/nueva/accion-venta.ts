@@ -8,7 +8,9 @@ import { ErrorLedger } from "../../../src/errores.ts";
 import { validarEntrada } from "../../../src/ticket.ts";
 import { registrarVentaEfectivo } from "../../../src/venta-efectivo.ts";
 import { almacenDeEntorno, almacenDtesDeEntorno } from "../../../src/servidor/configuracion.ts";
-import { accesoDeDueno } from "../../../src/servidor/sesion.ts";
+import { MENSAJE_SUSPENDIDO, puedeEmitir } from "../../../src/planes.ts";
+import { estadoParaEmitir } from "../../../src/servidor/planes.ts";
+import { accesoDeDueno, sesionActual } from "../../../src/servidor/sesion.ts";
 import { opcionesDeEmision } from "../../../src/servidor/simulacion.ts";
 
 // "Registrar venta" on the web: a cash sale the owner marks by hand. Owner only, checked here as well as on the page.
@@ -23,6 +25,9 @@ function texto(formulario: FormData, campo: string): string {
 
 export async function registrarVentaAccion(_anterior: EstadoVenta, formulario: FormData): Promise<EstadoVenta> {
   if (!(await accesoDeDueno("/tickets/nueva"))) return { error: "Esta cuenta no puede registrar ventas." };
+  // A plan unpaid past its grace period pauses new hand-entered sales (src/planes.ts). Never on a read failure.
+  const sesion = await sesionActual();
+  if (sesion && !puedeEmitir(await estadoParaEmitir(sesion.usuario.id))) return { error: MENSAJE_SUSPENDIDO };
   let destino: string;
   try {
     const cliente = texto(formulario, "cliente") === "contribuyente" ? "contribuyente" : "consumidor";

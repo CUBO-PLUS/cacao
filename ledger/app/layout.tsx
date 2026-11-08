@@ -105,6 +105,7 @@ async function NavegacionSesion() {
           <Link href="/cierre">Cierre</Link>
           <Link href="/comercios">Comercios</Link>
           <Link href="/mes">Mes</Link>
+          <Link href="/plan">Plan</Link>
         </>
       ) : null}
       <span className="nav-usuario">

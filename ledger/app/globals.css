@@ -860,3 +860,68 @@ select {
   display: inline-flex;
   align-items: center;
 }
+
+/* Plan: the three plan cards, the due with its QR, and the warning when issuing is paused. */
+.plan-grilla {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+}
+.plan-grilla .tarjeta {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.plan-grilla ul {
+  flex: 1;
+  margin: 0.5rem 0 1rem;
+  padding-left: 1.2rem;
+}
+.plan-actual {
+  border: 2px solid var(--acento);
+}
+.plan-precio {
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+.plan-alerta {
+  border: 2px solid var(--alerta);
+}
+.plan-cobro {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-start;
+}
+.plan-cobro > div:last-child {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+.plan-monto {
+  font-size: 1.25rem;
+}
+.plan-factura {
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+  font-size: 0.8rem;
+}
+.plan-botones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 0.5rem 0;
+}
+.plan-botones .nota {
+  flex-basis: 100%;
+  margin: 0;
+}
+.plan-grilla .tarjeta > form,
+.plan-grilla .tarjeta > .chip {
+  align-self: flex-start;
+}

@@ -70,7 +70,7 @@ Even a small share of a market that size matters, and Lightning delivery is the 
 
 ### CacaoLedger: monthly subscription (SaaS)
 
-Proposed plans (from `ledger/docs/estrategia-y-hacienda.md`):
+Plans (prices from `ledger/docs/estrategia-y-hacienda.md`). The plan page is built at `/plan` in Ledger: the owner picks a plan and pays each month's due with a Lightning invoice issued by CacaoPay, so Grupo Cacao bills with its own rails. The plan includes charging with CacaoPay, with no fee per sale. An unpaid due gives 7 days of grace before new hand-entered sales pause; sales already charged through CacaoPay always get their document. Card payment of the due is not built yet.
 
 | Plan | Price | For |
 |---|---|---|

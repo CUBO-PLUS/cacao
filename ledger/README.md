@@ -23,6 +23,7 @@ sello es del simulador local y empieza por `SIMULADO-`. Ningún sello de este re
 | Funciona, con pruebas | Cliente del firmador SVFE (contra un servidor falso); credenciales de varios comercios con cifrado AES-256-GCM; importación de facturas de BTCPay y de pedidos de CacaoMarket. |
 | Funciona en la web (dueño) | Tablero con el cierre de hoy; cierre por día en `/cierre/[día]`; tickets, detalle con la atestación de tasa, documento, libros del mes y CSV. Requiere cuenta de dueño y variables de entorno. |
 | Funciona en la web (dueño) | Venta en efectivo marcada a mano (`/tickets/nueva`), con un token por envío: un doble envío no hace dos tickets. La cadena de atestaciones se guarda en `ledger_atestaciones` y «Verificar cadena» la recalcula en el servidor. |
+| Funciona en la web (dueño) | Plan mensual en `/plan`: Comercio Semilla, Cosecha o Despacho Contable, con IVA. La cuota del mes se cobra con una factura Lightning que emite CacaoPay (API v1, producto `pay`); la página la muestra con QR y se actualiza sola al pagarse. Sin plan, la cuenta está en prueba gratis. Una cuota impaga da 7 días de gracia; después se pausa solo el registro de ventas a mano, nunca los documentos de ventas ya cobradas. Reglas en `src/planes.ts` (con pruebas); tablas `ledger_planes` y `ledger_cuotas`. Con tarjeta: todavía no. |
 | Simulado | Caída de Hacienda (`/cierre`, «Simular caída de Hacienda»): los documentos nuevos salen con `tipoOperacion` 2 y `tipoContingencia` 1, esperan 24 horas y «Simular que Hacienda volvió» los transmite con sello simulado. Todo se rotula SIMULADO. |
 | Parcial | Los esquemas `2026` se validan con el paquete oficial del Ministerio, pero el servicio de recepción real no se probó. Firma: solo el cliente, contra un firmador falso. |
 | Funciona, contra un mock | Firma local JWS RS512 con clave de prueba (`src/firma/firma-local.ts`) y transmisión al mock comunitario svfe-mock-api (`src/hacienda/`): el comprobante 03 sale sellado. La factura 01 la rechaza el mock por su regla BIZ_004, que suma el IVA encima de un precio que ya lo incluye (ver `docs/transmision-prueba.md`). |
@@ -172,6 +173,7 @@ Variables de entorno (solo en el servidor, salvo la clave pública de Clerk):
 | `SUPABASE_URL` | Proyecto de Supabase con `ledger_tickets`, `ledger_dtes`, `ledger_candados` y `usuarios`. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Clave de servicio de ese proyecto. Solo en el servidor. |
 | `LEDGER_BTCPAY_URL`, `LEDGER_BTCPAY_API_KEY`, `LEDGER_BTCPAY_TIENDAS` | Sincronización con BTCPay (solo lectura). |
+| `CACAO_PAY_URL`, `CACAO_PAY_API_KEY` | Cobro de la cuota del plan por CacaoPay. Sin ellas, `/plan` muestra los planes y no cobra nada. En producción las guarda `infra/btcpay/activar-planes-ledger.ps1`. |
 | `CRON_SECRET` | Secreto del cron de Vercel para `/api/sincronizar`. |
 
 ```

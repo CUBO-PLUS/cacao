@@ -16,8 +16,10 @@
     "@clerk/localizations": "^4.23.0",
     "@fontsource-variable/bricolage-grotesque": "^5.2.10",
     "@fontsource/jetbrains-mono": "^5.2.8",
+    "@types/qrcode": "^1.5.6",
     "astro": "^7.3.8",
-    "leaflet": "^1.9.4"
+    "leaflet": "^1.9.4",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.9",

@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 
+import { CodigoQr } from '@/componentes/CodigoQr';
 import { formatoSats, formatoUsd } from '@/lib/dinero';
 import type { Entrega } from '@/lib/cotizacion';
 import type { PagoLightning as Pago } from '@/lib/lightning';
@@ -150,6 +151,16 @@ export function PagoLightning({ envioId, entrega }: { envioId: string; entrega: 
             <li>Abrí tu billetera de bitcoin y pegalo para pagar.</li>
             <li>Esta página avisa sola cuando el pago entra. No tenés que tocar nada.</li>
           </ol>
+
+          {/* The QR to scan with the phone's wallet, first: the most common way to pay. */}
+          {!vencida && (
+            <CodigoQr
+              texto={`lightning:${pago.bolt11}`}
+              titulo="Escaneá el QR con tu billetera Lightning"
+              etiqueta="Código QR de la factura Lightning"
+              tamano={220}
+            />
+          )}
 
           <label htmlFor="factura-lightning" className="campo-etiqueta">
             Código de pago

@@ -2,7 +2,7 @@ import { matrizQr } from '@/lib/qr';
 
 // A QR code drawn on the server as SVG: no script, and it prints in black on white. Two modules of quiet
 // zone on each side, as the standard asks.
-export function CodigoQr({ texto, titulo, tamano = 168 }: { texto: string; titulo: string; tamano?: number }) {
+export function CodigoQr({ texto, titulo, tamano = 168, etiqueta }: { texto: string; titulo: string; tamano?: number; etiqueta?: string }) {
   const { tamano: modulos, d } = matrizQr(texto);
   const margen = 2;
   const total = modulos + margen * 2;
@@ -14,7 +14,7 @@ export function CodigoQr({ texto, titulo, tamano = 168 }: { texto: string; titul
         width={tamano}
         height={tamano}
         role="img"
-        aria-label={`Código QR para seguir el envío: ${texto}`}
+        aria-label={etiqueta ?? `Código QR para seguir el envío: ${texto}`}
         shapeRendering="crispEdges"
         style={{ display: 'block', background: '#fff', maxWidth: '100%', height: 'auto', aspectRatio: '1 / 1' }}
       >

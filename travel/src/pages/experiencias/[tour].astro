@@ -133,15 +133,19 @@ const datos = [
         <div class="reserva__pago" data-pago hidden aria-live="polite">
           <p class="reserva__sello">Pagá con Lightning</p>
           <p class="reserva__pago-monto"><span>Monto</span> <strong data-pago-monto></strong></p>
-          <div class="reserva__pago-campo">
-            <span>Factura</span>
-            <textarea class="reserva__factura" readonly rows="4" data-pago-factura></textarea>
+          <div class="reserva__qr">
+            <img data-pago-qr alt="Código QR de la factura Lightning" width="200" height="200" />
+            <p class="reserva__qr-ayuda">Escaneá el QR con tu billetera Lightning, o abrila desde este celular.</p>
           </div>
           <a class="boton" data-pago-abrir href="#">Abrir en mi billetera</a>
-          <button class="boton" type="button" data-pago-copiar>Copiar factura</button>
+          <a class="boton boton--secundario" data-pago-prueba href="#" target="_blank" rel="noopener" hidden>Pagar con la billetera de prueba</a>
+          <button class="boton boton--secundario" type="button" data-pago-copiar>Copiar factura</button>
+          <details class="reserva__pago-campo">
+            <summary>Ver factura</summary>
+            <textarea class="reserva__factura" readonly rows="3" data-pago-factura aria-label="Factura Lightning"></textarea>
+          </details>
           <p class="reserva__pago-cuenta" data-pago-cuenta></p>
-          <a class="reserva__pago-prueba" data-pago-prueba href="#" target="_blank" rel="noopener" hidden>Pagar con la billetera de prueba</a>
-          <button class="boton" type="button" data-pago-cambiar>Cambiar fecha o personas</button>
+          <button class="boton boton--secundario" type="button" data-pago-cambiar>Cambiar fecha o personas</button>
           <p class="reserva__nota">Bitcoin de prueba (regtest): no tiene valor.</p>
           <p class="reserva__error" data-pago-vencida role="alert" hidden>La factura venció. Volvé a intentar.</p>
           <button class="boton" type="button" data-pago-reintentar hidden>Volver a intentar</button>
@@ -419,7 +423,11 @@ const datos = [
     resize: none;
   }
   .reserva__pago-cuenta { margin: 0; font-size: 0.875rem; font-weight: 600; }
-  .reserva__pago-prueba { font-size: 0.9375rem; font-weight: 600; color: var(--mazorca); }
+  .reserva__qr { display: grid; justify-items: center; gap: 8px; }
+  .reserva__qr img { width: min(100%, 220px); height: auto; aspect-ratio: 1; padding: 10px; background: #fffaf4; border-radius: var(--radio-chico); }
+  .reserva__qr-ayuda { margin: 0; font-size: 0.875rem; text-align: center; color: var(--tinta-suave); }
+  .reserva__pago-campo > summary { cursor: pointer; font-size: 0.875rem; font-weight: 600; color: var(--tinta-suave); }
+  .reserva__pago-campo[open] > summary { margin-bottom: 6px; }
   .reserva__pago .reserva__error { margin: 0; }
   .reserva__pago .reserva__error[hidden] { display: none; }
 
@@ -456,6 +464,7 @@ const datos = [
 </style>
 
 <script>
+  import QRCode from 'qrcode';
   import { mananaEnElSalvador } from '../../lib/reparto';
   import { enUsd, tasaUsdBtc } from '../../lib/usd';
   import { dejarPendiente, guardarReserva, revisarPendientes } from '../../lib/pendientes';
@@ -652,6 +661,13 @@ const datos = [
 
         monto.textContent = sats(factura.sats);
         texto.value = factura.bolt11;
+        // The QR the customer scans from another device: dark Tostado on warm white, like Media's.
+        const imagenQr = caja.querySelector<HTMLImageElement>('[data-pago-qr]');
+        if (imagenQr) {
+          QRCode.toDataURL(`lightning:${factura.bolt11}`, { margin: 1, width: 220, color: { dark: '#2A1912', light: '#FFFAF4' } })
+            .then((url) => { imagenQr.src = url; })
+            .catch(() => { imagenQr.hidden = true; });
+        }
         const abrir = caja.querySelector<HTMLAnchorElement>('[data-pago-abrir]');
         if (abrir) abrir.href = `lightning:${factura.bolt11}`;
         copiar.textContent = 'Copiar factura';

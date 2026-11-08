@@ -322,6 +322,12 @@ function CarritoListo({ datos }: { datos: string }) {
         </p>
       )}
 
+      {grupos.length >= 2 && (
+        <p role="note" className={styles.nota}>
+          Cada tienda prepara y cobra su propio pedido, por eso confirmás uno por tienda.
+        </p>
+      )}
+
       {grupos.map((grupo) => (
         <BloqueNegocio
           key={grupo.negocioId}

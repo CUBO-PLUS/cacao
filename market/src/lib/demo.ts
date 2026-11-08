@@ -27,7 +27,7 @@ export function esDemo(btcmapId: number | null | undefined): boolean {
 
 /** The notice on a demo seller's page, product page and service page. */
 export function avisoDemo(nombre: string): string {
-  return `Demostración. ${nombre} es un negocio real que acepta bitcoin según BTC Map, pero no participa en CacaoMarket. Productos y precios son ejemplos.`;
+  return `${nombre}, negocio real que acepta bitcoin (según BTC Map). Es un ejemplo para la demostración: no participa en CacaoMarket y sus productos y precios son de ejemplo.`;
 }
 
 /** Shown in the cart, at checkout, and on the order and receipt pages when a demo seller is included. */

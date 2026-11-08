@@ -2,6 +2,8 @@
 
 import { useEffect } from "react";
 
+import { LineaContacto } from "./_componentes/LineaContacto.tsx";
+
 // Last-resort boundary for the pages under the shared layout. The message is plain; the cause goes to the console.
 export default function ErrorDePagina({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
@@ -19,6 +21,7 @@ export default function ErrorDePagina({ error, reset }: { error: Error & { diges
           Intentar de nuevo
         </button>
       </div>
+      <LineaContacto pregunta="¿Algo no funciona?" />
     </section>
   );
 }

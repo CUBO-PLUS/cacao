@@ -32,10 +32,10 @@ describe('aviso de demostración', () => {
     }
   });
 
-  it('keeps the exact wording the owner asked for', () => {
+  it('keeps the exact wording of the notice', () => {
     const html = renderToStaticMarkup(createElement(AvisoDemo, { btcmapId: 23673, nombre: 'Alquimia Coffee' }));
     expect(texto(html)).toBe(
-      'Demostración. Alquimia Coffee es un negocio real que acepta bitcoin según BTC Map, pero no participa en CacaoMarket. Productos y precios son ejemplos.',
+      'Alquimia Coffee, negocio real que acepta bitcoin (según BTC Map). Es un ejemplo para la demostración: no participa en CacaoMarket y sus productos y precios son de ejemplo.',
     );
   });
 

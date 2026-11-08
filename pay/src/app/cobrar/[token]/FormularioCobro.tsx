@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { useState, useTransition, type FormEvent } from 'react';
 
+import { AvisoPagoFallido } from '@/componentes/AvisoPagoFallido';
+
 import { cobrarAccion } from './acciones';
 import estilos from './estilos.module.css';
 
@@ -14,20 +16,23 @@ export function FormularioCobro({
   token,
   monto,
   enlaceFacturaDePrueba,
+  motivoFallido,
 }: {
   token: string;
   /** The exact amount in bitcoin, in words: "1,250 sats". Shown in the steps, where the invoice is asked for. */
   monto: string;
   /** Test wallet link for whoever has no bitcoin wallet, or null when BTCPay is not set up. */
   enlaceFacturaDePrueba: string | null;
+  /** The reason the last code failed, when the page was read after a failed charge. */
+  motivoFallido: string | null;
 }) {
   const router = useRouter();
   const [factura, setFactura] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(motivoFallido);
   const [pendiente, empezar] = useTransition();
 
-  function cobrar(evento: FormEvent<HTMLFormElement>) {
-    evento.preventDefault();
+  // The charge request: the form and the retry button both send the code now in the box.
+  function enviar() {
     setError(null);
     empezar(async () => {
       try {
@@ -41,6 +46,11 @@ export function FormularioCobro({
         setError('No pudimos conectarnos. Revisá tu conexión y probá de nuevo.');
       }
     });
+  }
+
+  function cobrar(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    enviar();
   }
 
   return (
@@ -105,9 +115,11 @@ export function FormularioCobro({
       </p>
 
       {error && (
-        <p role="alert" className={estilos.error}>
-          {error}
-        </p>
+        <AvisoPagoFallido
+          mensaje={error}
+          onReintentar={enviar}
+          deshabilitado={pendiente || factura.trim() === ''}
+        />
       )}
 
       <button type="submit" className="boton" disabled={pendiente}>

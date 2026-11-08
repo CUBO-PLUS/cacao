@@ -1,0 +1,28 @@
+/* The failed-payment notice: the reason on Arena with a Criollo edge, then the retry and the contact line. */
+.caja {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.mensaje {
+  margin: 0;
+  padding: 12px 14px;
+  border: 2px solid var(--criollo);
+  border-radius: var(--radio-chico);
+  background: var(--arena);
+  color: var(--tostado);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.ayuda {
+  margin: 0;
+  font-size: 0.9375rem;
+  overflow-wrap: anywhere;
+}
+
+.ayuda a {
+  color: var(--tostado);
+  font-weight: 600;
+}

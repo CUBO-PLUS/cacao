@@ -2,7 +2,6 @@
 import Base from '../layouts/Base.astro';
 import { PARTES } from '../lib/reparto';
 import { CATEGORIAS, ZONAS, DIAS_SEMANA } from '../content.config';
-import { MEDIA_URL } from '../lib/tours';
 
 // The operator panel is for signed-in people only. Signed-out visitors read the public explanation below, which links to /entrar/.
 export const prerender = false;
@@ -56,7 +55,7 @@ const OPERADOR_SIN_HISTORIA = PARTES.operador + PARTES.autor;
 
         <section class="tarjeta-publica" aria-labelledby="publico-contacto">
           <h2 id="publico-contacto">Cómo contactarnos</h2>
-          <p>Para sumarte o hacer preguntas sobre el panel, escribinos desde <a href={`${MEDIA_URL}/`}>Cacao Media</a>.</p>
+          <p><a href="mailto:hola@cacaomedia.sv">Escribinos a hola@cacaomedia.sv</a> para sumarte o hacer preguntas sobre el panel.</p>
           <a class="boton boton--secundario" href="/entrar/">Entrar a tu panel</a>
         </section>
       </div>

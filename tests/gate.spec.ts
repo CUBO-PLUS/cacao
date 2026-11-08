@@ -129,6 +129,7 @@ test('the invoice shows a QR, the amount and a countdown', async ({ page, reques
   await expect(page.locator('[data-gate-monto]')).toHaveText(/^120 sats · \$\d+\.\d{2}$/);
   await expect(page.locator('[data-gate-cuenta]')).toHaveText(/^[0-5]:[0-5]\d$/);
   await expect(page.getByRole('button', { name: 'Copiar factura' })).toBeVisible();
+  await expect(page.getByText('Pagá con cualquier billetera Lightning: escaneá el QR o copiá la factura.')).toBeVisible();
   await expect(page.locator('[data-gate-estado-texto]')).toHaveText('Esperando el pago. Esta página se actualiza sola.');
   await expect(page.locator('[data-gate-estado-texto]')).toHaveAttribute('aria-live', 'polite');
   await expect(page.getByText('Pago simulado (modo demo)')).toBeVisible();
@@ -434,8 +435,12 @@ test('without a database the gate says payments are not available and stays clos
   );
   await page.goto(PAGA);
   await expect(muro(page)).toHaveAttribute('data-paso', 'sin-base');
-  await expect(page.locator('[data-gate-estado-texto]')).toHaveText('Los pagos no están disponibles en este momento.');
+  await expect(page.locator('[data-gate-estado-texto]')).toHaveText(
+    'Los pagos no están disponibles en este momento. Probá de nuevo más tarde.',
+  );
   await expect(page.locator('[data-gate-pedir]')).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Intentar de nuevo' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'hola@cacaomedia.sv' })).toHaveAttribute('href', 'mailto:hola@cacaomedia.sv');
   await expect(cerrado(page)).toBeHidden();
 });
 
@@ -453,6 +458,8 @@ test('a failed invoice request explains itself', async ({ page }) => {
   await page.locator('[data-gate-pedir]').click();
   await expect(page.locator('[data-gate-error]')).toBeVisible();
   await expect(page.locator('[data-gate-error]')).toContainText('No pudimos');
+  await expect(page.getByRole('button', { name: 'Intentar de nuevo' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'hola@cacaomedia.sv' })).toHaveAttribute('href', 'mailto:hola@cacaomedia.sv');
   await expect(muro(page)).toBeVisible();
 });
 

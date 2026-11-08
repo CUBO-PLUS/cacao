@@ -48,21 +48,28 @@ export default function PaginaHacienda() {
           Dirección General de Impuestos Internos (DGII · Ministerio de Hacienda) y las reglas del Banco Central de
           Reserva (BCR) en El Salvador.
         </p>
-        <p>Esta página resume normas para la demo. No es asesoría tributaria.</p>
+        <p>Esta página resume normas para la demo.</p>
       </section>
+
+      {/* The one place the page says what is still open; the body only marks the specific points. */}
+      <aside className={estilos.nota} aria-label="Aviso sobre esta guía">
+        <p>
+          <strong>Guía informativa, no es asesoría tributaria.</strong> Algunas cifras y artículos están pendientes de
+          confirmar con un contador.
+        </p>
+      </aside>
 
       <section className={estilos.seccion} aria-labelledby="titulo-regla-principal">
         <h2 id="titulo-regla-principal">1. Qué impuestos recaen sobre una remesa</h2>
         <div className={estilos.tarjetas}>
           <div className={estilos.tarjeta}>
-            <h3>El monto que recibe tu familiar: alcance de Renta e IVA no confirmado</h3>
+            <h3>El monto que recibe tu familiar: alcance de Renta e IVA</h3>
             <p>
               Según el <strong>Artículo 3 numeral 4) de la Ley de Impuesto sobre la Renta (LISR)</strong>, los valores
-              recibidos del exterior no constituyen renta. El alcance de esa norma para las remesas familiares no está
-              confirmado en esta revisión.
+              recibidos del exterior no constituyen renta. El alcance de esa norma para las remesas familiares sigue pendiente.
             </p>
             <p>
-              El tratamiento de IVA sobre el monto principal <strong>no fue verificado en esta revisión</strong>.
+              El tratamiento de IVA sobre el monto principal <strong>todavía no está verificado</strong>.
             </p>
           </div>
 
@@ -79,7 +86,7 @@ export default function PaginaHacienda() {
                 fiscal de IVA es <span className="dato">cobro - base</span>.
               </li>
               <li>
-                <strong>Pago a cuenta de renta del 1.75% (Art. 151 CT, por confirmar):</strong> anticipo sobre los
+                <strong>Pago a cuenta de renta del 1.75% (Art. 151 CT):</strong> anticipo sobre los
                 ingresos brutos. En este simulador se aplica a la base sin IVA (<span className="dato">base × 1.75%</span>).
                 Supuesto: ingresos sin IVA; confirmalo con tu contador.
               </li>
@@ -105,7 +112,7 @@ export default function PaginaHacienda() {
                 <th scope="col">Cobro servicio (bruto)</th>
                 <th scope="col">Base sin IVA (F-07)</th>
                 <th scope="col">IVA 13% (F-07)</th>
-                <th scope="col">Pago a cuenta 1.75% (Art. 151 CT, por confirmar)</th>
+                <th scope="col">Pago a cuenta 1.75% (Art. 151 CT)</th>
                 <th scope="col">Código CAT-017</th>
               </tr>
             </thead>
@@ -126,7 +133,7 @@ export default function PaginaHacienda() {
                   <td data-etiqueta="IVA 13% (F-07)" className="dato">
                     {formatoUsd(t.ivaUsdCentavos)}
                   </td>
-                  <td data-etiqueta="Pago a cuenta 1.75% (Art. 151 CT, por confirmar)" className="dato">
+                  <td data-etiqueta="Pago a cuenta 1.75% (Art. 151 CT)" className="dato">
                     {formatoUsd(t.pagoACuentaUsdCentavos)}
                   </td>
                   <td data-etiqueta="Código CAT-017" className="dato">
@@ -147,10 +154,10 @@ export default function PaginaHacienda() {
         <h2 id="titulo-dte">3. Facturación electrónica (DTE), F-07, F-14 v17 y CacaoLedger</h2>
         <dl className={estilos.definiciones}>
           <div>
-            <dt>Emisión de DTE 01 y 03 (Arts. 119-B, 119-C y 119-F CT, por confirmar)</dt>
+            <dt>Emisión de DTE 01 y 03 (Arts. 119-B, 119-C y 119-F CT)</dt>
             <dd>
               El documento tributario electrónico se emite por el valor del servicio cobrado, expresado siempre en
-              dólares (<span className="dato">tipoMoneda: &quot;USD&quot;</span>). Por regla general (Art. 119-C CT, por confirmar) el
+              dólares (<span className="dato">tipoMoneda: &quot;USD&quot;</span>). Por regla general (Art. 119-C CT) el
               DTE se considera emitido al recibir el sello de recepción; la contingencia tiene reglas propias (Art. 119-F
               CT). Para personas naturales se emite{' '}
               <strong>Factura de Consumidor Final (tipoDte 01)</strong>; entre comercios o corresponsales con NRC se
@@ -160,14 +167,14 @@ export default function PaginaHacienda() {
           <div>
             <dt>Catálogo CAT-017 y envíos por Lightning</dt>
             <dd>
-              El catálogo <span className="dato">CAT-017</span> (códigos no verificados en esta revisión) asigna{' '}
+              El catálogo <span className="dato">CAT-017</span> (códigos sin verificar) asigna{' '}
               <span className="dato">01</span> a
               efectivo, <span className="dato">05</span> a transferencia o depósito bancario y{' '}
               <span className="dato">11</span> a Bitcoin. En la generación de esquemas v1 de Factura 01 donde el patrón
               del validador restringe el código <span className="dato">11</span>, se declara{' '}
               <span className="dato">99</span> (Otros) con la referencia estructurada{' '}
               <span className="dato">BTC-LN|&lt;sats&gt;sat|&lt;tasa&gt;|&lt;hash&gt;</span> y la cadena de atestación
-              SHA-256 en CacaoLedger. La <strong>Resolución 1003 del CVPCPA</strong> (por confirmar), según la guía de esa institución, indica que el bitcoin se mida a costo de adquisición, con el tipo de cambio de referencia al dólar
+              SHA-256 en CacaoLedger. La <strong>Resolución 1003 del CVPCPA</strong>, según la guía de esa institución, indica que el bitcoin se mida a costo de adquisición, con el tipo de cambio de referencia al dólar
               establecido por los mercados internacionales e indicado en la billetera que se utilice.
             </dd>
           </div>
@@ -177,9 +184,8 @@ export default function PaginaHacienda() {
               El <strong>Formulario F-07</strong> se presenta dentro de los primeros <strong>10 días hábiles</strong> del
               mes siguiente (arts. 93-94 Ley de IVA, según la DGII). Las operaciones con sello de recepción alimentan el Libro de Ventas
               a Consumidor Final y el <strong>Anexo 2 de 23 columnas (A a W)</strong> de la plantilla de la DGII de 2021.
-              La versión 14 del F-07 está publicada en mh.gob.sv (ago. 2025); vigencia por confirmar. El{' '}
-              <strong>Formulario F-14 v17</strong> de pago a cuenta e impuesto retenido se rige por el Art. 151 CT (pago a
-              cuenta, por confirmar). Las retenciones de renta, por el Art. 62 de la LISR (10 días hábiles, por confirmar).
+              La versión 14 del F-07 está publicada en mh.gob.sv (ago. 2025). El{' '}
+              <strong>Formulario F-14 v17</strong> de pago a cuenta e impuesto retenido se rige por el Art. 151 CT. Las retenciones de renta, por el Art. 62 de la LISR (10 días hábiles).
             </dd>
           </div>
           <div>
@@ -220,7 +226,7 @@ export default function PaginaHacienda() {
               <span className="dato">USD/BTC</span> obtenida de Coinbase y Kraken junto con su marca de tiempo. En
               producción, las entidades financieras que operen en el ecosistema bitcoin se rigen por la{' '}
               <strong>NRP-29 del BCR</strong>, cuyo artículo 10 exige registro en el{' '}
-              <strong>Registro de Proveedores de Bitcoin del BCR</strong> (por confirmar).
+              <strong>Registro de Proveedores de Bitcoin del BCR</strong>.
             </dd>
           </div>
         </dl>

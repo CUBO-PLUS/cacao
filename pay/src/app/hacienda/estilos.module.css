@@ -5,6 +5,21 @@
   min-width: 0;
 }
 
+/* The one note for the whole guide: what it is and what is still open. */
+.nota {
+  padding: 14px 16px;
+  border: 2px solid var(--criollo);
+  border-radius: var(--radio-chico);
+  background: var(--arena);
+  color: var(--tostado);
+  min-width: 0;
+}
+
+.nota p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
 .seccion {
   display: grid;
   gap: 16px;

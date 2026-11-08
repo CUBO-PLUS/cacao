@@ -113,6 +113,7 @@ const datos = [
               </div>
             </dl>
             <p class="reserva__usd" data-total-usd hidden></p>
+            <p class="reserva__como">Pagás con Lightning al reservar. Te damos un código para tu reserva.</p>
             <details class="reserva__reparto">
               <summary>Cómo se reparte tu pago</summary>
               <dl>
@@ -123,6 +124,7 @@ const datos = [
               <p class="reserva__autor-nota" data-nota-autor>El pago al autor se acredita al activar los pagos reales.</p>
             </details>
             <p class="reserva__error" id="error-reserva" role="alert" data-error hidden></p>
+            <p class="reserva__ayuda" data-ayuda hidden>¿Algo no funciona? <a href="mailto:hola@cacaomedia.sv">Escribinos a hola@cacaomedia.sv</a></p>
             <button class="boton" type="submit" data-reservar>Reservar</button>
             <p class="reserva__nota">Modo demo · se paga por Lightning con bitcoin de prueba (regtest), sin valor.</p>
           </div>
@@ -378,6 +380,10 @@ const datos = [
   .reserva__reparto [hidden] { display: none; }
   .reserva__error { padding: 10px 12px; border-radius: 10px; background: var(--criollo); color: var(--pulpa); font-size: 0.9375rem; }
   .reserva__error[hidden], .reserva__lista[hidden] { display: none; }
+  .reserva__ayuda { margin: 0; font-size: 0.875rem; color: var(--tinta-suave); }
+  .reserva__ayuda[hidden] { display: none; }
+  .reserva__ayuda a { color: var(--tostado); font-weight: 600; }
+  .reserva__como { margin: 0; font-size: 0.875rem; color: var(--tinta-suave); }
   .reserva .boton { width: 100%; }
   .reserva .boton:hover:not(:disabled) { background: var(--tostado); color: var(--pulpa); }
   .reserva .boton:disabled { opacity: 0.6; cursor: progress; }
@@ -466,6 +472,7 @@ const datos = [
 
     const form = caja.querySelector<HTMLFormElement>('[data-form]')!;
     const error = caja.querySelector<HTMLElement>('[data-error]')!;
+    const ayuda = caja.querySelector<HTMLElement>('[data-ayuda]')!;
     const boton = caja.querySelector<HTMLButtonElement>('[data-reservar]')!;
     const tour = caja.dataset.tour ?? '';
     const salidas = (caja.dataset.salidas ?? '').split(',');
@@ -517,6 +524,8 @@ const datos = [
     const mostrarError = (mensaje: string) => {
       error.textContent = mensaje;
       error.hidden = !mensaje;
+      // The help line is shown only for payment failures, set by the catch below.
+      ayuda.hidden = true;
     };
     // Weekday of a YYYY-MM-DD date without time-zone drift.
     const diaDe = (f: string) => DIAS[new Date(`${f}T12:00:00Z`).getUTCDay()];
@@ -731,8 +740,11 @@ const datos = [
         ocultarPago();
         form.hidden = false;
         mostrarError(err instanceof CambioDeDatos ? '' : err instanceof Error ? err.message : 'No se pudo reservar.');
+        // A failed booking or invoice gets the help line; going back on purpose does not.
+        ayuda.hidden = err instanceof CambioDeDatos;
+        // The same button repeats the same request: the attempt id is kept until the server answers with an invoice.
         boton.disabled = false;
-        boton.textContent = 'Reservar';
+        boton.textContent = err instanceof CambioDeDatos ? 'Reservar' : 'Intentar de nuevo';
       }
     });
   }

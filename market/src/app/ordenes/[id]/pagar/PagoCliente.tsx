@@ -20,6 +20,7 @@ import {
   reintentarCobroAccion,
   simularPagoAccion,
 } from './acciones';
+import { AyudaPago } from './AyudaPago';
 import styles from './estilos.module.css';
 import type { EstadoPago } from './tipos';
 
@@ -109,6 +110,8 @@ export function PagoCliente({
   const activo = !vencida && (estado.estado === 'creada' || esperando);
   // A cancelled product order: the screen stops, hides the invoice and says so.
   const canceladaProducto = !trabajo && estado.estado === 'cancelada';
+  // The states whose request is made by reintentar(): an order not yet invoiced, or a job waiting its request.
+  const pidePeticionCobro = estado.estado === 'creada' || (trabajo && estado.estado === 'hecha');
   // The same rule as the order page: the buyer may cancel while the order is unpaid.
   const puedeCancelar =
     !trabajo &&
@@ -341,22 +344,18 @@ export function PagoCliente({
           {problema}
         </p>
       )}
-      {(estado.estado === 'creada' || (trabajo && estado.estado === 'hecha')) && problema && !vencidaTrabajo && (
+      {/* One retry for any failure: a request that never got made is sent again, otherwise the order is read again. */}
+      {problema && !vencida && !canceladaProducto && !pagado && !vencidaTrabajo && (
         <div className={styles.acciones}>
-          <Boton onClick={() => void reintentar()} disabled={ocupado}>
+          <Boton
+            onClick={() => void (pidePeticionCobro ? reintentar() : refrescar())}
+            disabled={ocupado}
+          >
             Intentar de nuevo
           </Boton>
         </div>
       )}
-
-      {/* The invoice still works: a failed check can be repeated without asking for a new one. */}
-      {problema && cobroVigente && (
-        <div className={styles.acciones}>
-          <Boton onClick={() => void refrescar()} disabled={ocupado}>
-            Revisar de nuevo
-          </Boton>
-        </div>
-      )}
+      {problema && <AyudaPago />}
 
       {vencidaTrabajo && (
         <div className={styles.acciones}>

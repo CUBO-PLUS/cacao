@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { auth } from '@clerk/nextjs/server';
 import { connection } from 'next/server';
 import { Suspense } from 'react';
 
@@ -59,5 +60,7 @@ async function CotizadorConPrecio() {
     // Cash and bank quotes still work without it; the calculator says Lightning is not available.
     console.error('Precio de bitcoin:', error instanceof Error ? error.message : error);
   }
-  return <Cotizador usdBtc={usdBtc} fuenteBtc={fuenteBtc} />;
+  // Only the session id is read here: no account row is created or changed on the home page.
+  const { userId } = await auth();
+  return <Cotizador usdBtc={usdBtc} fuenteBtc={fuenteBtc} conSesion={Boolean(userId)} />;
 }

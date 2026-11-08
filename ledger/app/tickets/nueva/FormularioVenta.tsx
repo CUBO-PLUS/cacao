@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState, useTransition } from "react";
 
+import { LineaContacto } from "../../_componentes/LineaContacto.tsx";
 import { registrarVentaAccion, type EstadoVenta } from "./accion-venta.ts";
 
 const INICIAL: EstadoVenta = { error: null };
@@ -11,9 +12,23 @@ export function FormularioVenta() {
   const [estado, accion, pendiente] = useActionState(registrarVentaAccion, INICIAL);
   const [tipo, setTipo] = useState<"consumidor" | "contribuyente">("consumidor");
   const [envio] = useState(() => crypto.randomUUID());
+  const [, enTransicion] = useTransition();
+  // A copy of the last submitted data: React clears the fields after an action, and the retry needs them again.
+  const ultimoEnvio = useRef<FormData | null>(null);
+
+  function enviar(formulario: FormData) {
+    ultimoEnvio.current = formulario;
+    accion(formulario);
+  }
+
+  // Same request as "Registrar venta", with the same token, so a retry never makes a second sale.
+  function reintentar() {
+    const copia = ultimoEnvio.current;
+    if (copia !== null) enTransicion(() => accion(copia));
+  }
 
   return (
-    <form action={accion} className="bloque" aria-labelledby="titulo-venta">
+    <form action={enviar} className="bloque" aria-labelledby="titulo-venta">
       <h2 id="titulo-venta">Venta en efectivo</h2>
       <p className="nota">Marcá el cobro en efectivo. No pasa por ningún riel de pago: lo registra quien lo recibió.</p>
       <input type="hidden" name="envio" value={envio} />
@@ -90,9 +105,15 @@ export function FormularioVenta() {
         {pendiente ? "Emitiendo el documento. No apretes de nuevo: no se duplica." : ""}
       </p>
       {estado.error !== null ? (
-        <p role="alert" className="error">
-          {estado.error}
-        </p>
+        <>
+          <p role="alert" className="error">
+            {estado.error}
+          </p>
+          <button type="button" className="boton secundario" onClick={reintentar} disabled={pendiente}>
+            Intentar de nuevo
+          </button>
+          <LineaContacto pregunta="¿Algo no funciona?" />
+        </>
       ) : null}
     </form>
   );

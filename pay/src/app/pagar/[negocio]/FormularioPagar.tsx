@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 
+import { AvisoPagoFallido } from '@/componentes/AvisoPagoFallido';
 import { centavosDesdeTexto, formatoDolares } from '@/lib/cobro-negocio';
 import { matrizQr } from '@/lib/qr';
 import type { CobroNegocio } from '@/servidor/negocios';
@@ -31,6 +32,8 @@ export function FormularioPagar({ negocioId, nombre }: { negocioId: string; nomb
   const [modo, setModo] = useState<Modo>('formulario');
   const [cobro, setCobro] = useState<CobroNegocio | null>(null);
   const [mensaje, setMensaje] = useState('');
+  // True when the server or the connection failed the charge, so the notice offers a retry.
+  const [fallo, setFallo] = useState(false);
   const claveRef = useRef<string | null>(null);
   const enCurso = useRef(false);
 
@@ -53,22 +56,20 @@ export function FormularioPagar({ negocioId, nombre }: { negocioId: string; nomb
     };
   }, [modo, cobro, negocioId]);
 
-  async function pagar(evento: FormEvent<HTMLFormElement>) {
-    evento.preventDefault();
+  // The charge request. The retry button calls it again with the same amount and the same key, so the server
+  // makes one charge at most.
+  async function enviar() {
     if (enCurso.current) return;
-    const centavos = centavosDesdeTexto(dolares);
-    if (!centavos.ok) {
-      setMensaje(centavos.mensaje);
-      return;
-    }
     enCurso.current = true;
     claveRef.current ??= nuevaClave();
     setMensaje('');
+    setFallo(false);
     setModo('enviando');
     try {
       const r = await cobrarPublicoAccion(negocioId, dolares, claveRef.current);
       if (!r.ok) {
         setMensaje(r.mensaje);
+        setFallo(true);
         setModo('formulario');
         return;
       }
@@ -76,10 +77,22 @@ export function FormularioPagar({ negocioId, nombre }: { negocioId: string; nomb
       setModo(modoDe(r.dato.estado));
     } catch {
       setMensaje('No pudimos crear el pago. Probá de nuevo en un momento.');
+      setFallo(true);
       setModo('formulario');
     } finally {
       enCurso.current = false;
     }
+  }
+
+  function pagar(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    const centavos = centavosDesdeTexto(dolares);
+    if (!centavos.ok) {
+      setMensaje(centavos.mensaje);
+      setFallo(false);
+      return;
+    }
+    void enviar();
   }
 
   if (modo === 'formulario' || modo === 'enviando') {
@@ -106,11 +119,14 @@ export function FormularioPagar({ negocioId, nombre }: { negocioId: string; nomb
             Entre $1.00 y $10,000.00, con hasta dos decimales.
           </p>
         </div>
-        {mensaje && (
-          <p role="alert" className={estilos.error}>
-            {mensaje}
-          </p>
-        )}
+        {mensaje &&
+          (fallo ? (
+            <AvisoPagoFallido mensaje={mensaje} onReintentar={() => void enviar()} deshabilitado={modo === 'enviando'} />
+          ) : (
+            <p role="alert" className={estilos.error}>
+              {mensaje}
+            </p>
+          ))}
         <button type="submit" className="boton" disabled={modo === 'enviando'} aria-disabled={modo === 'enviando'}>
           {modo === 'enviando' ? 'Creando el pago…' : 'Pagar'}
         </button>

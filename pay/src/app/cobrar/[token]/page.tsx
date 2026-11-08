@@ -114,12 +114,16 @@ export default async function PaginaCobrar(props: { params: Promise<{ token: str
     // Ready to collect: nothing is pending, or the last invoice failed (its reason is shown again).
     contenido = (
       <div className={estilos.bloque}>
-        {datos.cobroEstado === 'fallido' && (
-          <p role="alert" className={estilos.error}>
-            {datos.cobroMotivo ?? 'No pudimos cobrar con ese código. Pegá un código nuevo y probá de nuevo.'}
-          </p>
-        )}
-        <FormularioCobro token={token} monto={cifra} enlaceFacturaDePrueba={await enlaceFacturaDePrueba(datos.sats)} />
+        <FormularioCobro
+          token={token}
+          monto={cifra}
+          enlaceFacturaDePrueba={await enlaceFacturaDePrueba(datos.sats)}
+          motivoFallido={
+            datos.cobroEstado === 'fallido'
+              ? (datos.cobroMotivo ?? 'No pudimos cobrar con ese código. Pegá un código nuevo y probá de nuevo.')
+              : null
+          }
+        />
       </div>
     );
   }

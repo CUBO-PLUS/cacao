@@ -556,11 +556,11 @@ main:focus {
   margin: 0 0 16px;
   padding: 12px 14px;
   border-radius: var(--radio-chico);
-  border-left: 6px solid var(--criollo);
+  border-left: 6px solid var(--chocolate);
   background: var(--arena);
   color: var(--tostado);
   font-size: 0.9375rem;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.45;
   overflow-wrap: anywhere;
 }

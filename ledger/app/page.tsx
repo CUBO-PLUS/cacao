@@ -14,6 +14,7 @@ import { hoySv, todosEntre } from "../src/servidor/tiempo-sv.ts";
 import { fechaHoraSalvador } from "../src/tiempo.ts";
 import { resumen, type Cifras } from "../src/tablero.ts";
 import type { Ticket } from "../src/ticket.ts";
+import { LineaContacto } from "./_componentes/LineaContacto.tsx";
 import { SinDatos } from "./_componentes/SinDatos.tsx";
 import { SincronizarAhora } from "./_componentes/SincronizarAhora.tsx";
 import { etiquetaProducto, fechaCorta, ORDEN_PRODUCTOS } from "./_componentes/formato.ts";
@@ -55,6 +56,7 @@ function ParaNegocios() {
         <li>Ledger arma y firma la factura</li>
         <li>Cerrás el día y el mes sin copiar datos</li>
       </ol>
+      <LineaContacto pregunta="¿Querés usarlo en tu negocio?" />
       <div className="acciones-negocios">
         <Link href="/entrar" className="boton">
           Entrar

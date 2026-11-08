@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { TEXTO_SIN_ACCESO } from "../../src/servidor/acceso.ts";
+import { LineaContacto } from "./LineaContacto.tsx";
 
 // Shown to a signed-in person who is not an owner. The page itself reads nothing.
 export function SinAcceso() {
@@ -10,6 +11,7 @@ export function SinAcceso() {
       <p className="nota" style={{ marginTop: "0.5rem" }}>
         {TEXTO_SIN_ACCESO}
       </p>
+      <LineaContacto pregunta="¿Querés usarlo en tu negocio?" />
       <p className="acciones">
         <Link className="boton secundario" href="/">
           Ir al tablero

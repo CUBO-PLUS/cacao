@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { AvisoPagoFallido } from '@/componentes/AvisoPagoFallido';
 import { agregarDigito, COBRO_MIN_CENTAVOS, formatoDolares } from '@/lib/cobro-negocio';
 import { matrizQr } from '@/lib/qr';
 import type { CobroNegocio } from '@/servidor/negocios';
@@ -134,11 +135,15 @@ export function CajaCobro({ nombre }: { nombre: string }) {
         {formatoDolares(montoMostrado)}
       </p>
 
-      {mensaje && (
-        <p role="alert" className={estilos.error}>
-          {mensaje}
-        </p>
-      )}
+      {mensaje &&
+        (modo === 'error' ? (
+          // A failed charge: the same amount and key go out again, so the server still makes one charge at most.
+          <AvisoPagoFallido mensaje={mensaje} onReintentar={() => void cobrar(centavos)} />
+        ) : (
+          <p role="alert" className={estilos.error}>
+            {mensaje}
+          </p>
+        ))}
 
       {teclado && (
         <>

@@ -29,7 +29,16 @@ function aCentavos(texto: string): number | null {
  * (usdBtc), and every line is computed here by cotizar(). The primary button carries the amount,
  * currency and delivery into /enviar, so the sender does not type them again.
  */
-export function Cotizador({ usdBtc, fuenteBtc }: { usdBtc: number | null; fuenteBtc: string }) {
+export function Cotizador({
+  usdBtc,
+  fuenteBtc,
+  conSesion = false,
+}: {
+  usdBtc: number | null;
+  fuenteBtc: string;
+  /** True when the visitor is signed in; a signed-out visitor is told that signing in comes next. */
+  conSesion?: boolean;
+}) {
   const id = useId();
   const [montoTexto, setMontoTexto] = useState('50');
   const [moneda, setMoneda] = useState<'USD' | 'EUR'>('USD');
@@ -137,6 +146,9 @@ export function Cotizador({ usdBtc, fuenteBtc }: { usdBtc: number | null; fuente
       ) : (
         <Boton disabled>Enviar dinero</Boton>
       )}
+      {!conSesion && (
+        <p className={estilos.entrar}>Te pedimos entrar para guardar el envío y darte su código de seguimiento.</p>
+      )}
     </div>
   );
 }
@@ -146,7 +158,7 @@ function Recibe({ cotizacion: c, usdBtc }: { cotizacion: Cotizacion | null; usdB
   if (!c) {
     return (
       <div className={estilos.recibe}>
-        <span className={estilos.recibeEtiqueta}>Recibe</span>
+        <span className={estilos.recibeEtiqueta}>Le llega a tu familiar</span>
         <span className={estilos.recibeMonto}>—</span>
       </div>
     );
@@ -173,7 +185,7 @@ function Recibe({ cotizacion: c, usdBtc }: { cotizacion: Cotizacion | null; usdB
   return (
     <>
       <div className={estilos.recibe} aria-live="polite">
-        <span className={estilos.recibeEtiqueta}>Recibe</span>
+        <span className={estilos.recibeEtiqueta}>Le llega a tu familiar</span>
         <span className={estilos.recibeMonto}>{montoPrincipal}</span>
         {enSats && (
           <small className={estilos.nota}>En bitcoin: {formatoMonto(c.montoDestino, c.monedaDestino)}</small>

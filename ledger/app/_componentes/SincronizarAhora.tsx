@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 
 import { sincronizarAhora, type EstadoAccionSincronizar } from "../accion-sincronizar.ts";
+import { LineaContacto } from "./LineaContacto.tsx";
 
 const INICIAL: EstadoAccionSincronizar = { mensaje: null, error: null };
 
@@ -17,9 +18,16 @@ export function SincronizarAhora() {
         {pendiente ? "Consultando BTCPay. Puede tardar unos segundos." : (estado.mensaje ?? "")}
       </p>
       {estado.error !== null ? (
-        <p role="alert" className="error">
-          {estado.error}
-        </p>
+        <>
+          <p role="alert" className="error">
+            {estado.error}
+          </p>
+          {/* Same request as the button above: the form submits the same action again. */}
+          <button type="submit" className="boton secundario" disabled={pendiente}>
+            Intentar de nuevo
+          </button>
+          <LineaContacto pregunta="¿Algo no funciona?" />
+        </>
       ) : null}
     </form>
   );

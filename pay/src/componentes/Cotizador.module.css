@@ -53,6 +53,14 @@
   background: var(--arena);
 }
 
+/* The line under the send button for a visitor who is not signed in yet. */
+.entrar {
+  margin: 0;
+  font-size: 0.9375rem;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
 /* The amount that arrives: the line the eye should land on. */
 .recibe {
   display: grid;

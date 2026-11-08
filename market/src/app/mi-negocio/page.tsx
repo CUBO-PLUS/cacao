@@ -3,8 +3,10 @@ import Link from 'next/link';
 import { connection } from 'next/server';
 import { Suspense } from 'react';
 
+import { auth } from '@clerk/nextjs/server';
+
 import { Boton } from '@/componentes/Boton';
-import { miNegocio, type DatosNegocio, type Negocio } from '@/servidor/cuentas';
+import { miNegocio, rutaEntrar, rutaRegistrarse, type DatosNegocio, type Negocio } from '@/servidor/cuentas';
 import { cotizacionesDelNegocio } from '@/servidor/cotizaciones';
 import { exigirSesion } from '@/servidor/sesion';
 
@@ -29,6 +31,10 @@ export default function PaginaMiNegocio() {
 
 async function MiNegocio() {
   await connection();
+  // Signed out: explain the page at once with sign-in and sign-up buttons, instead of redirecting.
+  const { userId } = await auth();
+  if (!userId) return <SinSesion />;
+
   const sesion = await exigirSesion('/mi-negocio');
   const resultado = await miNegocio(sesion.usuario.id);
   if (!resultado.ok) {
@@ -44,6 +50,24 @@ async function MiNegocio() {
   if (negocio.estado === 'suspendido') return <Suspendido negocio={negocio} />;
   if (negocio.estado === 'pendiente') return <EnRevision negocio={negocio} />;
   return <Aprobado negocio={negocio} />;
+}
+
+// A visitor who is not signed in: what the page is for, and the two ways in. Both return here.
+function SinSesion() {
+  return (
+    <div className={estilos.bloque}>
+      <section className="encabezado">
+        <h1>Mi negocio</h1>
+        <p>Vendé en CacaoMarket: publicá tus productos y cobrá en sats.</p>
+      </section>
+      <nav aria-label="Entrar o registrarte" className={estilos.accesos}>
+        <Boton href={rutaEntrar('/mi-negocio')}>Entrar</Boton>
+        <Boton href={rutaRegistrarse('/mi-negocio')} variante="secundario">
+          Registrar mi negocio
+        </Boton>
+      </nav>
+    </div>
+  );
 }
 
 function Solicitud() {

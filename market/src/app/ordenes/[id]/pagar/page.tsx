@@ -9,7 +9,10 @@ import { asegurarCobro, enlaceBilleteraDePruebaDe, estadoDePago } from '@/servid
 import { esOrdenDemo } from '@/servidor/pedidos';
 import { exigirSesion } from '@/servidor/sesion';
 
+import { AyudaPago } from './AyudaPago';
+import estilos from './estilos.module.css';
 import { PagoCliente } from './PagoCliente';
+import { ReintentarLectura } from './ReintentarLectura';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -45,7 +48,15 @@ async function PagoOrden({
   if (!lectura.ok) {
     // Not the buyer and not found look the same on purpose.
     if (lectura.codigo === 'NO_ENCONTRADA') notFound();
-    return <p role="alert">{lectura.mensaje}</p>;
+    return (
+      <>
+        <p role="alert">{lectura.mensaje}</p>
+        <div className={estilos.acciones}>
+          <ReintentarLectura />
+        </div>
+        <AyudaPago />
+      </>
+    );
   }
 
   let estado = lectura.dato;

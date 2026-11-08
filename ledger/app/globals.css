@@ -279,6 +279,16 @@ body:has(.aviso-cookies) .pie {
   color: var(--alerta);
   font-weight: 700;
 }
+/* The one contact line under an error or a merchant block: a little air above, a link that is easy to tap. */
+.linea-contacto {
+  margin-top: 0.75rem;
+}
+.linea-contacto a {
+  font-weight: 700;
+  min-height: var(--alto-toque);
+  display: inline-flex;
+  align-items: center;
+}
 
 /* Cards */
 .cifras {

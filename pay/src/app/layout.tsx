@@ -57,7 +57,7 @@ const apariencia = {
     fontFamily: 'var(--font-bricolage), system-ui, sans-serif',
   },
   // Hides Clerk's "Development mode" text. The keys stay as they are.
-  layout: {
+  options: {
     unsafe_disableDevelopmentModeWarnings: true,
   },
   // The page shows its own title, so the card keeps only the step's instructions. A flat card with a thin

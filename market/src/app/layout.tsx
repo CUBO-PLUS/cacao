@@ -52,7 +52,7 @@ const localizacion = {
 // Same palette as globals.css: chocolate for buttons and links, tostado for text.
 const apariencia = {
   // Hides Clerk's "Development mode" label. The keys are unchanged.
-  layout: {
+  options: {
     unsafe_disableDevelopmentModeWarnings: true,
   },
   variables: {

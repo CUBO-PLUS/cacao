@@ -37,7 +37,7 @@ const apariencia = {
     fontFamily: "'Bricolage Grotesque Variable', 'Bricolage Grotesque', system-ui, sans-serif",
   },
   // The development badge is hidden; the keys stay in the environment.
-  layout: { unsafe_disableDevelopmentModeWarnings: true },
+  options: { unsafe_disableDevelopmentModeWarnings: true },
   // A flat card with a thin border, like the other cards of the site.
   elements: {
     cardBox: { boxShadow: 'none', border: '1px solid rgba(42, 25, 18, 0.14)', borderRadius: '16px' },

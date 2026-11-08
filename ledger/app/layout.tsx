@@ -56,7 +56,7 @@ const apariencia = {
     headerTitle: { display: "none" },
   },
   // The Development mode badge is not shown to visitors. The keys and environment variables stay as they are.
-  layout: { unsafe_disableDevelopmentModeWarnings: true },
+  options: { unsafe_disableDevelopmentModeWarnings: true },
 };
 
 export const metadata: Metadata = {

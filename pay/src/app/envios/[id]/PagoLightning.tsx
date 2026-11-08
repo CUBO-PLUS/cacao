@@ -164,6 +164,11 @@ export function PagoLightning({ envioId, entrega }: { envioId: string; entrega: 
           />
 
           <div className={estilos.botones}>
+            {!vencida && (
+              <a className="boton boton--secundario" href={`lightning:${pago.bolt11}`}>
+                Abrir en mi billetera
+              </a>
+            )}
             <button type="button" className="boton boton--secundario" onClick={copiar}>
               {copiada ? 'Código copiado' : 'Copiar código de pago'}
             </button>

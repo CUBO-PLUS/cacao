@@ -137,6 +137,7 @@ const datos = [
             <span>Factura</span>
             <textarea class="reserva__factura" readonly rows="4" data-pago-factura></textarea>
           </div>
+          <a class="boton" data-pago-abrir href="#">Abrir en mi billetera</a>
           <button class="boton" type="button" data-pago-copiar>Copiar factura</button>
           <p class="reserva__pago-cuenta" data-pago-cuenta></p>
           <a class="reserva__pago-prueba" data-pago-prueba href="#" target="_blank" rel="noopener" hidden>Pagar con la billetera de prueba</a>
@@ -650,6 +651,8 @@ const datos = [
 
         monto.textContent = sats(factura.sats);
         texto.value = factura.bolt11;
+        const abrir = caja.querySelector<HTMLAnchorElement>('[data-pago-abrir]');
+        if (abrir) abrir.href = `lightning:${factura.bolt11}`;
         copiar.textContent = 'Copiar factura';
         copiar.onclick = async () => {
           try {

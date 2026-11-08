@@ -39,7 +39,11 @@ async function EntradaConDestino({ busqueda }: { busqueda: PageProps<'/entrar/[[
     <>
       <section className="encabezado">
         <h1>Entrá a tu cuenta</h1>
-        <p>Usá tu celular o tu correo para entrar.</p>
+        <p>
+          {volver.startsWith('/carrito')
+            ? 'Para hacer el pedido, entrá con tu celular o tu correo. Tu carrito te espera: al entrar volvés directo a él.'
+            : 'Usá tu celular o tu correo para entrar.'}
+        </p>
       </section>
 
       <SignIn

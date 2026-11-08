@@ -144,6 +144,13 @@ export function FormularioPagar({ negocioId, nombre }: { negocioId: string; nomb
         </p>
         <CodigoQr factura={cobro.factura ?? ''} etiqueta={`Código QR para pagar ${formatoDolares(cobro.usd_centavos)} en ${nombre}`} />
         <p className={estilos.ayuda}>Escaneá el código con tu billetera de bitcoin y confirmá el pago.</p>
+        {cobro.factura && (
+          <p>
+            <a className="boton boton--secundario" href={`lightning:${cobro.factura}`}>
+              ¿Estás en el celular? Abrir en mi billetera
+            </a>
+          </p>
+        )}
       </div>
     );
   }

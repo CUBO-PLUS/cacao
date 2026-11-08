@@ -46,7 +46,10 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
         <p class="etiqueta">{demo ? 'Factura Lightning simulada' : 'Factura Lightning'}</p>
         <p class="muro__monto mono" data-gate-monto></p>
         <p class="muro__codigo mono" data-gate-factura></p>
-        <button class="boton muro__secundario" type="button" data-gate-copiar>Copiar factura</button>
+        <div class="muro__acciones">
+          <a class="boton" data-gate-abrir href="#">Abrir en mi billetera</a>
+          <button class="boton muro__secundario" type="button" data-gate-copiar>Copiar factura</button>
+        </div>
       </div>
     </div>
     <div class="muro__prueba" data-gate-prueba hidden>
@@ -178,6 +181,12 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
     font-size: var(--t-etiqueta);
     overflow-wrap: anywhere;
     max-width: 100%;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow: hidden;
+    opacity: 0.8;
   }
   .muro__prueba { display: grid; gap: 8px; justify-items: start; }
   .muro__cuenta { font-size: 1.125rem; }
@@ -330,6 +339,7 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
     const aviso = dentro('[data-gate-error]');
     const prueba = dentro('[data-gate-prueba]');
     const billetera = dentro<HTMLAnchorElement>('[data-gate-billetera]');
+    const abrirBilletera = dentro<HTMLAnchorElement>('[data-gate-abrir]');
     const ya = dentro<HTMLDetailsElement>('[data-gate-ya]');
     const restaurar = dentro<HTMLFormElement>('[data-gate-restaurar]');
     const entrada = dentro<HTMLTextAreaElement>('[data-gate-codigo-entrada]');
@@ -490,6 +500,7 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
     async function adoptar(datos: Respuesta): Promise<void> {
       if (!datos.id || !datos.factura) throw new Error('Respuesta incompleta.');
       if (factura) factura.textContent = datos.factura;
+      if (abrirBilletera) abrirBilletera.href = `lightning:${datos.factura}`;
       if (monto) monto.textContent = textoMonto(datos.precioSats ?? 0, datos.precioUsdCentavos);
       if (qr) qr.src = await codigoQr(datos.factura);
       if (copiar) copiar.textContent = 'Copiar factura';

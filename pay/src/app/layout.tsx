@@ -6,6 +6,7 @@ import { Bricolage_Grotesque, JetBrains_Mono } from 'next/font/google';
 import { AvisoCookies } from '@/componentes/AvisoCookies';
 import { BarraInferior } from '@/componentes/BarraInferior';
 import { Cabecera } from '@/componentes/Cabecera';
+import { GrupoBarra } from '@/componentes/GrupoBarra';
 import { GrupoCacao } from '@/componentes/GrupoCacao';
 
 import './globals.css';
@@ -101,6 +102,7 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
           <a className="saltar" href="#contenido">
             Saltar al contenido
           </a>
+          <GrupoBarra actual="pay" />
           <AvisoCookies />
           <div className="hoja">
             <Cabecera />

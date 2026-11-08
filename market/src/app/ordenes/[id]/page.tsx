@@ -6,6 +6,7 @@ import { Boton } from '@/componentes/Boton';
 import { AvisoPedidoDemo } from '@/componentes/Demo';
 import { EtiquetaPrecio } from '@/componentes/EtiquetaPrecio';
 import { Estrellas } from '@/componentes/Estrellas';
+import { ProximoPaso } from '@/componentes/ProximoPaso';
 import { formatoSats, formatoUsd, usdCentavosASats } from '@/lib/dinero';
 import { accionesPosibles, descripcionDeEstado, ETIQUETA_RESULTADO } from '@/lib/estados';
 import { mensajesDe } from '@/servidor/mensajes';
@@ -13,6 +14,8 @@ import { detalleDeOrden, paraAcciones } from '@/servidor/pedidos';
 import { exigirSesion } from '@/servidor/sesion';
 
 import { fechaCorta } from '../fechas';
+
+import { SIGUIENTES_PASOS } from './siguientes';
 
 import { AccionesOrden } from './AccionesOrden';
 import { Chat } from './Chat';
@@ -108,6 +111,15 @@ async function Orden({ params }: { params: Promise<{ id: string }> }) {
             <p className={styles.codigoNumero}>{partirCodigo(detalle.codigoEntrega)}</p>
             <p>Mostráselo al vendedor cuando recibás tu pedido. No lo compartás antes.</p>
           </section>
+        )}
+
+        {/* After a payment the buyer sees the next step; the seller of a paid order has none. */}
+        {esComprador && detalle.pagadaEn !== null && (
+          <ProximoPaso
+            id="ahora-titulo"
+            intro="Tu pago quedó registrado. Guardá el comprobante por si lo necesitás."
+            opciones={SIGUIENTES_PASOS}
+          />
         )}
 
         {/* A job's steps: agreed, done, paid (the entregada step), closed. */}

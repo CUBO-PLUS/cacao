@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { AvisoCookies } from "./_componentes/AvisoCookies.tsx";
+import { BarraGrupo } from "./_componentes/BarraGrupo.tsx";
 import { URL_GRUPO, URL_TERMINOS } from "../src/grupo.ts";
 import { sesionActual } from "../src/servidor/sesion.ts";
 
@@ -122,6 +123,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           <a className="saltar" href="#contenido">
             Saltar al contenido
           </a>
+          <BarraGrupo />
           <div className="hoja">
             <header className="cabecera">
               <p className="marca">

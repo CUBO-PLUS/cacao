@@ -1,0 +1,46 @@
+/* The next-step block: a short title and one or two bordered cards, the same card style as the other pages. */
+.bloque {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.titulo {
+  font-size: 1.125rem;
+}
+
+.lista {
+  display: grid;
+  gap: 10px;
+}
+
+.tarjeta {
+  display: grid;
+  gap: 4px;
+  min-height: var(--alto-toque);
+  padding: 14px 16px;
+  border: 2px solid var(--tostado);
+  border-radius: var(--radio-chico);
+  color: var(--tostado);
+  text-decoration: none;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.tarjeta strong {
+  font-size: 1.0625rem;
+}
+
+.tarjeta span {
+  font-size: 0.9375rem;
+}
+
+.tarjeta:hover {
+  background: var(--blanco);
+}
+
+@media (min-width: 560px) {
+  .lista {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

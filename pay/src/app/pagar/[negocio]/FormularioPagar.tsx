@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 
 import { AvisoPagoFallido } from '@/componentes/AvisoPagoFallido';
+import { ProximoPaso } from '@/componentes/ProximoPaso';
 import { centavosDesdeTexto, formatoDolares } from '@/lib/cobro-negocio';
 import { matrizQr } from '@/lib/qr';
 import type { CobroNegocio } from '@/servidor/negocios';
@@ -149,9 +150,25 @@ export function FormularioPagar({ negocioId, nombre }: { negocioId: string; nomb
 
   if (modo === 'pagado') {
     return (
-      <p role="status" className={`${estilos.estadoGrande} ${estilos.estadoPagado}`}>
-        Pagado. Gracias.
-      </p>
+      <>
+        <p role="status" className={`${estilos.estadoGrande} ${estilos.estadoPagado}`}>
+          Pagado. Gracias.
+        </p>
+        {cobro && (
+          <p className={estilos.ayuda}>
+            Pagaste {formatoDolares(cobro.usd_centavos)} en {nombre}. Guardá esta pantalla como comprobante.
+          </p>
+        )}
+        <ProximoPaso
+          opciones={[
+            {
+              texto: 'Dónde más gastar',
+              href: '/donde-gastar',
+              detalle: 'Otros negocios de El Salvador donde se puede pagar con bitcoin.',
+            },
+          ]}
+        />
+      </>
     );
   }
 

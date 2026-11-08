@@ -16,12 +16,16 @@ export const GRUPO_FRASE =
 
 // Addresses are constants, except the Travel link, which follows the environment like the rest of Media.
 export const URL_CACAO = 'https://cacao-grupo.vercel.app';
+export const URL_MEDIA = 'https://cacao-media.vercel.app';
+export const URL_MARKET = 'https://cacao-market.vercel.app';
+export const URL_PAY = 'https://cacao-pay.vercel.app';
+export const URL_LEDGER = 'https://cacao-cuentas.vercel.app';
 
 export const PRODUCTOS: Producto[] = [
   { id: 'cacao', marca: '', url: URL_CACAO, linea: 'La empresa y la plataforma. De aquí salen los demás.' },
-  { id: 'media', marca: 'media', url: 'https://cacao-media.vercel.app', linea: 'Historias de El Salvador, grano a grano' },
+  { id: 'media', marca: 'media', url: URL_MEDIA, linea: 'Historias de El Salvador, grano a grano' },
   { id: 'travel', marca: 'travel', url: TRAVEL_URL, linea: 'Experiencias en El Salvador, con precio en sats' },
-  { id: 'market', marca: 'market', url: 'https://cacao-market.vercel.app', linea: 'Productos y servicios locales, pagados en sats' },
-  { id: 'pay', marca: 'pay', url: 'https://cacao-pay.vercel.app', linea: 'Mandá dinero a El Salvador y mirá cada centavo' },
-  { id: 'ledger', marca: 'ledger', url: 'https://cacao-cuentas.vercel.app', linea: 'Cobrá y declará: la venta y su factura electrónica' },
+  { id: 'market', marca: 'market', url: URL_MARKET, linea: 'Productos y servicios locales, pagados en sats' },
+  { id: 'pay', marca: 'pay', url: URL_PAY, linea: 'Mandá dinero a El Salvador y mirá cada centavo' },
+  { id: 'ledger', marca: 'ledger', url: URL_LEDGER, linea: 'Cobrá y declará: la venta y su factura electrónica' },
 ];

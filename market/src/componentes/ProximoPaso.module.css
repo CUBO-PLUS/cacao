@@ -1,0 +1,62 @@
+/* The next-step block after a success: cards in the site's card style (Blanco calido ground,
+   Tostado text). Brand colours only; no shadows, no gradients. */
+
+.bloque {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.bloque h2 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.intro {
+  margin: 0;
+}
+
+.lista {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Two cards side by side from 640px, so the block stays short on wide screens. */
+@media (min-width: 640px) {
+  .lista {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  height: 100%;
+  min-height: var(--alto-toque);
+  padding: 16px;
+  border-radius: var(--radio-chico);
+  background: var(--blanco);
+  color: var(--tostado);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.tarjeta:hover {
+  background: var(--arena);
+}
+
+.titulo {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.texto {
+  font-size: 0.9375rem;
+  line-height: 1.4;
+}

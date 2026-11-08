@@ -123,6 +123,27 @@ import { MEDIA_URL } from '../lib/tours';
     border-top: 1.5px solid var(--arena);
     min-width: 0;
   }
+  [data-reservas] :global(.ticket__ahora) {
+    display: grid;
+    gap: 12px;
+    padding: 20px 24px;
+    border-top: 1.5px solid var(--arena);
+    min-width: 0;
+  }
+  [data-reservas] :global(.ticket__tarjeta) {
+    justify-self: start;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 10px 16px;
+    border-radius: var(--radio-chico);
+    background: var(--chocolate);
+    color: var(--pulpa);
+    font-weight: 700;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+  }
+  [data-reservas] :global(.ticket__tarjeta:hover) { background: var(--tostado); color: var(--pulpa); text-decoration: underline; }
   [data-reservas] :global(.ticket__lista) { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; min-width: 0; }
   [data-reservas] :global(.ticket__lista a) { font-weight: 700; overflow-wrap: anywhere; }
   [data-reservas] :global(.ticket__lista a:hover) { color: var(--criollo); }
@@ -272,6 +293,16 @@ import { MEDIA_URL } from '../lib/tours';
       bloque.append(lista);
     }
 
+    // A paid booking points to the next product: the group's marketplace.
+    let ahora: HTMLElement | null = null;
+    if (r.pagada === true) {
+      ahora = el('div', 'ticket__ahora');
+      ahora.append(el('p', 'dato ticket__subtitulo', '¿Y ahora?'));
+      const tarjeta = el('a', 'ticket__tarjeta', 'Llevate algo local');
+      tarjeta.href = 'https://cacao-market.vercel.app';
+      ahora.append(tarjeta);
+    }
+
     const pie = el('div', 'ticket__pie');
     const olvidar = el('button', 'quitar', 'Quitar de este navegador');
     olvidar.type = 'button';
@@ -280,6 +311,7 @@ import { MEDIA_URL } from '../lib/tours';
 
     articulo.append(cuerpo, talon);
     if (bloque) articulo.append(bloque);
+    if (ahora) articulo.append(ahora);
     articulo.append(pie);
     return articulo;
   }

@@ -1,0 +1,55 @@
+/* The group strip: a Tostado bar above the site header, Pulpa text, 36px tall. The links keep the page width
+   on wide screens and scroll sideways on phones, with the scrollbar hidden. No shadows, no gradients. */
+
+.barra {
+  display: flex;
+  height: 36px;
+  overflow-x: auto;
+  background: var(--tostado);
+  color: var(--pulpa);
+  font-size: 13px;
+  letter-spacing: normal;
+  scrollbar-width: none;
+}
+
+.barra::-webkit-scrollbar {
+  display: none;
+}
+
+.lista {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  width: max-content;
+  height: 100%;
+  /* Starts on the page's own column on wide screens, and at the 16px gutter on phones. */
+  margin-inline: max(var(--canal), calc((100% - var(--ancho)) / 2)) 0;
+  padding-inline: 0 var(--canal);
+  white-space: nowrap;
+}
+
+.barra a {
+  color: var(--pulpa);
+  text-decoration: none;
+}
+
+.barra a:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.18em;
+}
+
+/* The focus ring sits on the dark bar, so it is Pulpa, and drawn inside the strip so the scroller does not clip it. */
+.barra a:focus-visible {
+  outline: 2px solid var(--pulpa);
+  outline-offset: -3px;
+}
+
+.barra b {
+  font-weight: 800;
+}
+
+.barra .actual {
+  color: var(--mazorca);
+  font-weight: 700;
+}

@@ -11,6 +11,7 @@ import WidgetTravel from '../../components/WidgetTravel.astro';
 import PagarBitcoin from '../../components/PagarBitcoin.astro';
 import CompartirHistoria from '../../components/CompartirHistoria.astro';
 import { TRAVEL_URL } from '../../lib/travel';
+import { URL_MARKET } from '../../lib/grupo';
 
 export async function getStaticPaths() {
   const todas = await todasLasHistorias();
@@ -82,14 +83,22 @@ const urlHistoria = new URL(`/historias/${historia.id}/`, Astro.site).href;
 
     <WidgetTravel historia={historia.id} lugar={d.lugar} seccion={d.seccion} />
 
-    {
-      !d.gratis && (
-        <aside class="historia__viaje" aria-label="Cacao Travel">
-          <p>¿Querés ir? Mirá experiencias para vivirlo.</p>
-          <a class="boton" href={`${TRAVEL_URL}/`}>Ver experiencias</a>
-        </aside>
-      )
-    }
+    <!-- The next step after the story. Shown by the CSS once the story is read or unlocked (see the gate states below). -->
+    <aside class="historia__siguiente" aria-labelledby={`siguiente-${historia.id}`}>
+      <h2 class="historia__siguiente-titulo" id={`siguiente-${historia.id}`}>¿Y ahora?</h2>
+      <div class="historia__siguiente-celdas">
+        <a class="historia__siguiente-tarjeta" href={`${TRAVEL_URL}/`}>
+          <span class="etiqueta">Cacao Travel</span>
+          <strong>Vivilo</strong>
+          <span>Experiencias en El Salvador, con precio en sats.</span>
+        </a>
+        <a class="historia__siguiente-tarjeta" href={`${URL_MARKET}/`}>
+          <span class="etiqueta">Cacao Market</span>
+          <strong>Llevate algo local</strong>
+          <span>Productos y servicios locales, pagados en sats.</span>
+        </a>
+      </div>
+    </aside>
 
     <PagarBitcoin coords={d.coords} />
 
@@ -191,20 +200,35 @@ const urlHistoria = new URL(`/historias/${historia.id}/`, Astro.site).href;
   .historia__autor-nombre a { text-decoration: none; }
   .historia__autor-nombre a:hover { color: inherit; text-decoration: underline; }
 
-  /* The Travel card under a paid story: same width as the text, on the arena ground the other side cards use. */
-  .historia__viaje {
+  /* "¿Y ahora?" closes the story, same width as the text, on the arena ground the side cards use.
+     Hidden until the story is read (free) or unlocked (paid), so a paid story never shows it before the payment. */
+  .historia__siguiente {
     width: min(100% - 2 * var(--canal), var(--ancho-lectura));
     margin: clamp(32px, 5vw, 56px) auto 0;
     padding: clamp(20px, 3vw, 32px);
-    display: flex;
-    flex-wrap: wrap;
-    gap: 14px 24px;
-    align-items: center;
-    justify-content: space-between;
+    display: none;
+    gap: 16px;
     background: var(--arena);
     border-radius: var(--radio-chico);
   }
-  .historia__viaje p { margin: 0; font-size: var(--t-h2); font-weight: 800; line-height: 1.15; letter-spacing: -0.01em; }
+  .historia[data-gate-estado='desbloqueado'] .historia__siguiente,
+  .historia[data-gate-estado='leyendo'] .historia__siguiente,
+  .historia[data-gate-estado='gratis'] .historia__siguiente { display: grid; }
+  .historia__siguiente-titulo { font-size: var(--t-h2); font-weight: 800; line-height: 1.15; letter-spacing: -0.01em; }
+  .historia__siguiente-celdas { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .historia__siguiente-tarjeta {
+    display: grid;
+    gap: 6px;
+    align-content: start;
+    min-height: 44px;
+    padding: 18px;
+    background: var(--pulpa);
+    color: var(--tostado);
+    border-radius: var(--radio-chico);
+    text-decoration: none;
+  }
+  .historia__siguiente-tarjeta strong { font-size: 1.25rem; font-weight: 800; line-height: 1.15; letter-spacing: -0.01em; }
+  .historia__siguiente-tarjeta:hover { background: var(--tostado); color: var(--pulpa); }
 
   .historia__pie {
     width: min(100% - 2 * var(--canal), var(--ancho-lectura));

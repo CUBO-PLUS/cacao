@@ -490,3 +490,31 @@ p { margin: 0; }
   font-family: var(--mono);
   font-size: 13px;
 }
+
+/* Group bar: the slim strip above the site header, the same on all six Cacao sites. Brand colours, no shadows. */
+.barra-grupo {
+  display: flex;
+  align-items: center;
+  gap: 4px 18px;
+  height: 36px;
+  padding: 0 clamp(16px, 4vw, 56px);
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+  background: #2A1912;
+  color: #F5EDE3;
+  font-family: var(--fuente);
+  font-size: 13px;
+  letter-spacing: normal;
+  line-height: 1;
+}
+.barra-grupo::-webkit-scrollbar { display: none; }
+.barra-grupo a {
+  flex: none;
+  color: #F5EDE3;
+  text-decoration: none;
+}
+.barra-grupo a:hover { color: #D9902F; text-decoration: underline; }
+.barra-grupo a[aria-current="page"] { color: #D9902F; font-weight: 700; }
+.barra-grupo a:focus-visible { outline: 2px solid #D9902F; outline-offset: -2px; }
+.barra-grupo b { font-weight: 800; }

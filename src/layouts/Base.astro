@@ -7,6 +7,16 @@ import Logo from '../components/Logo.astro';
 import { Show, UserButton } from '@clerk/astro/components';
 import { SECCIONES, type SeccionId } from '../lib/secciones';
 import { TRAVEL_URL } from '../lib/travel';
+import { URL_CACAO, URL_LEDGER, URL_MARKET, URL_MEDIA, URL_PAY } from '../lib/grupo';
+
+// The group bar: the same strip on every Cacao site. Media is the current one here.
+const BARRA_GRUPO = [
+  { texto: 'media', url: URL_MEDIA },
+  { texto: 'travel', url: TRAVEL_URL },
+  { texto: 'mercado', url: URL_MARKET },
+  { texto: 'pay', url: URL_PAY },
+  { texto: 'ledger', url: URL_LEDGER },
+];
 
 interface Props {
   titulo?: string;
@@ -51,6 +61,19 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
   </head>
   <body data-seccion={seccion}>
     <a class="saltar" href="#contenido">Saltar al contenido</a>
+    <!-- Above the site's own header and not sticky, so it scrolls away with the page. -->
+    <nav class="grupo-barra" aria-label="Grupo Cacao">
+      <ul class="grupo-barra__lista">
+        <li><a class="grupo-barra__marca" href={URL_CACAO}><b>cacao</b></a></li>
+        {
+          BARRA_GRUPO.map((enlace) => (
+            <li>
+              <a href={enlace.url} aria-current={enlace.texto === 'media' ? 'page' : undefined}>{enlace.texto}</a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
     <!-- In the page flow, not floating: it never covers the story or the pay button. Hidden until the script
          sees it has not been dismissed on this browser. -->
     <aside class="aviso-cookies" aria-label="Cookies y almacenamiento" data-aviso-cookies hidden>
@@ -136,6 +159,40 @@ const demo = import.meta.env.PUBLIC_DEMO === '1';
 <style>
   .saltar { position: absolute; left: -999px; top: 8px; background: var(--mazorca); color: var(--tostado); padding: 0.5em 1em; border-radius: 999px; z-index: 10; }
   .saltar:focus { left: 8px; }
+
+  /* Flat strip: no shadow, no gradient. On phones the links scroll sideways inside the bar, never wrap. */
+  .grupo-barra {
+    height: 36px;
+    background: #2a1912;
+    color: #f5ede3;
+    font-size: 13px;
+    letter-spacing: normal;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .grupo-barra::-webkit-scrollbar { display: none; }
+  .grupo-barra__lista {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    height: 100%;
+    width: max-content;
+    min-width: 100%;
+    margin: 0;
+    padding: 0 var(--canal);
+    list-style: none;
+    white-space: nowrap;
+  }
+  .grupo-barra a {
+    display: inline-flex;
+    align-items: center;
+    height: 100%;
+    color: #f5ede3;
+    text-decoration: none;
+  }
+  .grupo-barra a:hover { text-decoration: underline; }
+  .grupo-barra a[aria-current='page'] { color: #d9902f; }
+  .grupo-barra a:focus-visible { outline: 2px solid #d9902f; outline-offset: -4px; }
 
   /* A slim bar on the bottom edge of the viewport: it floats over the page and never pushes the content down. */
   .aviso-cookies {

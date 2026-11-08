@@ -175,9 +175,47 @@ body:has(.aviso-cookies) .pie {
 
 .hoja {
   background: var(--fondo);
-  min-height: 100vh;
+  min-height: calc(100vh - 36px);
   display: flex;
   flex-direction: column;
+}
+
+/* Group bar: the slim strip above every Cacao site, the same on all six. Fixed brand colours, light or dark.
+   On a phone it scrolls sideways; the scrollbar stays hidden. */
+.barra-grupo {
+  display: flex;
+  align-items: center;
+  gap: 4px 18px;
+  height: 36px;
+  padding: 0 16px;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+  background: #2a1912;
+  color: #f5ede3;
+  font-size: 13px;
+  letter-spacing: normal;
+  line-height: 1;
+}
+.barra-grupo::-webkit-scrollbar {
+  display: none;
+}
+.barra-grupo a {
+  flex: none;
+  color: #f5ede3;
+  text-decoration: none;
+}
+.barra-grupo a:hover {
+  color: #d9902f;
+  text-decoration: underline;
+}
+.barra-grupo a[aria-current="page"] {
+  color: #d9902f;
+  font-weight: 700;
+}
+.barra-grupo a:focus-visible {
+  outline: 2px solid #d9902f;
+  outline-offset: -2px;
 }
 
 /* Header */
@@ -769,6 +807,7 @@ select {
     --acento: #ddd;
     --sobre-acento: #000;
   }
+  .barra-grupo,
   .cabecera,
   .aviso-cookies,
   .pie,

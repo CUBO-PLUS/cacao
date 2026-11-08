@@ -42,6 +42,17 @@ const canonica = new URL(Astro.url.pathname, Astro.site);
   <body>
     <Telon />
     <a class="saltar" href="#contenido">Saltar al contenido</a>
+    <!-- The group bar: the same strip on every Cacao site. It sits above this site's header and scrolls away with the page. -->
+    <nav class="grupo-barra" aria-label="Grupo Cacao">
+      <ul class="grupo-barra__lista">
+        <li><a href="https://cacao-grupo.vercel.app"><b>cacao</b></a></li>
+        <li><a href={MEDIA_URL}>media</a></li>
+        <li><a href="https://cacao-travel.vercel.app" aria-current="page">travel</a></li>
+        <li><a href="https://cacao-market.vercel.app">mercado</a></li>
+        <li><a href="https://cacao-pay.vercel.app">pay</a></li>
+        <li><a href="https://cacao-cuentas.vercel.app">ledger</a></li>
+      </ul>
+    </nav>
     <!-- A slim bar fixed to the bottom of the viewport: it does not push the page down. Hidden until the script
          sees it has not been dismissed on this browser. -->
     <aside class="aviso-cookies" aria-label="Cookies y almacenamiento" data-aviso-cookies hidden>
@@ -118,6 +129,34 @@ const canonica = new URL(Astro.url.pathname, Astro.site);
 <style>
   .saltar { position: absolute; left: -999px; top: 8px; background: var(--mazorca); color: var(--tostado); padding: 0.5em 1em; border-radius: 999px; z-index: 10; }
   .saltar:focus { left: 8px; }
+
+  /* Group bar: 36px tall, the same on every Cacao site. On a phone it scrolls sideways rather than wrapping. */
+  .grupo-barra {
+    height: 36px;
+    background: #2A1912;
+    color: #F5EDE3;
+    font-size: 13px;
+    letter-spacing: normal;
+  }
+  .grupo-barra__lista {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    height: 100%;
+    width: min(100% - 2 * var(--canal), var(--ancho));
+    margin: 0 auto;
+    padding: 0;
+    list-style: none;
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: none;
+  }
+  .grupo-barra__lista::-webkit-scrollbar { display: none; }
+  .grupo-barra__lista li { flex: 0 0 auto; }
+  .grupo-barra a { color: #F5EDE3; text-decoration: none; }
+  .grupo-barra a:hover { text-decoration: underline; }
+  .grupo-barra a[aria-current='page'] { color: #D9902F; font-weight: 600; }
+  .grupo-barra a:focus-visible { outline: 2px solid #D9902F; outline-offset: 2px; border-radius: 2px; }
 
   /* Slim bar on the bottom edge: one short text with the link, and the button. About 60px on a phone. */
   .aviso-cookies {

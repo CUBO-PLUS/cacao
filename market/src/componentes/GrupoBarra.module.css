@@ -1,0 +1,51 @@
+/* The group strip above the site header: 36px, Tostado ground, Pulpa text. The current product is
+   Mazorca. Brand colours only; no shadows, no gradients. */
+
+.barra {
+  height: 36px;
+  background: var(--tostado);
+  color: var(--pulpa);
+  font-size: 0.8125rem;
+  letter-spacing: normal;
+  line-height: 36px;
+  /* On phones the links scroll sideways instead of wrapping; the page itself never scrolls sideways. */
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  scrollbar-width: none;
+}
+
+.barra::-webkit-scrollbar {
+  display: none;
+}
+
+.lista {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: min(100% - 2 * var(--canal), var(--ancho));
+  height: 100%;
+  margin-inline: auto;
+  padding: 0;
+  list-style: none;
+}
+
+.enlace {
+  display: inline-block;
+  color: var(--pulpa);
+  text-decoration: none;
+}
+
+.enlace:hover {
+  text-decoration: underline;
+}
+
+.enlace[aria-current='page'] {
+  color: var(--mazorca);
+}
+
+/* The focus ring sits on the dark strip, so it is Pulpa here. */
+.enlace:focus-visible {
+  outline: 2px solid var(--pulpa);
+  outline-offset: 2px;
+}

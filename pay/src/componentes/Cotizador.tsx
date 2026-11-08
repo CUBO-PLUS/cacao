@@ -7,6 +7,7 @@ import { cotizar, type Cotizacion, type Entrega, formatoMonto, TARIFAS, TASA_EUR
 import { montoTextoDesdeCentavos, rutaEnviarCon } from '@/lib/repetir';
 
 import { Boton } from './Boton';
+import { ProximoPaso } from './ProximoPaso';
 import { tipoDeCambio } from './formatoEnvio';
 import estilos from './Cotizador.module.css';
 
@@ -148,6 +149,22 @@ export function Cotizador({
       )}
       {!conSesion && (
         <p className={estilos.entrar}>Te pedimos entrar para guardar el envío y darte su código de seguimiento.</p>
+      )}
+      {cotizacion && (
+        <ProximoPaso
+          opciones={[
+            {
+              texto: 'Dónde gastar tus sats',
+              href: '/donde-gastar',
+              detalle: 'Negocios de El Salvador donde se puede pagar con bitcoin.',
+            },
+            {
+              texto: 'Comprá en CacaoMarket',
+              href: 'https://cacao-market.vercel.app',
+              detalle: 'Productos y servicios locales, pagados en sats.',
+            },
+          ]}
+        />
       )}
     </div>
   );

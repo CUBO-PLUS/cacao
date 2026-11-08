@@ -156,6 +156,13 @@ const datos = [
             <ul data-lecturas-lista></ul>
           </div>
           <a class="boton" href="/reservas/">Ver mis reservas</a>
+          <section class="reserva__ahora" aria-label="¿Y ahora?">
+            <h3 class="reserva__ahora-titulo">¿Y ahora?</h3>
+            <a class="reserva__tarjeta" href="https://cacao-market.vercel.app">
+              <strong>Llevate algo local</strong>
+              <span>Productos y servicios de El Salvador, pagados en sats.</span>
+            </a>
+          </section>
         </div>
       </aside>
 
@@ -419,6 +426,14 @@ const datos = [
   .reserva__sello { font-size: 0.8125rem; font-weight: 800; color: var(--criollo); }
   .reserva__codigo { font-family: var(--mono); font-size: 2rem; letter-spacing: 0.06em; line-height: 1; overflow-wrap: anywhere; }
   .reserva__abre { font-weight: 800; }
+  /* The next step after a paid booking: a short block under the main action, in the same card style as the reading cards. */
+  .reserva__ahora { display: grid; gap: 10px; margin-top: 8px; }
+  .reserva__ahora-titulo { font-size: 1rem; font-weight: 800; }
+  .reserva__tarjeta { display: grid; gap: 2px; padding: 12px 14px; border-radius: var(--radio-chico); background: var(--chocolate); color: var(--pulpa); text-decoration: none; }
+  .reserva__tarjeta:hover { color: var(--pulpa); }
+  .reserva__tarjeta:hover strong { text-decoration: underline; }
+  .reserva__tarjeta strong { font-weight: 800; line-height: 1.2; }
+  .reserva__tarjeta span { font-size: 0.8125rem; color: var(--arena-oscura); }
   .reserva__lista ul { margin: 6px 0 0; padding-left: 1.2em; }
   .reserva__lista li { margin: 0.3em 0; }
 

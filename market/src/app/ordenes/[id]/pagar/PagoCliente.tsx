@@ -7,12 +7,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { Boton } from '@/componentes/Boton';
 import { EtiquetaPrecio } from '@/componentes/EtiquetaPrecio';
+import { ProximoPaso } from '@/componentes/ProximoPaso';
 import { formatoUsd } from '@/lib/dinero';
 import { accionesPosibles } from '@/lib/estados';
 import { clienteNavegador } from '@/lib/supabase-navegador';
 
 import { clienteEnVivo } from '../canalEnVivo';
 import { FormularioCancelar } from '../FormularioCancelar';
+import { SIGUIENTES_PASOS } from '../siguientes';
 
 import {
   estadoDePagoAccion,
@@ -230,7 +232,8 @@ export function PagoCliente({
   // "Pago recibido" stays for a second, then the buyer lands on the order.
   useEffect(() => {
     if (!pagado) return;
-    const id = setTimeout(() => router.replace(`/ordenes/${ordenId}`), 1000);
+    // Long enough to read the next step; the order page has the same block and a button to it.
+    const id = setTimeout(() => router.replace(`/ordenes/${ordenId}`), 4000);
     return () => clearTimeout(id);
   }, [pagado, ordenId, router]);
 
@@ -291,7 +294,7 @@ export function PagoCliente({
   }
 
   let textoEstado: string;
-  if (pagado) textoEstado = 'Pago recibido';
+  if (pagado) textoEstado = 'Pago recibido. El comprobante queda en tu orden.';
   else if (canceladaProducto) textoEstado = 'Cancelaste este pedido. No pagués esta factura.';
   else if (vencidaTrabajo) textoEstado = TEXTO_VENCIDA_TRABAJO;
   else if (vencidaProducto) textoEstado = TEXTO_VENCIDA;
@@ -333,6 +336,15 @@ export function PagoCliente({
       <div className={styles.estado} aria-live="polite">
         {textoEstado}
       </div>
+
+      {pagado && (
+        <>
+          <div className={styles.acciones}>
+            <Boton href={`/ordenes/${ordenId}`}>Ver mi orden</Boton>
+          </div>
+          <ProximoPaso id="pago-siguiente" opciones={SIGUIENTES_PASOS} />
+        </>
+      )}
 
       {sinConexion && (
         <p role="status" className={styles.nota}>
